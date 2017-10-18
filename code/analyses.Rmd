@@ -1,0 +1,20 @@
+---
+title: "analyses"
+author: "Marissa Lee"
+date: "10/18/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#load data
+
+#calculate sample total dry mass and density
+
+#rbind the dataframes
+
+
+
+```
+
