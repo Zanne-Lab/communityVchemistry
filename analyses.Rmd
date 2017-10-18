@@ -17,23 +17,28 @@ library(vegan)
 ```{r setup, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-#load data
+#load harvest data
 
+#initial mass
 initial_mass <- read_in_initial_mass()
 ggplot(initial_mass,aes(y=totalSampleDryMass,x=Species,fill=size))+geom_violin()+ theme(axis.text.x=element_text(angle=90,hjust=1)) + scale_y_log10()
 
+#mass at harvests
 harvest_data<-LoadHarvestFiles()
 harvest_data1<-CalcTotalDryMass(harvest_data)
 harvest_data2<-CalcDensity(harvest_data1)
 harvest_mass<-ReorgDataFrame(harvest_data2)
 
-
-#merge files
-colnames(initial_mass)
-colnames(harvest_mass)
+#create a complete sample mass df for all time points
 mass.data<-rbind(initial_mass, harvest_mass)
+ggplot(mass.data, aes(x=time, y=totalSampleDryMass)) + geom_point() #funky outlier
+max(mass.data$totalSampleDryMass, na.rm=TRUE)
 
-ggplot(mass.data, aes(x=time, y=totalSampleDryMass)) + geom_point()
+colnames(mass.data)
+unique(mass.data$unique)
+
+
+
 
 
 ```
