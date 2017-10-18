@@ -33,6 +33,7 @@ LoadHarvestFiles<-function(){
     samp3$wetWeightForMass <- apply(samp3[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
     samp3[is.na(samp3$wetWeight), 'wetWeightForMass'] <- NA
     samp3$time <- 25
+    samp3$volMass <- as.numeric(samp3$volMass) # this needs to be removed after fixing this column for time 3
     return(samp3)
   }
   
@@ -73,8 +74,7 @@ CalcTotalDryMass<-function(data){
   
   data$totalSampleDryMass <- NA
   x <- which(data$drill == 'no'); data$totalSampleDryMass[x] <- data$dryMass[x]
-  x <- which(data$drill == 'yes'); data$totalSampleDryMass[x] <- (data$drilledWeight[x] * data$dryMass[x]) / data$wetWeightForMass[x]
-  
+  x <- which(data$drill == 'yes'); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
   return(data)
 }
 
