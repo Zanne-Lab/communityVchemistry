@@ -7,13 +7,16 @@ read_in_initial_mass <- function(){
   big <- read_csv("data/covariates_bigStems.csv")
   small <- read_csv("data/covariates_smallStems.csv")
  
-  big_out <- process_initial_file(big)
-  small_out <- process_initial_file(small)
+  big_out <- process_initial_file(big,"big")
+  small_out <- process_initial_file(small,"small")
+  
+  df_out<-bind_rows(big_out,small_out)
+  return(df_out)
 } 
   
   
   
-process_initial_file<-function(df){
+process_initial_file<-function(df,size){
   
   if ("Dry mass total (g)" %in% names(df)) {
     df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
@@ -27,7 +30,7 @@ process_initial_file<-function(df){
   
   df %>%
     left_join(moisture) %>%
-    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size="big",density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
+    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
     select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) -> df_out
   
   return(df_out)

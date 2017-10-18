@@ -2,25 +2,33 @@
 title: "analyses"
 author: "Marissa Lee"
 date: "10/18/2017"
-output: html_document
+output: github_document
 ---
 
-```{r setup, include=FALSE}
+```{r,message=FALSE}
+source("code/read_initial.R")
+source("code/functions.R")
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(vegan)
+```
+
+```{r setup, include=FALSE,message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 #load data
 
+initial_mass <- read_in_initial_mass()
+ggplot(initial_mass,aes(y=totalSampleDryMass,x=Species,fill=size))+geom_violin()+ theme(axis.text.x=element_text(angle=90,hjust=1)) + scale_y_log10()
+
+
+```
+
+
 #calculate sample total dry mass and density
 
 #rbind the dataframes
-
-smcov.data<-read.csv("data/covariates_smallStems.csv")
-data<-read.csv("data/samp1data_201402.csv")
-
-
-
-
-
 
 ```
 
