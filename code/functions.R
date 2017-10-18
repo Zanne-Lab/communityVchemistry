@@ -72,7 +72,7 @@ LoadHarvestFiles<-function(){
 CalcTotalDryMass<-function(data){
   data$totalSampleDryMass <- NA
   x <- which(data$drill == 'no'); data$dtotalSampleDryMass[x] <- data$dryMass[x]
-  x <- which(data$drill == 'yes'); data$totalSampleDryMass[x] <- (data$wetWeightForMass[x] * data$dryMass[x]) / data$drilledWeight[x]
+  x <- which(data$drill == 'yes'); data$totalSampleDryMass[x] <- (data$drilledWeight[x] * data$dryMass[x]) / data$wetWeightForMass[x]
   return(data)
 }
 
