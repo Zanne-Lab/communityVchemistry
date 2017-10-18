@@ -7,7 +7,7 @@ read_in_initial_mass <- function(){
   big <- read_csv("data/covariates_bigStems.csv")
   small <- read_csv("data/covariates_smallStems.csv")
  
-  big_out <- process_initial_file(big,"big")
+  big_out <- process_initial_file(big,"large")
   small_out <- process_initial_file(small,"small")
   
   df_out<-bind_rows(big_out,small_out)

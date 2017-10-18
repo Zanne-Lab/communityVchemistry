@@ -71,6 +71,7 @@ LoadHarvestFiles<-function(){
 
 
 CalcTotalDryMass<-function(data){
+  
   data$totalSampleDryMass <- NA
   x <- which(data$drill == 'no'); data$totalSampleDryMass[x] <- data$dryMass[x]
   x <- which(data$drill == 'yes'); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
@@ -87,6 +88,8 @@ ReorgDataFrame<-function(data){
   
   require(tidyr)
   
+  data<-harvest_data2
+  
   #add a species column
   data1<-separate(data, unique, into=c("Species","extraCode"), 4, remove=FALSE)
   
@@ -94,7 +97,7 @@ ReorgDataFrame<-function(data){
   data1$size<-NA
   data1[tolower(data1$Species) == data1$Species,"size"]<-"small"
   data1[tolower(data1$Species) != data1$Species,"size"]<-"large"
-  
+
   #rename
   data2<-rename(data1, "fruiting"="fruitingBodies","insects"="insectDamage")
   

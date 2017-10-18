@@ -6,19 +6,22 @@ output: github_document
 ---
 
 ```{r,message=FALSE}
+devtools::install_github("cornwell-lab-unsw/litterfitter")
 source("code/read_initial.R")
 source("code/functions.R")
 library(dplyr)
 library(ggplot2)
 library(readr)
 library(vegan)
+library(litterfitter)
 ```
 
 ```{r setup, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
-#load data
+#load harvest data
 
+#initial mass
 initial_mass <- read_in_initial_mass()
 
 initial_mass %>%
@@ -28,26 +31,61 @@ initial_mass %>%
   theme(axis.text.x=element_text(angle=90,hjust=1)) + 
   scale_y_log10()
 
+#mass at harvests
 harvest_data<-LoadHarvestFiles()
 harvest_data1<-CalcTotalDryMass(harvest_data)
 harvest_data2<-CalcDensity(harvest_data1)
 harvest_mass<-ReorgDataFrame(harvest_data2)
 
-
-#merge files
-colnames(initial_mass)
-colnames(harvest_mass)
+#create a complete sample mass df for all time points
 mass.data<-rbind(initial_mass, harvest_mass)
+ggplot(mass.data, aes(x=time, y=totalSampleDryMass)) + geom_point() #funky outlier
+max(mass.data$totalSampleDryMass, na.rm=TRUE)
 
-ggplot(mass.data, aes(x=time, y=totalSampleDryMass)) + geom_point()
+colnames(mass.data)
+unique(mass.data$unique)
+
+
+
 
 
 ```
 
 
-#calculate sample total dry mass and density
 
-#rbind the dataframes
 
+```{r}
+mass.data %>%
+  filter(time==0) %>%
+   rename(timeZeroDensity=density) %>%
+   rename(timeZeroMass=totalSampleDryMass) %>%
+   select(unique,timeZeroMass,timeZeroDensity)->time_zero
+
+
+
+
+mass.data %>%
+  left_join(time_zero,by="unique") %>%
+  mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
+  filter(pmr<2) %>% #remove outlier
+mutate(SpeciesCode=tolower(Species)) -> plotting_df
+
+plotting_df%>%
+ggplot(aes(x=time, y=pmr,col=SpeciesCode,shape=size)) + geom_point()+geom_smooth(method="lm",se=FALSE) ->gg1
+library(plotly)
+ggplotly(gg1)
+
+```
+
+An example using litterFitter
+
+```{r}
+plotting_df %>%
+ filter(SpeciesCode=="eute",size=="small") ->out
+  
+plot_multiple_fits(time = out$time/12,
+mass.remaining = out$pmr,
+bty = 'n', model = c('neg.exp', 'weibull'),
+xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
