@@ -39,9 +39,5 @@ ggplot(mass.data, aes(x=time, y=totalSampleDryMass)) + geom_point()
 ```
 
 
-#calculate sample total dry mass and density
 
-#rbind the dataframes
-
-```
 
