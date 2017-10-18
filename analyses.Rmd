@@ -20,7 +20,13 @@ knitr::opts_chunk$set(echo = TRUE)
 #load data
 
 initial_mass <- read_in_initial_mass()
-ggplot(initial_mass,aes(y=totalSampleDryMass,x=Species,fill=size))+geom_violin()+ theme(axis.text.x=element_text(angle=90,hjust=1)) + scale_y_log10()
+
+initial_mass %>%
+  mutate(SpeciesCode=tolower(Species))%>%
+  ggplot(aes(y=totalSampleDryMass,x=SpeciesCode,fill=size))+
+  geom_violin()+ 
+  theme(axis.text.x=element_text(angle=90,hjust=1)) + 
+  scale_y_log10()
 
 harvest_data<-LoadHarvestFiles()
 harvest_data1<-CalcTotalDryMass(harvest_data)

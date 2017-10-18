@@ -92,8 +92,8 @@ ReorgDataFrame<-function(data){
   
   #add a size column
   data1$size<-NA
-  data1[tolower(data1$species) == data1$species,"size"]<-"small"
-  data1[tolower(data1$species) != data1$species,"size"]<-"large"
+  data1[tolower(data1$Species) == data1$Species,"size"]<-"small"
+  data1[tolower(data1$Species) != data1$Species,"size"]<-"large"
   
   #rename
   data2<-rename(data1, "fruiting"="fruitingBodies","insects"="insectDamage")
