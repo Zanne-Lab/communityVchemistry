@@ -1,5 +1,27 @@
 #functions to calculate sample dry mass and density
 
+LoadHarvestFiles<-function(){
+  
+  s1<-read.csv("data/samp1data_201402.csv")
+  s2<-read.csv("data/samp2data_201408.csv")
+  s3<-read.csv("data/samp3data_201508.csv")
+  
+  #add an extra column to make all parallel
+  s1$notes<-NA
+  
+  #add column for time
+  s1$time<-6
+  s2$time<-12
+  s3$time<-24
+  
+  #bind everything together
+  s.data<-rbind(s1,s2,s3)
+  
+  return(s.data)
+  
+}
+
+
 CalcTotalDryMass<-function(data){
   data$dryMassCalc <- NA
   x <- which(data$drill == 'no'); data$dryMassCalc[x] <- data$dryMass[x]
