@@ -113,3 +113,85 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
+
+and looking at branches seperately
+
+```{r}
+
+plotting_df %>%
+  mutate(branch=as.factor(substr(plotting_df$unique, 5, 5))) %>%
+   filter(SpeciesCode=="eute",size=="large") %>%
+    ggplot(aes(x=time, y=pmr,col=branch,shape=size))+geom_point()
+  
+  geom_smooth(se=FALSE) ->gg1
+
+```
+
+
+applying to all species/size classes
+
+```{r,warning=FALSE,message=FALSE,results=FALSE}
+plotting_df %>%
+  mutate(sp_size=paste(SpeciesCode,size,sep="_")) ->out
+
+  fits <- lapply(split(out,factor(out$sp_size)),function(x){
+  fit_litter(time = x$time/12, 
+        mass.remaining = x$pmr, model = c("neg.exp"), iters = 1000)
+  })
+  
+  spdf<-data.frame(k=unlist(lapply(fits,function(x)x$optimFit$par)))
+  spdf$sp_size<-row.names(spdf)
+  
+  spdf %>%
+    separate(sp_size, c("species", "size"))%>%
+    ggplot(aes(x=size,y=k,col=species))+geom_point()
+  
+```
+
+```{r,warning=FALSE,message=FALSE,results=FALSE}
+spdf$sp_size<-row.names(spdf)
+  
+  
+  w.fits <- lapply(split(out,factor(out$sp_size)),function(x){
+  fit_litter(time = x$time/12, 
+        mass.remaining = x$pmr, model = c("weibull"), iters = 1000)
+  })
+  
+spdf<-data.frame(k=unlist(lapply(fits,
+                                 function(x)x$optimFit$par)),
+                 t70=unlist(lapply(fits,function(x)             time_to_prop_mass_remaining(x,threshold.mass=0.70))),
+                 neg.exp.aic=unlist(lapply(fits,
+                                 function(x)x$fitAICc)),
+                 w.t70=unlist(lapply(w.fits,function(x)             time_to_prop_mass_remaining(x,threshold.mass=0.70))),
+                 w.aic=unlist(lapply(w.fits,
+                                 function(x)x$fitAICc)),
+                 alpha=unlist(lapply(w.fits,
+                                 function(x)x$optimFit$par[[2]]))#check parameter order
+                 
+                 )
+
+spdf$sp_size<-rownames(spdf)
+
+
+spdf %>%
+  separate(sp_size,sep="_",into = c("species","size"))->spdf
+
+ggplot(spdf,aes(x=t70,y=w.t70,col=size))+geom_point()+labs(x="Time to 30% mass loss (negative exponential)", y="weibull time to 30% mass loss")+geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+
+write_csv(spdf,"derived_data/mass_loss_parameters.csv")
+
+spdf[which(-spdf$neg.exp.aic+spdf$w.aic < -2),]
+```
+
+
+
+```{r}
+plotting_df %>%
+  filter(SpeciesCode=="ripi",size=="small") ->out
+
+plot_multiple_fits(time = out$time/12,
+                   mass.remaining = out$pmr,
+                   bty = 'n', model = c('neg.exp', 'weibull'),
+                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
+
+```
