@@ -1,0 +1,115 @@
+---
+title: "Does chemistry or community better predict mass loss?"
+author: "Marissa Lee"
+date: "10/18/2017"
+output: github_document
+---
+
+```{r,message=FALSE}
+devtools::install_github("cornwell-lab-unsw/litterfitter")
+source("code/read_initial.R")
+source("code/functions.R")
+library(dplyr)
+library(ggplot2)
+library(readr)
+library(vegan)
+library(litterfitter)
+```
+
+Load harvest data
+
+```{r setup, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#initial mass
+initial_mass <- read_in_initial_mass()
+
+initial_mass %>%
+  mutate(SpeciesCode=tolower(Species))%>%
+  ggplot(aes(y=totalSampleDryMass,x=SpeciesCode,fill=size))+
+  geom_violin()+ 
+  theme(axis.text.x=element_text(angle=90,hjust=1)) + 
+  scale_y_log10()
+
+#mass at harvests
+harvest_data<-LoadHarvestFiles()
+harvest_data1<-CalcTotalDryMass(harvest_data)
+harvest_data2<-CalcDensity(harvest_data1)
+harvest_mass<-ReorgDataFrame(harvest_data2)
+```
+
+A first pass at plotting to look for outliers
+
+```{r}
+#create a complete sample mass df for all time points
+mass.data<-rbind(initial_mass, harvest_mass)
+mass.data %>%
+  ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
+
+#funky outlier
+max(mass.data$totalSampleDryMass, na.rm=TRUE)
+mass.data[which.max(mass.data$totalSampleDryMass),]
+```
+
+and another view.  Might want to check out those two high mass value outliers from harvest 3.  
+
+```{r}
+mass.data %>%
+  ggplot(aes(x=time, y=totalSampleDryMass,col=size)) + geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
+```
+Looking for outliers in the other direction, but I guess these are real 0's?
+
+```{r}
+
+#funky outlier
+min(mass.data$totalSampleDryMass, na.rm=TRUE)
+mass.data[which(mass.data$totalSampleDryMass==0),]
+
+#colnames(mass.data)
+#unique(mass.data$unique)
+```
+
+
+
+Merge time zero with the other harvests to calculate proportion mass remaining at each time point
+
+```{r}
+mass.data %>%
+  filter(time==0) %>%
+  rename(timeZeroDensity=density) %>%
+  rename(timeZeroMass=totalSampleDryMass) %>%
+  select(unique,timeZeroMass,timeZeroDensity)->time_zero
+
+mass.data %>%
+  left_join(time_zero,by="unique") %>%
+  mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
+  filter(pmr<2) %>% #remove outlier noted above
+  mutate(SpeciesCode=tolower(Species)) -> plotting_df
+
+plotting_df%>%
+  ggplot(aes(x=time, y=pmr,col=SpeciesCode,shape=size)) + 
+  geom_point()+geom_smooth(method="lm",se=FALSE) ->gg1
+gg1
+```
+
+
+Interactive plotting for fun
+
+```{r}
+#library(plotly)
+#ggplotly(gg1)
+
+```
+
+An example using litterFitter to remember how it works.
+
+```{r}
+plotting_df %>%
+  filter(SpeciesCode=="eute",size=="small") ->out
+
+plot_multiple_fits(time = out$time/12,
+                   mass.remaining = out$pmr,
+                   bty = 'n', model = c('neg.exp', 'weibull'),
+                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
+```
+
