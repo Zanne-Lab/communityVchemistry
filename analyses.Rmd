@@ -6,8 +6,7 @@ output: github_document
 ---
 
 ```{r,message=FALSE}
-source("code/read_initial.R")
-source("code/functions.R")
+source("code/load_fxns.R")
 library(dplyr)
 library(ggplot2)
 library(readr)
@@ -17,11 +16,14 @@ library(vegan)
 ```{r setup, message=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+##########
 #load harvest data
 
 #initial mass
 initial_mass <- read_in_initial_mass()
 ggplot(initial_mass,aes(y=totalSampleDryMass,x=Species,fill=size))+geom_violin()+ theme(axis.text.x=element_text(angle=90,hjust=1)) + scale_y_log10()
+
+# one missing value: covar.small[covar.small$unique == 'basp3l', ]
 
 #mass at harvests
 harvest_data<-LoadHarvestFiles()
@@ -32,12 +34,20 @@ harvest_mass<-ReorgDataFrame(harvest_data2)
 #create a complete sample mass df for all time points
 mass.data<-rbind(initial_mass, harvest_mass)
 ggplot(mass.data, aes(x=time, y=totalSampleDryMass)) + geom_point() #funky outlier
-max(mass.data$totalSampleDryMass, na.rm=TRUE)
+mass.data[which.max(mass.data$totalSampleDryMass),]
+data[194, ]; data[194, 'dryMassCalc'] <- NA; data[194, ]  # 'mede3g': >20g mass removed during drilling, entries match original datasheet, error unknown
+  data[165, ]; data[165, 'notes'] <- 'drilledWeight and dryMass do not include fallen bark'; data[165, ]  # 'LEPA13': >7g mass removed between pre- and post-drilling weights
+  
 
-colnames(mass.data)
-unique(mass.data$unique)
+#calculate %mass remaining at each time step
 
 
+##########
+#load initial wood trait data
+
+
+##########
+#load initial fungal community
 
 
 
