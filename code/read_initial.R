@@ -7,7 +7,7 @@ read_in_initial_mass <- function(){
   big <- read_csv("data/covariates_bigStems.csv")
   small <- read_csv("data/covariates_smallStems.csv")
  
-  big_out <- process_initial_file(big,"big")
+  big_out <- process_initial_file(big,"large")
   small_out <- process_initial_file(small,"small")
   
   df_out<-bind_rows(big_out,small_out)
@@ -28,6 +28,7 @@ process_initial_file<-function(df,size){
      group_by(Species) %>%
      summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
   
+  #TODO ADD A REAL CALCULATION OF WOOD DENSITY ONCE WE UNDERSTAND HOW TO DO THAT
   df %>%
     left_join(moisture) %>%
     mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
