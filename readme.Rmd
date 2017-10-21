@@ -195,3 +195,34 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 
 ```
+
+and without the t=0 points
+
+```{r}
+plotting_df %>%
+  filter(SpeciesCode=="ripi",size=="small",time>0) ->out
+
+plot_multiple_fits(time = out$time/12,
+                   mass.remaining = out$pmr,
+                   bty = 'n', model = c('neg.exp', 'weibull'),
+                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
+```
+
+
+```{r}
+library(magrittr)
+out%$%
+fit_litter(time = time/12, 
+        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
+print(plot_1)
+plot(plot_1)
+
+
+plotting_df %>%
+  filter(SpeciesCode=="ripi",size=="small") ->out
+out%$%
+fit_litter(time = time/12, 
+        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
+print(plot_2)
+plot(plot_2)
+```
