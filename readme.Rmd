@@ -1,7 +1,7 @@
 ---
 title: "Does chemistry or community better predict mass loss?"
 author: "Marissa Lee"
-date: "10/18/2017"
+date: "10/23/2017"
 output: github_document
 ---
 
@@ -11,13 +11,15 @@ knitr::opts_chunk$set(echo = TRUE)
 
 #libraries
 devtools::install_github("cornwell-lab-unsw/litterfitter")
-source("code/load_fxns.R")
 library(dplyr)
 library(ggplot2)
 library(readr)
 library(vegan)
 library(litterfitter)
 library(magrittr)
+library(tidyr)
+source("code/load_fxns.R")
+source("code/curve_fitting_fxns.R")
 ```
 
 ############
@@ -100,96 +102,17 @@ mass.data %>%
   mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
   filter(pmr<2) %>% #remove outlier noted above
   mutate(SpeciesCode=tolower(Species)) -> plotting_df
-
-plotting_df%>%
-  ggplot(aes(x=time, y=pmr,col=SpeciesCode,shape=size)) + 
-  geom_point()+geom_smooth(method="lm",se=FALSE) ->gg1
-gg1
 ```
 
+### Non-linear curve fits of decay trajectories
 
-Interactive plotting for fun
-
-```{r}
-#library(plotly)
-#ggplotly(gg1)
-
-```
-
-An example using litterFitter to remember how it works.
-
-```{r}
-plotting_df %>%
-  filter(SpeciesCode=="eute",size=="small") ->out
-
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-```
-
-
-and looking at branches seperately
-
-```{r}
-
-plotting_df %>%
-  mutate(branch=as.factor(substr(plotting_df$unique, 5, 5))) %>%
-   filter(SpeciesCode=="eute",size=="large") %>%
-    ggplot(aes(x=time, y=pmr,col=branch,shape=size))+geom_point()
-  
-  geom_smooth(se=FALSE) ->gg1
-
-```
-
-
-applying to all species/size classes
+Using `litterfitter` to apply both negative exponenial and weibull to all species/size classes
 
 ```{r,warning=FALSE,message=FALSE,results=FALSE}
-plotting_df %>%
-  mutate(sp_size=paste(SpeciesCode,size,sep="_")) ->out
 
-  fits <- lapply(split(out,factor(out$sp_size)),function(x){
-  fit_litter(time = x$time/12, 
-        mass.remaining = x$pmr, model = c("neg.exp"), iters = 1000)
-  })
-  
-  spdf<-data.frame(k=unlist(lapply(fits,function(x)x$optimFit$par)))
-  spdf$sp_size<-row.names(spdf)
-  
-  spdf %>%
-    separate(sp_size, c("species", "size"))%>%
-    ggplot(aes(x=size,y=k,col=species))+geom_point()
-  
-```
+#spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
+spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
-```{r,warning=FALSE,message=FALSE,results=FALSE}
-spdf$sp_size<-row.names(spdf)
-  
-  
-  w.fits <- lapply(split(out,factor(out$sp_size)),function(x){
-  fit_litter(time = x$time/12, 
-        mass.remaining = x$pmr, model = c("weibull"), iters = 1000)
-  })
-  
-spdf<-data.frame(k=unlist(lapply(fits,
-                                 function(x)x$optimFit$par)),
-                 t70=unlist(lapply(fits,function(x)             time_to_prop_mass_remaining(x,threshold.mass=0.70))),
-                 neg.exp.aic=unlist(lapply(fits,
-                                 function(x)x$fitAICc)),
-                 w.t70=unlist(lapply(w.fits,function(x)             time_to_prop_mass_remaining(x,threshold.mass=0.70))),
-                 w.aic=unlist(lapply(w.fits,
-                                 function(x)x$fitAICc)),
-                 alpha=unlist(lapply(w.fits,
-                                 function(x)x$optimFit$par[[2]]))#check parameter order
-                 
-                 )
-
-spdf$sp_size<-rownames(spdf)
-
-
-spdf %>%
-  separate(sp_size,sep="_",into = c("species","size"))->spdf
 
 ggplot(spdf,aes(x=t70,y=w.t70,col=size))+geom_point()+labs(x="Time to 30% mass loss (negative exponential)", y="weibull time to 30% mass loss")+geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
@@ -198,20 +121,35 @@ write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 spdf[which(-spdf$neg.exp.aic+spdf$w.aic < -2),]
 ```
 
-
+Here is an example where the neg.exp and the weibull curves are almost identical
 
 ```{r}
 plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small") ->out
+  filter(SpeciesCode=="eute",size=="small")  ->one_example
 
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
+plot_multiple_fits(time = one_example$time/12,
+                   mass.remaining = one_example$pmr,
                    bty = 'n', model = c('neg.exp', 'weibull'),
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 
 ```
 
-and without the t=0 points
+and one where they are pretty different:
+
+```{r}
+
+plotting_df %>%
+  filter(SpeciesCode=="ripi",size=="small") -> another_example
+
+plot_multiple_fits(time = another_example$time/12,
+                   mass.remaining = another_example$pmr,
+                   bty = 'n', model = c('neg.exp', 'weibull'),
+                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
+
+```
+### Testing effects of t=0 points
+
+replotting the last example without the t=0 points
 
 ```{r}
 plotting_df %>%
@@ -223,6 +161,8 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
+
+Checking that the fits are the same for weibull which they are 
 
 ```{r}
 
@@ -242,5 +182,5 @@ print(plot_2)
 plot(plot_2)
 ```
 
-
+Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.  
 
