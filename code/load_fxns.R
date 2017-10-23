@@ -1,6 +1,7 @@
 #load data and clean initial dataframes
 
-# Harvest data and initial mass
+#############
+# Sample mass & volume data
 
 read_in_initial_mass <- function(){
   library(readr)
@@ -142,7 +143,8 @@ ReorgDataFrame<-function(data){
 }
 
 
-# Initial chemistry data
+#############
+# Initial wood trait data
 
 load_waterPercent<-function(){
   require(dplyr)
@@ -164,9 +166,14 @@ load_waterPercent<-function(){
   ## aggregate by code
   group_by(water.percent, code) %>%
     summarize(meanWaterPerc = mean(water.percent, na.rm=TRUE),
-              sdWaterPerc = sd(water.percent, na.rm=TRUE)) -> water.percent.agg
+              sdWaterPerc = sd(water.percent, na.rm=TRUE)) -> waterPercent
+  
+  #remove sd cols
+  waterPercent<-waterPercent[,c("code","meanWaterPerc")]
+  colnames(waterPercent)<-c("code","waterperc")
+  length(unique(waterPercent$code)) #34
               
-  return(water.percent.agg)
+  return(waterPercent)
   
 }
 
@@ -187,13 +194,19 @@ load_densityNbarkthick<-function(){
     summarize(meanDensity = mean(density.gpercm3, na.rm=TRUE),
               sdDensity = sd(density.gpercm3, na.rm=TRUE),
               meanBarkthick = mean(barkthickness.mm, na.rm=TRUE),
-              sdBarkthick = sd(barkthickness.mm, na.rm=TRUE)) -> physTraits.agg
-  colnames(physTraits.agg)[1]<-"code"
+              sdBarkthick = sd(barkthickness.mm, na.rm=TRUE)) -> densityNbarkthick
+  colnames(densityNbarkthick)[1]<-"code"
   
-  return(physTraits.agg)
+  #remove sd cols
+  densityNbarkthick<-densityNbarkthick[,c("code","meanDensity","meanBarkthick")]
+  colnames(densityNbarkthick)<-c("code","density","barkthick")
+  length(unique(densityNbarkthick$code)) #22
+  
+  return(densityNbarkthick)
   
 }
 
+#issue --> why are there some species+size that are composited == TRUE and FALSE?
 load_XRF<-function(){
   require(dplyr)
   
@@ -212,9 +225,12 @@ load_XRF<-function(){
   indx<-meta[,c("SampleCode","StemSize","code","compositeSample")]
   df.xrf1<-left_join(indx,df.xrf)
   
-  ## identify samples that are not composited and do the aggregation by code
-  temp<-df.xrf1[df.xrf1$compositeSample==FALSE, ]
-  group_by(temp, code) %>%
+  group_by(df.xrf1, code) %>%
+    summarize(compos=paste(unique(compositeSample), collapse="_")) -> summ
+  #why are there some species+size that are composited == TRUE and FALSE?
+  
+  ## aggregate by code
+  group_by(df.xrf1, code) %>%
     summarize(meanP = mean(P, na.rm=TRUE),
               sdP = sd(P, na.rm=TRUE),
               
@@ -233,16 +249,12 @@ load_XRF<-function(){
               meanZn = mean(Zn, na.rm=TRUE),
               sdZn = sd(Zn, na.rm=TRUE)
               
-              ) -> temp.agg
+              ) -> xrf
 
-  aggSamps<-temp.agg[,c("code","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
-  colnames(aggSamps)<-c("code","P","K","Ca","Mn","Fe","Zn")
+  xrf<-xrf[,c("code","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
+  colnames(xrf)<-c("code","P","K","Ca","Mn","Fe","Zn")
   
-  #combine composite and aggregated samples
-  compSamps<-df.xrf1[df.xrf1$compositeSample==TRUE,c("code","P","K","Ca","Mn","Fe","Zn")]
-  xrfSamps<-data.frame(rbind(aggSamps,compSamps))
-  
-  return(xrfSamps)
+  return(xrf)
 }
 
 load_CN<-function(){
@@ -261,104 +273,93 @@ load_CN<-function(){
   meta$compositeSample <- T
   meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
   
-  ## fix sample names for composited samples
+  ## fix code for composited samples
   indx<-meta[,c("SampleCode","StemSize","code","compositeSample")]
   temp<-merge(cndata, indx, by.x="sampleID",by.y="SampleCode", all.x=TRUE)
-  
-  x<-temp[,"sampleID"]
-  x
+  temp[is.na(temp$compositeSample),"compositeSample"]<-TRUE
+  x<-temp[temp$compositeSample==TRUE,"sampleID"]
   xx<-unlist(strsplit(x,"pooled"))
-  xx
+  xx<-tolower(xx)
   xx[xx=="cali "]<-"cali"
   xx[xx=="acelextra"]<-"acel"
-  temp[,"code"]<-substr(xx, 1,4)
-  temp[,"compositeSample"]<-TRUE
+  temp[temp$compositeSample==TRUE,"code"]<-substr(xx, 1,4)
+  temp[temp$compositeSample==TRUE,"StemSize"]<-"small"
   
-  
-  
-  
-  ## look up code in meta to fill in species and speciesStemSize
-  temp<-temp[,c("sampleID","n.perc","c.perc","StemSize","code","compositeSample")]
-  indx<-unique(meta[,c("code","species","speciesStemSize")])
-  temp<-merge(temp,indx, by="code", all.x=TRUE)
-  ## identify the composite samples
-  pooledCodes<-codes$code %in% temp[temp$compositeSample==TRUE,"code"] 
-  codes$code[pooledCodes]
-  ## identify samples that are not composited, but for which there is a pooled sample
-  tmp<-temp[temp$compositeSample==FALSE & temp$code %in% codes$code[pooledCodes], ]
-  ddply(tmp, ~code, summarize, numReps=sum(!is.na(sampleID))) #number of samples per code.. there are not 3 for all of them, so I am just going to use the composite values
-  ## identify samples that are not composited and there is no pooled sample
-  tmp<-temp[temp$compositeSample==FALSE & !temp$code %in% codes$code[pooledCodes], ]
-  tmp$speciesStemSize<-paste(tmp$species, tmp$StemSize, sep="__")
   # aggregate values by code
-  tmp.agg <- summaryBy(n.perc + c.perc ~ speciesStemSize, data=tmp, FUN=c(mean, sd), na.rm=T)
-  indx<-unique(tmp[,c("speciesStemSize","code")])
-  tmp2<-left_join(tmp.agg, indx)
-  aggSamps<-tmp2[,c("speciesStemSize","n.perc.mean","c.perc.mean","code")]
-  colnames(aggSamps)<-c("speciesStemSize","n.perc","c.perc","code")
-  #combine composite and aggregated samples
-  compSamps<-temp[temp$compositeSample==TRUE,c("speciesStemSize","n.perc","c.perc","code")]
-  cnSamps<-data.frame(rbind(aggSamps,compSamps))
+  group_by(temp, code) %>%
+    summarize(meanN = mean(n.perc, na.rm=TRUE),
+              sdN = sd(n.perc, na.rm=TRUE),
+              
+              meanC = mean(c.perc, na.rm=TRUE),
+              sdC = sd(c.perc, na.rm=TRUE)
+              
+    ) -> temp.agg
+  aggSamps<-temp.agg[,c("code","meanN","meanC")]
+  colnames(aggSamps)<-c("code","n.perc","c.perc")
+  cn<-data.frame(aggSamps)
+  length(unique(cn$code)) #33
+  
+  return(cn)
+  
+}
+
+mergeTraitData<-function(){
+  
+  #load code-aggregated trait data
+  waterPercent<-load_waterPercent()
+  densityNbarkthick<-load_densityNbarkthick()
+  xrf<-load_XRF()
+  cn<-load_CN()
+  
+  # merge together water percent, traits, and xrf.mean by 'code'
+  tmp<-left_join(waterPercent, densityNbarkthick)
+  tmp<-left_join(tmp, xrf)
+  traits<-left_join(tmp, cn)
+  
+  # rename columns
+  traits<-rename(traits, "N"="n.perc", "C"="c.perc")
+  
+  # use species-level small-stem estimates of density and barkthick for large-stem samples
+  traits$species_lower<-tolower(traits$code)
+  traits$size<-"small"
+  traits[tolower(traits$code)!=traits$code,"size"]<-"large"
+  largeCodes<-as.data.frame(traits[traits$size=="large","code"])[,1]
+  for(i in 1:length(largeCodes)){
+    curr.code<-largeCodes[i]
+    curr.species_lower<-tolower(curr.code)
+    filter(traits, species_lower==curr.species_lower) %>%
+      filter(size=="small") -> curr.row
+    curr.data<-data.frame(curr.row[,c("density","barkthick")])
+    traits[traits$code == curr.code, c("density","barkthick")]<-curr.data
+  }
+  
+  traits<-traits[,c("code", "species_lower","size",
+                    "waterperc","density","barkthick","P" ,"K" ,"Ca" ,"Mn","Fe","Zn" ,"N","C")]
+  
+  #summarize trait ranges
+  traits.long<-as.data.frame(gather(traits, key=trait, value=value, -(1:3)))
+  group_by(traits.long, trait) %>%
+    summarize(max=range(value, na.rm=TRUE)[1],
+              min=range(value, na.rm=TRUE)[2])
+  
+  return(traits)
   
 }
 
 
+#############
+# Initial microbial community data
 
-
-
-
-
-####### NEED TO MODIFY
-
-
-
-
-  
- 
-  
-  # integrate species-level estimates of wood chemistry data into traits table ([NO EUSC DATA FOR SMALL SIZE CLASS] maybe only use from 'small' size class? - no interaction observed in adonis analysis [in 'analysis_T0.R'], only for K in univariate analysis)
-
-
- 
-  
-  
-  #merge together xrfSamps and cnSamps
-  xrfcnSamps<-left_join(xrfSamps,cnSamps)
-  
-  # merge together water percent, traits, and xrf.mean
-  tmp<-left_join(water.percent.agg, xrfcnSamps)
-  tmp<-separate(tmp, col=speciesStemSize, into=c("species","StemSize"), sep="__", remove=FALSE)
-  traits<-left_join(tmp, physTraits.agg)
-  traits.mean<-traits[,c("species","StemSize",
-                         "density.gpercm3.mean","barkthickness.mm.mean","water.percent.mean",
-                         "P","K","Ca","Mn","Fe","Zn","n.perc","c.perc")]
-  colnames(traits.mean)<-c("species","size",
-                           "density","barkthick","waterperc",
-                           "P","K","Ca","Mn","Fe","Zn","N","C")
-  dim(traits.mean)
-  tmp<-gather(traits.mean, key=trait, value=value, 3:13)
-  ddply(tmp, ~trait, summarize,
-        max=range(value, na.rm=TRUE)[1],
-        min=range(value, na.rm=TRUE)[2])
-  
-  
-
-
-
-
-
-
-
-
-#based on woodDecay_dataPrep_sequencing_T0_refactor.R
 load_matotu<-function(){
   
   # read in taxonomy
   tax <- read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors=F)
   
   # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
-  data.otu <- read.csv('data/sequencing_T0/DP16_OTUtable.csv')
+  data.otu <- read.csv('data/sequencing_T0/DP16_OTUtable.csv', stringsAsFactors = FALSE)
   mat.otu <- as.matrix(data.otu[, 2:ncol(data.otu)]); rownames(mat.otu) <- data.otu[, 1]
+  
+  sum(colSums(mat.otu)==0) # if 0, then there are no empty columns
   
   # read in dataframe that contains sample information (also used to create meta and xrf)
   data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
@@ -388,148 +389,101 @@ load_matotu<-function(){
   
 }
 
-#based on woodDecay_dataPrep_traits_T0.R
-load_traits_mean <- function(harvest, meta) {
+add_oomycetes<-function(fung.otu){
   
-  # get "codes" from harvest
-  spl <- split(harvest[, c('code', 'species', 'family', 'site','size')], harvest$code) 
-  codes <- do.call(rbind, lapply(spl, function(x) {x[1, ]})) 
-  codes$code <- as.character(codes$code) 
+  # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
+  data.otu <- read.csv('data/sequencing_T0/OTUtable_oomycetes_20171020.csv', row.names=1)
+  data.df<-data.frame(seqSamp=row.names(data.otu), data.otu)
   
-  # read in initial covariate data
-  covar.big <-read.csv('data/covariates_bigStems.csv', stringsAsFactor = F)
-  covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
+  #make mat.otu of fungal taxa a dataframe
+  fung.otu<-mat.otu
+  fung.df<-data.frame(seqSamp=row.names(fung.otu), fung.otu)
   
-  # calculate water content for each species, size class (SIGNIFICANT INTERACTION TERM, HOW TO COMBINE; IS THIS EVEN INFORMATIVE?)
-  water.percent <- c(with(covar.big, (Fresh.mass..g. - Dry.mass..g.) / Dry.mass..g.),
-                     with(covar.small, (Fresh.mass..g. - Dry.mass.total..g.) / Dry.mass.total..g.))
+  #merge by seqSamp
+  comm.df<-left_join(fung.df, data.df)
   
-  water.percent <- data.frame(code=c(covar.big$Species, covar.small$Species),
-                              StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
-                              water.percent, stringsAsFactors=F)
-  #m1 <- lm(water.percent ~ species * StemSize, data=water.percent)
-  #Anova(m1)
-  #visreg(m1, xvar='species', by='StemSize', overlay=T)
-  indx<-codes[,c("code","size","species")]
-  water.percent.tmp <- left_join(indx, water.percent)
-  water.percent.tmp$speciesStemSize<-paste(water.percent.tmp$species, water.percent.tmp$StemSize, sep="__") #why is this data so sparse?
-  ## by species x stemSize
-  water.percent.agg <-
-    summaryBy(
-      water.percent ~ speciesStemSize,
-      data = water.percent.tmp,
-      FUN = c(mean, sd),
-      na.rm = T
+  #make NAs into 0s
+  comm.df[is.na(comm.df)]<-0
+  
+  #make dataframe into a matrix again
+  row.names(comm.df)<-comm.df$seqSamp
+  comm.mat<-comm.df[,-1]
+  comm.mat<-as.matrix(comm.mat)
+  
+  return(comm.mat)
+}
+
+#need to add oomycete taxa
+load_TaxAndFunguild <- function() {
+  require(dplyr)
+  
+  funguild <-read.delim('data/sequencing_T0/DP16_funguild.txt', stringsAsFactors = F)
+  tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
+  
+  # merge the dataframes by OTUId
+  colnames(tax)[1] <- "OTUId" #make this match the column name in funguild
+  taxAndFunguild <- full_join(tax, funguild)
+  
+  return(taxAndFunguild)
+}
+
+# calc_matotu_summStats<-function(mat.otu, meta){
+#   
+#   #total number of OTUs
+#   totalOTUs<-dim(mat.otu)[2]
+#   
+#   #mean sample richness
+#   richness<-apply(mat.otu,MARGIN = 1,function(x) sum(x>0))
+#   meanRichness<-mean(richness)
+#   seRichness<-sd(richness)/sqrt(length(richness))
+#   
+#   #mean sample evenness
+#   H <- diversity(mat.otu) 
+#   S <- specnumber(mat.otu) ## rowSums(BCI > 0) does the same...
+#   J <- H/log(S) #Pielou's evenness (J)
+#   meanJ<-mean(J)
+#   seJ<-sd(J)/sqrt(length(J))
+#   
+#   #mean number of reads per sample
+#   meanReads<-mean(rowSums(mat.otu))
+#   seReads<-sd(rowSums(mat.otu))/sqrt(length(rowSums(mat.otu)))
+#   seReads
+#   
+#   summaryStats<-data.frame(label=c("totalOTUs","meanRichness","seRichness","meanEvenness","seEvenness"),
+#                            value=c(totalOTUs, meanRichness, seRichness, meanJ, seJ))
+#   round(summaryStats$value, digits=4)
+#   write.csv(summaryStats, file="output/matotu_summary.csv")
+# }
+
+plot_sampleEffortCurves<-function(mat.otu){
+  
+  pdf(file="output/sampleEffortCurve.pdf", width=5, height=5)
+  
+  rarecurve(mat.otu, step=100,
+            xlab="Number of reads per sample", 
+            ylab="Cumulative number of OTUs", label=FALSE)
+  dev.off()
+  
+}
+
+
+##############
+
+make_ggplot_theme <- function(){
+  
+  #my ggplot template
+  mytheme <- theme_bw(base_size = 10, base_family = "Helvetica") +
+    theme(panel.border = element_rect(colour = "black"),      #put a black box around the plotting area
+          axis.line = element_line(colour = "black"),                 #axis lines are in black
+          panel.grid.major = element_blank(),                         #turn off the gridlines
+          panel.grid.minor = element_blank(),
+          strip.text.x = element_text(face='bold.italic', hjust=0.05),         #turn off the x axis facet labels
+          strip.text.y = element_text(face='bold.italic', hjust=0.05),
+          strip.background = element_rect(fill = 'white', colour='black'),    #make y axis facet labels be italic and top justified
+          legend.key = element_blank(),                               #turn off box around legend
+          plot.title=element_text(hjust=0, vjust=0.5, face='bold'), #style and position of the panel label
+          plot.margin = unit(c(0.05,0.05,0.05,0.05),"in")
     )
-  dim(water.percent.agg)
   
-  # calculate wood density and bark thickness for each species
-  #only have these values measured on small stems
-  covar.small$density.gpercm3 <-
-    with(covar.small, Dry.mass.wood..g. / Volume..g.)
-  #hist(covar.small$density.gpercm3)
-  covar.small$barkthickness.mm <-
-    with(covar.small, Diameter.wbark..mm. - Diameter.nobark..mm.)
-  #hist(covar.small$barkthickness.mm)
-  covar.small <-
-    left_join(covar.small, codes, by = c('Species' = 'code'))
-  # summary(lm(density.gpercm3 ~ species, data=covar.small))
-  # summary(lm(barkthickness.mm ~ species, data=covar.small))
-  physTraits.agg <-
-    summaryBy(
-      density.gpercm3 + barkthickness.mm ~ species,
-      data = covar.small,
-      FUN = c(mean, sd),
-      na.rm = T
-    )
-  dim(physTraits.agg)
-  
-  # integrate species-level estimates of wood chemistry data into traits table ([NO EUSC DATA FOR SMALL SIZE CLASS] maybe only use from 'small' size class? - no interaction observed in adonis analysis [in 'analysis_T0.R'], only for K in univariate analysis)
-  # read in dataframe that contains sample information and xrf data (also used to create meta)
-  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
-  df.xrf<-data.frame(SampleCode=data$SampleCode, data[, 26:ncol(data)])
-  df.xrf<-df.xrf[df.xrf$SampleCode!="blank",]
-  indx<-meta[,c("SampleCode","speciesStemSize","compositeSample")]
-  df.xrf1<-left_join(indx,df.xrf)
-  # deal with composite samples in xrf
-  ## add code to df.xrf1
-  indx<-meta[,c("SampleCode","StemSize","code","species")]
-  df.xrf2<-left_join(df.xrf1, indx)
-  ## identify the composite samples
-  pooledCodes<-codes$code %in% df.xrf2[df.xrf2$compositeSample==TRUE,"SampleCode"] 
-  codes$code[pooledCodes]
-  ## identify samples that are not composited, but for which there is a pooled sample
-  temp<-df.xrf2[df.xrf2$compositeSample==FALSE & df.xrf2$code %in% codes$code[pooledCodes], ]
-  ddply(temp, ~code, summarize, numReps=sum(!is.na(SampleCode))) #number of samples per code.. there are not 3 for all of them, so I am just going to use the composite values
-  ## identify samples that are not composited and there is no pooled sample
-  temp<-df.xrf2[df.xrf2$compositeSample==FALSE & !df.xrf2$code %in% codes$code[pooledCodes], ]
-  # aggregate values by code
-  temp.agg <- summaryBy(P + K + Ca + Mn + Fe + Zn ~ speciesStemSize, data=temp, FUN=c(mean, sd), na.rm=T)
-  indx<-unique(temp[,c("speciesStemSize","code")])
-  temp2<-left_join(temp.agg, indx)
-  aggSamps<-temp2[,c("speciesStemSize","P.mean","K.mean","Ca.mean","Mn.mean","Fe.mean","Zn.mean","code")]
-  colnames(aggSamps)<-c("speciesStemSize","P","K","Ca","Mn","Fe","Zn","code")
-  #combine composite and aggregated samples
-  compSamps<-df.xrf2[df.xrf2$compositeSample==TRUE,c("speciesStemSize","P","K","Ca","Mn","Fe","Zn","code")]
-  xrfSamps<-data.frame(rbind(aggSamps,compSamps))
-  
-  # read in CN data
-  cndata <- read.csv('data/CN/JEFF_POWELL_CN_DATA_DIVERSITY_ROT_AUG_2013.csv', stringsAsFactors=F)
-  colnames(cndata)<-c("sampleID","comments","mass","n.perc","c.perc")
-  # deal with composite samples in xrf
-  ## fix sample names for composited/pooled samples
-  indx<-meta[,c("SampleCode","StemSize","code","species","speciesStemSize","compositeSample")]
-  temp<-merge(cndata, indx, by.x="sampleID",by.y="SampleCode", all.x=TRUE)
-  x<-temp[is.na(temp$species),"sampleID"]
-  xx<-unlist(strsplit(x,"pooled"))
-  xx<-tolower(xx)
-  xx[xx=="cali "]<-"cali"
-  xx[xx=="acelextra"]<-"acel"
-  temp[is.na(temp$species),"code"]<-xx
-  temp[is.na(temp$species),"StemSize"]<-"small"
-  temp[is.na(temp$species),"compositeSample"]<-TRUE
-  ## look up code in meta to fill in species and speciesStemSize
-  temp<-temp[,c("sampleID","n.perc","c.perc","StemSize","code","compositeSample")]
-  indx<-unique(meta[,c("code","species","speciesStemSize")])
-  temp<-merge(temp,indx, by="code", all.x=TRUE)
-  ## identify the composite samples
-  pooledCodes<-codes$code %in% temp[temp$compositeSample==TRUE,"code"] 
-  codes$code[pooledCodes]
-  ## identify samples that are not composited, but for which there is a pooled sample
-  tmp<-temp[temp$compositeSample==FALSE & temp$code %in% codes$code[pooledCodes], ]
-  ddply(tmp, ~code, summarize, numReps=sum(!is.na(sampleID))) #number of samples per code.. there are not 3 for all of them, so I am just going to use the composite values
-  ## identify samples that are not composited and there is no pooled sample
-  tmp<-temp[temp$compositeSample==FALSE & !temp$code %in% codes$code[pooledCodes], ]
-  tmp$speciesStemSize<-paste(tmp$species, tmp$StemSize, sep="__")
-  # aggregate values by code
-  tmp.agg <- summaryBy(n.perc + c.perc ~ speciesStemSize, data=tmp, FUN=c(mean, sd), na.rm=T)
-  indx<-unique(tmp[,c("speciesStemSize","code")])
-  tmp2<-left_join(tmp.agg, indx)
-  aggSamps<-tmp2[,c("speciesStemSize","n.perc.mean","c.perc.mean","code")]
-  colnames(aggSamps)<-c("speciesStemSize","n.perc","c.perc","code")
-  #combine composite and aggregated samples
-  compSamps<-temp[temp$compositeSample==TRUE,c("speciesStemSize","n.perc","c.perc","code")]
-  cnSamps<-data.frame(rbind(aggSamps,compSamps))
-  
-  #merge together xrfSamps and cnSamps
-  xrfcnSamps<-left_join(xrfSamps,cnSamps)
-  
-  # merge together water percent, traits, and xrf.mean
-  tmp<-left_join(water.percent.agg, xrfcnSamps)
-  tmp<-separate(tmp, col=speciesStemSize, into=c("species","StemSize"), sep="__", remove=FALSE)
-  traits<-left_join(tmp, physTraits.agg)
-  traits.mean<-traits[,c("species","StemSize",
-                         "density.gpercm3.mean","barkthickness.mm.mean","water.percent.mean",
-                         "P","K","Ca","Mn","Fe","Zn","n.perc","c.perc")]
-  colnames(traits.mean)<-c("species","size",
-                           "density","barkthick","waterperc",
-                           "P","K","Ca","Mn","Fe","Zn","N","C")
-  dim(traits.mean)
-  tmp<-gather(traits.mean, key=trait, value=value, 3:13)
-  ddply(tmp, ~trait, summarize,
-        max=range(value, na.rm=TRUE)[1],
-        min=range(value, na.rm=TRUE)[2])
-  
-  
-  return(traits.mean)
+  return(mytheme)
 }

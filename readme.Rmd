@@ -20,14 +20,38 @@ library(litterfitter)
 library(magrittr)
 ```
 
+
 ############
-Load chemistry data
+Load microbial community data
 
 ```{r , message=FALSE}
 
+fung.otu<-load_matotu()
+comm.otu<-add_oomycetes(fung.otu)
+
+plot_sampleEffortCurves(comm.otu)
+
+```
 
 
+############
+Load wood trait data
 
+```{r , message=FALSE}
+
+trait.means<-mergeTraitData()
+traits.long<-as.data.frame(gather(trait.means, key=trait, value=value, -(1:3)))
+
+ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
+  geom_point() + 
+  facet_wrap(~trait, scales="free") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+#the Fe values are vastly different between the size classes
+subset(traits.long, trait=="Fe") %>%
+  ggplot(aes(x=species_lower, y=value, color=size)) + 
+  geom_point() +
+  facet_wrap(~size, scales="free")
 
 ```
 
