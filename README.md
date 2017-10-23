@@ -1,34 +1,34 @@
 Does chemistry or community better predict mass loss?
 ================
 Marissa Lee
-10/18/2017
+10/23/2017
 
 ``` r
+#chunk options
+knitr::opts_chunk$set(echo = TRUE)
+
+#libraries
 devtools::install_github("cornwell-lab-unsw/litterfitter")
-source("code/read_initial.R")
-source("code/functions.R")
 library(dplyr)
-```
-
-    ## Warning: package 'dplyr' was built under R version 3.4.1
-
-``` r
 library(ggplot2)
 library(readr)
 library(vegan)
-```
-
-    ## Warning: package 'vegan' was built under R version 3.4.1
-
-``` r
 library(litterfitter)
+library(magrittr)
+library(tidyr)
+source("code/load_fxns.R")
+source("code/curve_fitting_fxns.R")
 ```
+
+############ 
+
+Load chemistry data
+
+############ 
 
 Load harvest data
 
 ``` r
-knitr::opts_chunk$set(echo = TRUE)
-
 #initial mass
 initial_mass <- read_in_initial_mass()
 
@@ -68,7 +68,7 @@ mass.data %>%
 
     ## Warning: Removed 34 rows containing missing values (geom_point).
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-2-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png)
 
 ``` r
 #funky outlier
@@ -98,7 +98,7 @@ mass.data %>%
 
     ## Warning: Removed 34 rows containing missing values (geom_point).
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png) Looking for outliers in the other direction, but I guess these are real 0's?
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-4-1.png) Looking for outliers in the other direction, but I guess these are real 0's?
 
 ``` r
 #funky outlier
@@ -144,107 +144,21 @@ mass.data %>%
   mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
   filter(pmr<2) %>% #remove outlier noted above
   mutate(SpeciesCode=tolower(Species)) -> plotting_df
-
-plotting_df%>%
-  ggplot(aes(x=time, y=pmr,col=SpeciesCode,shape=size)) + 
-  geom_point()+geom_smooth(method="lm",se=FALSE) ->gg1
-gg1
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-5-1.png)
+### Non-linear curve fits of decay trajectories
 
-Interactive plotting for fun
-
-``` r
-#library(plotly)
-#ggplotly(gg1)
-```
-
-An example using litterFitter to remember how it works.
+Using `litterfitter` to apply both negative exponenial and weibull to all species/size classes
 
 ``` r
-plotting_df %>%
-  filter(SpeciesCode=="eute",size=="small") ->out
+#spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
+spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-```
-
-    ## Number of successful fits:  996  out of 1000 
-    ## Number of successful fits:  999  out of 1000
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
-
-and looking at branches seperately
-
-``` r
-plotting_df %>%
-  mutate(branch=as.factor(substr(plotting_df$unique, 5, 5))) %>%
-   filter(SpeciesCode=="eute",size=="large") %>%
-    ggplot(aes(x=time, y=pmr,col=branch,shape=size))+geom_point()
-```
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png)
-
-``` r
-  geom_smooth(se=FALSE) ->gg1
-```
-
-applying to all species/size classes
-
-``` r
-plotting_df %>%
-  mutate(sp_size=paste(SpeciesCode,size,sep="_")) ->out
-
-  fits <- lapply(split(out,factor(out$sp_size)),function(x){
-  fit_litter(time = x$time/12, 
-        mass.remaining = x$pmr, model = c("neg.exp"), iters = 1000)
-  })
-  
-  spdf<-data.frame(k=unlist(lapply(fits,function(x)x$optimFit$par)))
-  spdf$sp_size<-row.names(spdf)
-  
-  spdf %>%
-    separate(sp_size, c("species", "size"))%>%
-    ggplot(aes(x=size,y=k,col=species))+geom_point()
-```
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
-
-``` r
-spdf$sp_size<-row.names(spdf)
-  
-  
-  w.fits <- lapply(split(out,factor(out$sp_size)),function(x){
-  fit_litter(time = x$time/12, 
-        mass.remaining = x$pmr, model = c("weibull"), iters = 1000)
-  })
-  
-spdf<-data.frame(k=unlist(lapply(fits,
-                                 function(x)x$optimFit$par)),
-                 t70=unlist(lapply(fits,function(x)             time_to_prop_mass_remaining(x,threshold.mass=0.70))),
-                 neg.exp.aic=unlist(lapply(fits,
-                                 function(x)x$fitAICc)),
-                 w.t70=unlist(lapply(w.fits,function(x)             time_to_prop_mass_remaining(x,threshold.mass=0.70))),
-                 w.aic=unlist(lapply(w.fits,
-                                 function(x)x$fitAICc)),
-                 alpha=unlist(lapply(w.fits,
-                                 function(x)x$optimFit$par[[2]]))#check parameter order
-                 
-                 )
-
-spdf$sp_size<-rownames(spdf)
-
-
-spdf %>%
-  separate(sp_size,sep="_",into = c("species","size"))->spdf
 
 ggplot(spdf,aes(x=t70,y=w.t70,col=size))+geom_point()+labs(x="Time to 30% mass loss (negative exponential)", y="weibull time to 30% mass loss")+geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
 
 ``` r
 write_csv(spdf,"derived_data/mass_loss_parameters.csv")
@@ -252,22 +166,44 @@ write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 spdf[which(-spdf$neg.exp.aic+spdf$w.aic < -2),]
 ```
 
+Here is an example where the neg.exp and the weibull curves are almost identical
+
 ``` r
 plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small") ->out
+  filter(SpeciesCode=="eute",size=="small")  ->one_example
 
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
+plot_multiple_fits(time = one_example$time/12,
+                   mass.remaining = one_example$pmr,
                    bty = 'n', model = c('neg.exp', 'weibull'),
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
-    ## Number of successful fits:  994  out of 1000 
-    ## Number of successful fits:  1000  out of 1000
+    ## Number of successful fits:  998  out of 1000 
+    ## Number of successful fits:  999  out of 1000
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)
+    ## Warning in multioptimFit(time, mass.remaining, model, iters = iters, upper
+    ## = upper, : May not have found global best fit; increase iterations
 
-and without the t=0 points
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png)
+
+and one where they are pretty different:
+
+``` r
+plotting_df %>%
+  filter(SpeciesCode=="ripi",size=="small") -> another_example
+
+plot_multiple_fits(time = another_example$time/12,
+                   mass.remaining = another_example$pmr,
+                   bty = 'n', model = c('neg.exp', 'weibull'),
+                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
+```
+
+    ## Number of successful fits:  991  out of 1000 
+    ## Number of successful fits:  999  out of 1000
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png) \#\#\# Testing effects of t=0 points
+
+replotting the last example without the t=0 points
 
 ``` r
 plotting_df %>%
@@ -279,21 +215,12 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
-    ## Number of successful fits:  990  out of 1000 
+    ## Number of successful fits:  996  out of 1000 
     ## Number of successful fits:  1000  out of 1000
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
 
-``` r
-library(magrittr)
-```
-
-    ## 
-    ## Attaching package: 'magrittr'
-
-    ## The following object is masked from 'package:tidyr':
-    ## 
-    ##     extract
+Checking that the fits are the same for weibull which they are
 
 ``` r
 out%$%
@@ -301,7 +228,7 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
 ```
 
-    ## Number of successful fits:  1000  out of 1000
+    ## Number of successful fits:  999  out of 1000
 
 ``` r
 print(plot_1)
@@ -316,7 +243,7 @@ print(plot_1)
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       27       27 
+    ##       35       35 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -368,7 +295,7 @@ print(plot_1)
 plot(plot_1)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-13-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)
 
 ``` r
 plotting_df %>%
@@ -379,6 +306,9 @@ fit_litter(time = time/12,
 ```
 
     ## Number of successful fits:  1000  out of 1000
+
+    ## Warning in multioptimFit(time, mass.remaining, model, iters = iters, upper
+    ## = upper, : May not have found global best fit; increase iterations
 
 ``` r
 print(plot_2)
@@ -393,7 +323,7 @@ print(plot_2)
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       21       21 
+    ##       23       23 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -460,4 +390,6 @@ print(plot_2)
 plot(plot_2)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-13-2.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-2.png)
+
+Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation. Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.
