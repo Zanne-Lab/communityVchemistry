@@ -6,21 +6,36 @@ output: github_document
 ---
 
 ```{r,message=FALSE}
+#chunk options
+knitr::opts_chunk$set(echo = TRUE)
+
+#libraries
 devtools::install_github("cornwell-lab-unsw/litterfitter")
-source("code/read_initial.R")
-source("code/functions.R")
+source("code/load_fxns.R")
 library(dplyr)
 library(ggplot2)
 library(readr)
 library(vegan)
 library(litterfitter)
+library(magrittr)
 ```
 
+############
+Load chemistry data
+
+```{r , message=FALSE}
+
+
+
+
+
+```
+
+
+############
 Load harvest data
 
 ```{r setup, message=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-
 #initial mass
 initial_mass <- read_in_initial_mass()
 
@@ -210,7 +225,7 @@ plot_multiple_fits(time = out$time/12,
 
 
 ```{r}
-library(magrittr)
+
 out%$%
 fit_litter(time = time/12, 
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
@@ -226,3 +241,6 @@ fit_litter(time = time/12,
 print(plot_2)
 plot(plot_2)
 ```
+
+
+

@@ -1,12 +1,14 @@
 #load data and clean initial dataframes
 
+# Harvest data and initial mass
+
 read_in_initial_mass <- function(){
   library(readr)
   library(dplyr)
   big <- read_csv("data/covariates_bigStems.csv")
   small <- read_csv("data/covariates_smallStems.csv")
   
-  big_out <- process_initial_file(big,"big")
+  big_out <- process_initial_file(big,"large")
   small_out <- process_initial_file(small,"small")
   
   df_out<-bind_rows(big_out,small_out)
@@ -25,6 +27,7 @@ process_initial_file<-function(df,size){
     group_by(Species) %>%
     summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
   
+  #TODO ADD A REAL CALCULATION OF WOOD DENSITY ONCE WE UNDERSTAND HOW TO DO THAT
   df %>%
     left_join(moisture) %>%
     mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
@@ -120,8 +123,6 @@ ReorgDataFrame<-function(data){
   
   require(tidyr)
   
-  data<-harvest_data2
-  
   #add a species column
   data1<-separate(data, unique, into=c("Species","extraCode"), 4, remove=FALSE)
   
@@ -140,45 +141,214 @@ ReorgDataFrame<-function(data){
   
 }
 
-####### NEED TO MODIFY
 
-# load_harvest<-function(){
-#   
-#   # read in species data; contains names, codes, family ID, collection location
-#   species <- read.csv('data/species.csv', stringsAsFactor=F)
-#   # fix a spelling error
-#   species[species$Binomial=="Ricinocarpus pinifolius","Binomial"]<-"Ricinocarpos pinifolius"
-#   
-#   # read in deployment data; contains metadata (species/size, ID number, stem number, deployment order)
-#   deploy <- read.csv('data/deployment.csv', stringsAsFactor=F)
-#   
-#   return(harvest)
-# }
+# Initial chemistry data
 
-#based on woodDecay_dataPrep_sequencing_T0_refactor.R
-load_meta<-function(){
+load_waterPercent<-function(){
+  require(dplyr)
   
-  # read in dataframe that contains sample information
+  # read in initial covariate data
+  covar.big <-read.csv('data/covariates_bigStems.csv', stringsAsFactor = F)
+  covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
+  
+  # calculate water content for each species, size class
+  water.percent <- c(with(covar.big, (Fresh.mass..g. - Dry.mass..g.) / Dry.mass..g.),
+                     with(covar.small, (Fresh.mass..g. - Dry.mass.total..g.) / Dry.mass.total..g.))
+  water.percent <- data.frame(code=c(covar.big$Species, covar.small$Species),
+                              StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
+                              water.percent, stringsAsFactors=F)
+  
+  #why is this so sparse?
+  #View(water.percent)
+  
+  ## aggregate by code
+  group_by(water.percent, code) %>%
+    summarize(meanWaterPerc = mean(water.percent, na.rm=TRUE),
+              sdWaterPerc = sd(water.percent, na.rm=TRUE)) -> water.percent.agg
+              
+  return(water.percent.agg)
+  
+}
+
+load_densityNbarkthick<-function(){
+  require(dplyr)
+  
+  # read in initial covariate data
+  covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
+  
+  # calculate wood density and bark thickness for each species
+  #only have these values measured on small stems
+  
+  covar.small$density.gpercm3 <- with(covar.small, Dry.mass.wood..g. / Volume..g.)
+  covar.small$barkthickness.mm <- with(covar.small, Diameter.wbark..mm. - Diameter.nobark..mm.)
+  
+  ## aggregate by species (all small size)
+  group_by(covar.small, Species) %>%
+    summarize(meanDensity = mean(density.gpercm3, na.rm=TRUE),
+              sdDensity = sd(density.gpercm3, na.rm=TRUE),
+              meanBarkthick = mean(barkthickness.mm, na.rm=TRUE),
+              sdBarkthick = sd(barkthickness.mm, na.rm=TRUE)) -> physTraits.agg
+  colnames(physTraits.agg)[1]<-"code"
+  
+  return(physTraits.agg)
+  
+}
+
+load_XRF<-function(){
+  require(dplyr)
+  
   data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
+  data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
   
-  # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  data <- data[!data$SampleCode == 'blank', ]
-  
-  # create dataframe containing metadata for sequencing, XRF data
+  # create dataframe containing metadata for initial sequencing and XRF data
   meta <- data[, c('SampleCode', 'StemSize', 'mgSample', 'NucleicAcidConc', 'ExtractionDate')]
   meta$code <- substr(meta$SampleCode, 1, 4)
-
   # add column to 'meta' indicating whether data obtained from independent/composite sample
   meta$compositeSample <- T
   meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
-  meta[, c('SampleCode', 'compositeSample')]
   
-  # add column that identifies unique species x stemSize
-  meta$speciesStemSize<-paste(meta$species, meta$StemSize, sep="__")
-  #length(unique(meta$speciesStemSize))
+  #isolate XRF cols
+  df.xrf<-data.frame(SampleCode=data$SampleCode, data[, 26:ncol(data)])
+  indx<-meta[,c("SampleCode","StemSize","code","compositeSample")]
+  df.xrf1<-left_join(indx,df.xrf)
   
-  return(meta)
+  ## identify samples that are not composited and do the aggregation by code
+  temp<-df.xrf1[df.xrf1$compositeSample==FALSE, ]
+  group_by(temp, code) %>%
+    summarize(meanP = mean(P, na.rm=TRUE),
+              sdP = sd(P, na.rm=TRUE),
+              
+              meanK = mean(K, na.rm=TRUE),
+              sdK = sd(K, na.rm=TRUE),
+              
+              meanCa = mean(Ca, na.rm=TRUE),
+              sdCa = sd(Ca, na.rm=TRUE),
+              
+              meanMn = mean(Mn, na.rm=TRUE),
+              sdMn = sd(Mn, na.rm=TRUE),
+              
+              meanFe = mean(Fe, na.rm=TRUE),
+              sdFe = sd(Fe, na.rm=TRUE),
+              
+              meanZn = mean(Zn, na.rm=TRUE),
+              sdZn = sd(Zn, na.rm=TRUE)
+              
+              ) -> temp.agg
+
+  aggSamps<-temp.agg[,c("code","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
+  colnames(aggSamps)<-c("code","P","K","Ca","Mn","Fe","Zn")
+  
+  #combine composite and aggregated samples
+  compSamps<-df.xrf1[df.xrf1$compositeSample==TRUE,c("code","P","K","Ca","Mn","Fe","Zn")]
+  xrfSamps<-data.frame(rbind(aggSamps,compSamps))
+  
+  return(xrfSamps)
 }
+
+load_CN<-function(){
+  require(dplyr)
+  
+  # read in CN data
+  cndata <- read.csv('data/CN/JEFF_POWELL_CN_DATA_DIVERSITY_ROT_AUG_2013.csv', stringsAsFactors=F)
+  colnames(cndata)<-c("sampleID","comments","mass","n.perc","c.perc")
+  
+  #create meta from XRF meta data
+  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
+  data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
+  meta <- data[, c('SampleCode', 'StemSize', 'mgSample', 'NucleicAcidConc', 'ExtractionDate')]
+  meta$code <- substr(meta$SampleCode, 1, 4)
+  # add column to 'meta' indicating whether data obtained from independent/composite sample
+  meta$compositeSample <- T
+  meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
+  
+  ## fix sample names for composited samples
+  indx<-meta[,c("SampleCode","StemSize","code","compositeSample")]
+  temp<-merge(cndata, indx, by.x="sampleID",by.y="SampleCode", all.x=TRUE)
+  
+  x<-temp[,"sampleID"]
+  x
+  xx<-unlist(strsplit(x,"pooled"))
+  xx
+  xx[xx=="cali "]<-"cali"
+  xx[xx=="acelextra"]<-"acel"
+  temp[,"code"]<-substr(xx, 1,4)
+  temp[,"compositeSample"]<-TRUE
+  
+  
+  
+  
+  ## look up code in meta to fill in species and speciesStemSize
+  temp<-temp[,c("sampleID","n.perc","c.perc","StemSize","code","compositeSample")]
+  indx<-unique(meta[,c("code","species","speciesStemSize")])
+  temp<-merge(temp,indx, by="code", all.x=TRUE)
+  ## identify the composite samples
+  pooledCodes<-codes$code %in% temp[temp$compositeSample==TRUE,"code"] 
+  codes$code[pooledCodes]
+  ## identify samples that are not composited, but for which there is a pooled sample
+  tmp<-temp[temp$compositeSample==FALSE & temp$code %in% codes$code[pooledCodes], ]
+  ddply(tmp, ~code, summarize, numReps=sum(!is.na(sampleID))) #number of samples per code.. there are not 3 for all of them, so I am just going to use the composite values
+  ## identify samples that are not composited and there is no pooled sample
+  tmp<-temp[temp$compositeSample==FALSE & !temp$code %in% codes$code[pooledCodes], ]
+  tmp$speciesStemSize<-paste(tmp$species, tmp$StemSize, sep="__")
+  # aggregate values by code
+  tmp.agg <- summaryBy(n.perc + c.perc ~ speciesStemSize, data=tmp, FUN=c(mean, sd), na.rm=T)
+  indx<-unique(tmp[,c("speciesStemSize","code")])
+  tmp2<-left_join(tmp.agg, indx)
+  aggSamps<-tmp2[,c("speciesStemSize","n.perc.mean","c.perc.mean","code")]
+  colnames(aggSamps)<-c("speciesStemSize","n.perc","c.perc","code")
+  #combine composite and aggregated samples
+  compSamps<-temp[temp$compositeSample==TRUE,c("speciesStemSize","n.perc","c.perc","code")]
+  cnSamps<-data.frame(rbind(aggSamps,compSamps))
+  
+}
+
+
+
+
+
+
+
+####### NEED TO MODIFY
+
+
+
+
+  
+ 
+  
+  # integrate species-level estimates of wood chemistry data into traits table ([NO EUSC DATA FOR SMALL SIZE CLASS] maybe only use from 'small' size class? - no interaction observed in adonis analysis [in 'analysis_T0.R'], only for K in univariate analysis)
+
+
+ 
+  
+  
+  #merge together xrfSamps and cnSamps
+  xrfcnSamps<-left_join(xrfSamps,cnSamps)
+  
+  # merge together water percent, traits, and xrf.mean
+  tmp<-left_join(water.percent.agg, xrfcnSamps)
+  tmp<-separate(tmp, col=speciesStemSize, into=c("species","StemSize"), sep="__", remove=FALSE)
+  traits<-left_join(tmp, physTraits.agg)
+  traits.mean<-traits[,c("species","StemSize",
+                         "density.gpercm3.mean","barkthickness.mm.mean","water.percent.mean",
+                         "P","K","Ca","Mn","Fe","Zn","n.perc","c.perc")]
+  colnames(traits.mean)<-c("species","size",
+                           "density","barkthick","waterperc",
+                           "P","K","Ca","Mn","Fe","Zn","N","C")
+  dim(traits.mean)
+  tmp<-gather(traits.mean, key=trait, value=value, 3:13)
+  ddply(tmp, ~trait, summarize,
+        max=range(value, na.rm=TRUE)[1],
+        min=range(value, na.rm=TRUE)[2])
+  
+  
+
+
+
+
+
+
+
 
 #based on woodDecay_dataPrep_sequencing_T0_refactor.R
 load_matotu<-function(){
