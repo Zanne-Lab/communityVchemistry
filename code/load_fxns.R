@@ -95,8 +95,8 @@ read.samp4 <- function(s3){
 
 CalcTotalDryMass<-function(data){
   data$totalSampleDryMass <- NA
-  x <- which(data$drill == 'no'); data$totalSampleDryMass[x] <- data$dryMass[x]
-  x <- which(data$drill == 'yes'); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
+  x <- which(data$drill == 'no' | data$dryMass == 0); data$totalSampleDryMass[x] <- data$dryMass[x]
+  x <- which(data$drill == 'yes' & data$dryMass > 0); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
   return(data)
 }
 
@@ -138,8 +138,7 @@ LoadHarvestFiles<-function(){
   
   #bind everything together
   s.data<-rbind(s1,s2,s3,s4)
-  filter(s.data, drill=="yes" & wetWeight == 0) #ripi1j is drilled, has a wetWeight ==0 and wetWeightExcess==0
-  
+
   #calculate total dry mass
   s.data<-CalcTotalDryMass(s.data)
 
@@ -150,9 +149,8 @@ LoadHarvestFiles<-function(){
   s.data<-ReorgDataFrame(s.data)
   
   #check for missing data
-  filter(s.data, is.na(totalSampleDryMass)) #see issue with ripi1j above
-  s.data<-s.data[s.data$unique!="ripi1j",] #exclude ripi1j for now
-  
+  filter(s.data, is.na(totalSampleDryMass)) 
+
   return(s.data)
   
 }
