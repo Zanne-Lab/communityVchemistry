@@ -210,7 +210,9 @@ p.alpha<-ggplot(join.dist.alpha, aes(x=mean_comm_dist, y=abs(decayparam_dist), c
   geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
   xlab('Mean microbial community distance') + ylab("Delta decay model alpha")
 
+#pdf('output/commDist_decayparamDist_byCode.pdf', width=4, height=9)
 grid.arrange(p.aic, p.k, p.alpha)
+#dev.off()
 
 
 #combine delta decay param columns
