@@ -20,6 +20,7 @@ library(magrittr)
 library(tidyr)
 source("code/load_fxns.R")
 source("code/curve_fitting_fxns.R")
+source("code/distance_fxns.R")
 ```
 
 ### Load microbial community data
@@ -172,6 +173,124 @@ Conclusion: including t=0 points affects the liklihood and the model selection c
 
 ### Plot beta diversity of microbial community vs beta diversity of decay params
 ```{r}
+#####
+#calculate pairwise community distances
+
+#1. create sample table for the community data
+sampTab<-unique(mass.data[,c("Species","size")])
+sampTab<-rename(sampTab, "code"="Species")
+seq_sampName<-row.names(comm.otu)
+indx<-data.frame(seq_sampName=seq_sampName, code=substr(seq_sampName, 1, 4))
+sampTab<-left_join(indx, sampTab)
+
+#2. calc dist, make it long format
+dist <- vegdist(as.matrix(comm.otu), method = "bray", upper=TRUE, diag=TRUE)  #calculate jaccard index
+dist.mat<-as.matrix(dist)
+dist.df<-extract_uniquePairDists(dist.mat) #make the distance matrix long and add metadata
+dist.df<-rename(dist.df, "sampID1"="sp1", "sampID2"="sp2")
+
+#3. annotate distances with sample info
+indx<-rename(sampTab, "sampID"="seq_sampName")
+left_join(dist.df, indx, by=c("sampID1" = "sampID")) %>%
+  rename("code1"="code",
+         "size1"="size") -> dist.df1 # use the index to add info for 1st sample
+left_join(dist.df1, indx, by=c("sampID2" = "sampID")) %>%
+  rename("code2"="code",
+         "size2"="size") -> dist.df2 # use the index to add info for the 2nd sample
+
+#4. remove distances between size classes
+comm.dist<-subset(dist.df2, size1 == size2)
+
+#####
+#calculate pairwise min AIC distances
+
+
+#1. find the min AIC for each species+size
+spdf<-mutate(spdf, minAIC = pmin(neg.exp.aic, w.aic) )
+
+#2. identify spdf by code
+sampTab<-mutate(sampTab, species=tolower(code))
+indx<-unique(sampTab[,c("code","species","size")])
+spdf<-left_join(spdf, indx) #put code into the dataframe
+#fix an NA code
+spdf[is.na(spdf$code),"code"]<-"eusc"
+
+#3. calc the pairwise differences in minAIC
+v <- spdf$minAIC
+z <- outer(v,v,'-') # sp1 - sp2 = dist
+colnames(z)<-spdf$code
+row.names(z)<-spdf$code
+dist.df<-extract_uniquePairDists(z) #make the distance matrix long and add metadata
+dist.df<-rename(dist.df, "code1"="sp1", "code2"="sp2")
+
+#4. add back species + size identifiers
+indx<-unique(sampTab[,c("code","species","size")])
+left_join(dist.df, indx, by=c("code1" = "code")) %>%
+  rename("species1"="species",
+         "size1"="size") -> dist.df1 # use the index to add info for 1st sample
+left_join(dist.df1, indx, by=c("code2" = "code")) %>%
+  rename("species2"="species",
+         "size2"="size") -> dist.df2 # use the index to add info for the 2nd sample
+
+#4. remove distances between size classes
+aic.dist<-subset(dist.df2, size1 == size2)
+
+
+
+#####
+#merge community and AIC distances into the same dataframe
+#community
+comm.dist$codePair<-paste(comm.dist$code1, comm.dist$code2, sep="_")
+comm.df<-comm.dist[,c("codePair","dist")]
+comm.df<-rename(comm.df, "comm_dist"="dist")
+summ.comm_dist<-group_by(comm.df, codePair) %>%
+  summarize(mean=mean(comm_dist),
+            se=sd(comm_dist)/sqrt(length(comm_dist)),
+            lower=mean-se,
+            upper=mean+se)
+summ.comm_dist<-rename(summ.comm_dist, "mean_comm_dist"="mean",
+                       "lower_comm_dist"="lower",
+                       "upper_comm_dist"="upper")
+unique(summ.comm_dist$codePair)
+
+#aic
+aic.dist$codePair<-paste(aic.dist$code1, aic.dist$code2, sep="_")
+aic.dist$codePair_rev<-paste(aic.dist$code2, aic.dist$code1, sep="_")
+aic.df<-aic.dist[,c("codePair","codePair_rev","dist")]
+aic.df<-rename(aic.df, "aic_dist"="dist")
+aic.df_forward<-aic.df[,c("codePair","aic_dist")]
+aic.df_reverse<-aic.df[,c("codePair_rev","aic_dist")]
+uniqAICcodePairs<-unique(c(aic.df$codePair, aic.df$codePair_rev))
+
+#why are all these code pairs missing from aic.df?
+missingCodePairs<-summ.comm_dist$codePair[!unique(summ.comm_dist$codePair) %in% uniqAICcodePairs]
+# df<-data.frame(codePair=missingCodePairs)
+#  df %>%
+#   separate(codePair, into=c("code1","code2"), remove=FALSE) %>%
+#   filter(code1 != code2) #1. aic does not include code pairs within the same species+size
+
+summ.comm_dist %>%
+  left_join(aic.df_forward) %>% #join with the forward versions of aic.df$codePair
+  rename("aic_dist_forward"="aic_dist") %>%
+  left_join(aic.df_reverse, by=c("codePair"="codePair_rev")) %>%
+  rename("aic_dist_reverse"="aic_dist") -> summ.comm_dist
+
+filter(summ.comm_dist, is.na(aic_dist_forward) & !is.na(aic_dist_reverse)) %>%
+  mutate(aic_dist=aic_dist_reverse) -> reverse.rows
+filter(summ.comm_dist, !is.na(aic_dist_forward) & is.na(aic_dist_reverse)) %>%
+  mutate(aic_dist=aic_dist_forward) -> forward.rows
+summ.comm_dist<-bind_rows(reverse.rows, forward.rows)
+summ.comm_dist<-summ.comm_dist[,c("codePair","mean_comm_dist","lower_comm_dist","upper_comm_dist","aic_dist")]
+
+#add size back
+summ.comm_dist$size<-"large"
+summ.comm_dist[tolower(summ.comm_dist$codePair) == summ.comm_dist$codePair,"size"]<-"small"
+
+ggplot(summ.comm_dist, aes(x=mean_comm_dist, y=abs(aic_dist), color=size)) + 
+  geom_point() + 
+  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
+  xlab('Mean microbial community distance') + ylab("Delta decay model AIC")
+
 
 ```
 
