@@ -64,7 +64,7 @@ initial_mass <- read_in_initial_mass()
 harvest_mass<-LoadHarvestFiles()
 
 #create a complete sample mass df for all time points
-mass.data<-rbind(initial_mass, harvest_mass)
+mass.data<-bind_rows(initial_mass, harvest_mass)
 
 ```
 Identify outliers in mass loss data
@@ -118,8 +118,11 @@ Using `litterfitter` to apply both negative exponenial and weibull to all specie
 spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 
-
-ggplot(spdf,aes(x=t70,y=w.t70,col=size))+geom_point()+labs(x="Time to 30% mass loss (negative exponential)", y="weibull time to 30% mass loss")+geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
+  geom_point()+
+  labs(x="Time to 30% mass loss (negative exponential)", 
+       y="weibull time to 30% mass loss")+
+  geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
 # #Here is an example where the neg.exp and the weibull curves are almost identical
 # plotting_df %>%
@@ -215,6 +218,7 @@ grid.arrange(p.aic, p.k, p.alpha)
 #dev.off()
 
 ```
+Not a lot of information in mean inital community distance about species+size decay trajectories
 
 ### Plot beta diversity of wood traits vs distance in decay params
 ```{r}
@@ -254,26 +258,34 @@ grid.arrange(p.aic, p.k, p.alpha)
 #dev.off()
 
 ```
+Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial mean communities distances
 
 ### Look at 3-way relationship between species+size distances: wood trait, microbial community, and k
 ```{r}
 
 comm_wood_decay.dist.k<-left_join(comm_decay.dist.k, wood_decay.dist.k)
 
-p1<-ggplot(comm_wood_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist)) + 
+#what is up with the missing data in woodTraitDist?
+select(comm_wood_decay.dist.k, size, mean_comm_dist, woodTraitDist, decayparam_dist) %>%
+  filter(complete.cases(size, comm_wood_decay.dist.k, mean_comm_dist, woodTraitDist, decayparam_dist)) -> df.k
+
+p1<-ggplot(df.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
   geom_point() + xlab("Mean microbial community distance") + ylab("Decay rate (k) distance")
 
-p2<-ggplot(comm_wood_decay.dist.k, aes(x=woodTraitDist, y=decayparam_dist)) + 
+p2<-ggplot(df.k, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
   geom_point() +  xlab("Wood trait distance") + ylab("Decay rate (k) distance")
 
-p3<-ggplot(comm_wood_decay.dist.k, aes(x=mean_comm_dist, y=woodTraitDist)) + 
+p3<-ggplot(df.k, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) + 
   geom_point() +  xlab("Mean microbial community distance") + ylab("Wood trait distance")
 
 #pdf('output/triDist_k_byCode.pdf', width=6, height=6)
 grid.arrange(p1,p2,p3, ncol=2)
 #dev.off()
 
+cor(df.k[,-1])
+
 ```
+Another view that emphasizes the relationship between wood trait distance and decay rate distances between species+size classes.  Mean microbial community distance is not correlated with either variable.
 
 ### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
 ```{r}
@@ -318,4 +330,7 @@ grid.arrange(p.negexp.aic, p.w.aic)
 #dev.off()
 
 ```
+Expected to see a positive relationship between AIC and within species+size class microbial community distance. In other words, expected that samples with similar initial microbial communities would have better-fitting decay models.
 
+The large size samples show no pattern
+The small size samples show (maybe) the opposite pattern

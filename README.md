@@ -131,7 +131,7 @@ harvest_mass<-LoadHarvestFiles()
 
 ``` r
 #create a complete sample mass df for all time points
-mass.data<-rbind(initial_mass, harvest_mass)
+mass.data<-bind_rows(initial_mass, harvest_mass)
 ```
 
 Identify outliers in mass loss data
@@ -149,11 +149,12 @@ mass.data %>%
 mass.data[which.max(mass.data$totalSampleDryMass),]
 ```
 
-    ## # A tibble: 1 x 9
-    ##    unique Species  size  time totalSampleDryMass   density
-    ##     <chr>   <chr> <chr> <dbl>              <dbl>     <dbl>
-    ## 1 ALLI111    ALLI large    37           1242.641 0.7351301
-    ## # ... with 3 more variables: fruiting <chr>, insects <chr>, drill <chr>
+    ## # A tibble: 1 x 10
+    ##    unique Species  size  time totalSampleDryMass density
+    ##     <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>
+    ## 1 ALLI111    ALLI large    37            1242.64    0.74
+    ## # ... with 4 more variables: fruiting <chr>, insects <chr>, drill <chr>,
+    ## #   notes <chr>
 
 ``` r
 outlier.uniques<-as.character(mass.data[which.max(mass.data$totalSampleDryMass),"unique"])
@@ -183,12 +184,12 @@ filter(mass.data, size=="small", time==25) %>%
 tmp[1:2,]
 ```
 
-    ## # A tibble: 2 x 9
-    ##   unique Species  size  time totalSampleDryMass   density fruiting insects
-    ##    <chr>   <chr> <chr> <dbl>              <dbl>     <dbl>    <chr>   <chr>
-    ## 1 alli3l    alli small    25              18.37 0.6488873   hyphae        
-    ## 2 hase1k    hase small    25              16.04 0.6005241                 
-    ## # ... with 1 more variables: drill <chr>
+    ## # A tibble: 2 x 10
+    ##   unique Species  size  time totalSampleDryMass density fruiting insects
+    ##    <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>    <chr>   <chr>
+    ## 1 alli3l    alli small    25              18.37    0.65   hyphae        
+    ## 2 hase1k    hase small    25              16.04    0.60                 
+    ## # ... with 2 more variables: drill <chr>, notes <chr>
 
 ``` r
 outlier.uniques<-c(outlier.uniques, tmp$unique[1:2])
@@ -200,20 +201,15 @@ Are these real 0's?
 mass.data[which(mass.data$totalSampleDryMass==0),]
 ```
 
-    ## # A tibble: 10 x 9
-    ##     unique Species  size  time totalSampleDryMass density fruiting insects
-    ##      <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>    <chr>   <chr>
-    ##  1  ripi1j    ripi small    37                  0     NaN                4
-    ##  2  eute2b    eute small    37                  0     NaN             <NA>
-    ##  3  acel2f    acel small    37                  0     NaN                3
-    ##  4  olst1c    olst small    37                  0     NaN             <NA>
-    ##  5  eusc3j    eusc small    37                  0     NaN                3
-    ##  6  olst1e    olst small    37                  0     NaN             <NA>
-    ##  7 ALLI311    ALLI large    37                  0     NaN             <NA>
-    ##  8  hase2b    hase small    37                  0     NaN                4
-    ##  9  baae1a    baae small    37                  0     NaN             <NA>
-    ## 10  eute1e    eute small    37                  0     NaN                4
-    ## # ... with 1 more variables: drill <chr>
+    ## # A tibble: 5 x 10
+    ##    unique Species  size  time totalSampleDryMass density fruiting insects
+    ##     <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>    <chr>   <chr>
+    ## 1  ripi1j    ripi small    37                  0     NaN                4
+    ## 2 ALLI311    ALLI large    37                  0     NaN             <NA>
+    ## 3  hase2b    hase small    37                  0     NaN                4
+    ## 4  baae1a    baae small    37                  0     NaN             <NA>
+    ## 5  eute1e    eute small    37                  0     NaN                4
+    ## # ... with 2 more variables: drill <chr>, notes <chr>
 
 Remove outliers from mass.data and merge time zero with the other harvests to calculate proportion mass remaining at each time point
 
@@ -242,8 +238,11 @@ Using `litterfitter` to apply both negative exponenial and weibull to all specie
 spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 
-
-ggplot(spdf,aes(x=t70,y=w.t70,col=size))+geom_point()+labs(x="Time to 30% mass loss (negative exponential)", y="weibull time to 30% mass loss")+geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
+  geom_point()+
+  labs(x="Time to 30% mass loss (negative exponential)", 
+       y="weibull time to 30% mass loss")+
+  geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
@@ -281,8 +280,8 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
-    ## Number of successful fits:  987  out of 1000 
-    ## Number of successful fits:  999  out of 1000
+    ## Number of successful fits:  988  out of 1000 
+    ## Number of successful fits:  1000  out of 1000
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png) Checking that the fits are the same for weibull which they are
 
@@ -300,14 +299,14 @@ print(plot_1)
 
     ## $optimFit
     ## $optimFit$par
-    ## [1] 2.167896 1.575979
+    ## [1] 2.167791 1.576424
     ## 
     ## $optimFit$value
-    ## [1] 0.5691124
+    ## [1] 0.5690418
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       25       25 
+    ##       22       22 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -317,16 +316,16 @@ print(plot_1)
     ## 
     ## 
     ## $logLik
-    ## [1] 10.84625
+    ## [1] 10.84774
     ## 
     ## $fitAIC
-    ## [1] -17.6925
+    ## [1] -17.69548
     ## 
     ## $fitAICc
-    ## [1] -17.12107
+    ## [1] -17.12405
     ## 
     ## $fitBIC
-    ## [1] -15.33639
+    ## [1] -15.33937
     ## 
     ## $time
     ##  [1] 0.5833333 0.5833333 0.5833333 0.5833333 0.5833333 0.5833333 1.0833333
@@ -335,16 +334,16 @@ print(plot_1)
     ## [22] 3.0833333 3.0833333 3.0833333
     ## 
     ## $mass
-    ##  [1] 0.8074037 0.7059619 0.7383556 0.9853129 0.9853245 0.9773359 0.4475656
-    ##  [8] 0.4802992 0.6065266 0.8842247 0.9266620 0.8901663 0.2295541 0.2520352
-    ## [15] 0.4086021 0.4715314 0.6029402 0.5922796 0.0000000 0.1444158 0.0307866
-    ## [22] 0.3935514 0.1626236 0.1413729
+    ##  [1] 0.80702715 0.70635658 0.73831715 0.98531286 0.98532447 0.97733591
+    ##  [7] 0.44745619 0.48033810 0.60704277 0.88422473 0.92666205 0.89016632
+    ## [13] 0.22928849 0.25228526 0.40869266 0.47153137 0.60294025 0.59227957
+    ## [19] 0.00000000 0.14378464 0.03073876 0.39355135 0.16262361 0.14137293
     ## 
     ## $predicted
-    ##  [1] 0.8813256 0.8813256 0.8813256 0.8813256 0.8813256 0.8813256 0.7152553
-    ##  [8] 0.7152553 0.7152553 0.7152553 0.7152553 0.7152553 0.3909324 0.3909324
-    ## [15] 0.3909324 0.3909324 0.3909324 0.3909324 0.1751357 0.1751357 0.1751357
-    ## [22] 0.1751357 0.1751357 0.1751357
+    ##  [1] 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822 0.7153111
+    ##  [8] 0.7153111 0.7153111 0.7153111 0.7153111 0.7153111 0.3909110 0.3909110
+    ## [15] 0.3909110 0.3909110 0.3909110 0.3909110 0.1750647 0.1750647 0.1750647
+    ## [22] 0.1750647 0.1750647 0.1750647
     ## 
     ## $model
     ## [1] "weibull"
@@ -371,7 +370,10 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
 ```
 
-    ## Number of successful fits:  999  out of 1000
+    ## Number of successful fits:  1000  out of 1000
+
+    ## Warning in multioptimFit(time, mass.remaining, model, iters = iters, upper
+    ## = upper, : May not have found global best fit; increase iterations
 
 ``` r
 print(plot_2)
@@ -379,14 +381,14 @@ print(plot_2)
 
     ## $optimFit
     ## $optimFit$par
-    ## [1] 2.167896 1.575979
+    ## [1] 2.167791 1.576424
     ## 
     ## $optimFit$value
-    ## [1] 0.5691124
+    ## [1] 0.5690418
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       13       13 
+    ##       32       32 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -396,16 +398,16 @@ print(plot_2)
     ## 
     ## 
     ## $logLik
-    ## [1] 54.60435
+    ## [1] 54.60807
     ## 
     ## $fitAIC
-    ## [1] -105.2087
+    ## [1] -105.2161
     ## 
     ## $fitAICc
-    ## [1] -104.9982
+    ## [1] -105.0056
     ## 
     ## $fitBIC
-    ## [1] -101.02
+    ## [1] -101.0274
     ## 
     ## $time
     ##  [1] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
@@ -419,15 +421,16 @@ print(plot_2)
     ## [57] 3.0833333 3.0833333 3.0833333 3.0833333
     ## 
     ## $mass
-    ##  [1] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ##  [8] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [15] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [22] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [29] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [36] 1.0000000 0.8074037 0.7059619 0.7383556 0.9853129 0.9853245 0.9773359
-    ## [43] 0.4475656 0.4802992 0.6065266 0.8842247 0.9266620 0.8901663 0.2295541
-    ## [50] 0.2520352 0.4086021 0.4715314 0.6029402 0.5922796 0.0000000 0.1444158
-    ## [57] 0.0307866 0.3935514 0.1626236 0.1413729
+    ##  [1] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
+    ##  [7] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
+    ## [13] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
+    ## [19] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
+    ## [25] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
+    ## [31] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
+    ## [37] 0.80702715 0.70635658 0.73831715 0.98531286 0.98532447 0.97733591
+    ## [43] 0.44745619 0.48033810 0.60704277 0.88422473 0.92666205 0.89016632
+    ## [49] 0.22928849 0.25228526 0.40869266 0.47153137 0.60294025 0.59227957
+    ## [55] 0.00000000 0.14378464 0.03073876 0.39355135 0.16262361 0.14137293
     ## 
     ## $predicted
     ##  [1] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
@@ -435,10 +438,10 @@ print(plot_2)
     ## [15] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
     ## [22] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
     ## [29] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [36] 1.0000000 0.8813256 0.8813256 0.8813256 0.8813256 0.8813256 0.8813256
-    ## [43] 0.7152553 0.7152553 0.7152553 0.7152553 0.7152553 0.7152553 0.3909324
-    ## [50] 0.3909324 0.3909324 0.3909324 0.3909324 0.3909324 0.1751357 0.1751357
-    ## [57] 0.1751357 0.1751357 0.1751357 0.1751357
+    ## [36] 1.0000000 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822
+    ## [43] 0.7153111 0.7153111 0.7153111 0.7153111 0.7153111 0.7153111 0.3909110
+    ## [50] 0.3909110 0.3909110 0.3909110 0.3909110 0.3909110 0.1750647 0.1750647
+    ## [57] 0.1750647 0.1750647 0.1750647 0.1750647
     ## 
     ## $model
     ## [1] "weibull"
@@ -571,6 +574,8 @@ grid.arrange(p.aic, p.k, p.alpha)
 #dev.off()
 ```
 
+Not a lot of information in mean inital community distance about species+size decay trajectories
+
 ### Plot beta diversity of wood traits vs distance in decay params
 
 ``` r
@@ -659,6 +664,8 @@ grid.arrange(p.aic, p.k, p.alpha)
 #dev.off()
 ```
 
+Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial mean communities distances
+
 ### Look at 3-way relationship between species+size distances: wood trait, microbial community, and k
 
 ``` r
@@ -668,28 +675,37 @@ comm_wood_decay.dist.k<-left_join(comm_decay.dist.k, wood_decay.dist.k)
     ## Joining, by = c("codePair", "size", "decayparam_dist")
 
 ``` r
-p1<-ggplot(comm_wood_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist)) + 
+#what is up with the missing data in woodTraitDist?
+select(comm_wood_decay.dist.k, size, mean_comm_dist, woodTraitDist, decayparam_dist) %>%
+  filter(complete.cases(size, comm_wood_decay.dist.k, mean_comm_dist, woodTraitDist, decayparam_dist)) -> df.k
+
+p1<-ggplot(df.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
   geom_point() + xlab("Mean microbial community distance") + ylab("Decay rate (k) distance")
 
-p2<-ggplot(comm_wood_decay.dist.k, aes(x=woodTraitDist, y=decayparam_dist)) + 
+p2<-ggplot(df.k, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
   geom_point() +  xlab("Wood trait distance") + ylab("Decay rate (k) distance")
 
-p3<-ggplot(comm_wood_decay.dist.k, aes(x=mean_comm_dist, y=woodTraitDist)) + 
+p3<-ggplot(df.k, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) + 
   geom_point() +  xlab("Mean microbial community distance") + ylab("Wood trait distance")
 
 #pdf('output/triDist_k_byCode.pdf', width=6, height=6)
 grid.arrange(p1,p2,p3, ncol=2)
 ```
 
-    ## Warning: Removed 208 rows containing missing values (geom_point).
-
-    ## Warning: Removed 208 rows containing missing values (geom_point).
-
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
 
 ``` r
 #dev.off()
+
+cor(df.k[,-1])
 ```
+
+    ##                 mean_comm_dist woodTraitDist decayparam_dist
+    ## mean_comm_dist      1.00000000    0.07362931      0.09170396
+    ## woodTraitDist       0.07362931    1.00000000      0.26622256
+    ## decayparam_dist     0.09170396    0.26622256      1.00000000
+
+Another view that emphasizes the relationship between wood trait distance and decay rate distances between species+size classes. Mean microbial community distance is not correlated with either variable.
 
 ### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
 
@@ -767,3 +783,7 @@ grid.arrange(p.negexp.aic, p.w.aic)
 ``` r
 #dev.off()
 ```
+
+Expected to see a positive relationship between AIC and within species+size class microbial community distance. In other words, expected that samples with similar initial microbial communities would have better-fitting decay models.
+
+The large size samples show no pattern The small size samples show (maybe) the opposite pattern
