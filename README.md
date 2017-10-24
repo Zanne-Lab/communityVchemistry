@@ -281,7 +281,7 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
-    ## Number of successful fits:  995  out of 1000 
+    ## Number of successful fits:  987  out of 1000 
     ## Number of successful fits:  999  out of 1000
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png) Checking that the fits are the same for weibull which they are
@@ -292,7 +292,7 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
 ```
 
-    ## Number of successful fits:  998  out of 1000
+    ## Number of successful fits:  1000  out of 1000
 
 ``` r
 print(plot_1)
@@ -307,7 +307,7 @@ print(plot_1)
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       26       26 
+    ##       25       25 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -371,7 +371,7 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
 ```
 
-    ## Number of successful fits:  1000  out of 1000
+    ## Number of successful fits:  999  out of 1000
 
 ``` r
 print(plot_2)
@@ -386,7 +386,7 @@ print(plot_2)
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       15       15 
+    ##       13       13 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -519,38 +519,38 @@ alpha.dist<-Calc_decayParamDiffs(valueCol="alpha", spdf, sampTab)
 
 ``` r
 #merge community and decay param distances into the same dataframe
-join.dist.aic<-MergeCommNDecaydists_byCodePair(decayparam.dist=aic.dist, summ.comm_dist)
+comm_decay.dist.aic<-MergeCommNDecaydists_byCodePair(decayparam.dist=aic.dist, summ.comm_dist)
 ```
 
     ## Joining, by = "codePair"
 
 ``` r
-join.dist.k<-MergeCommNDecaydists_byCodePair(decayparam.dist=k.dist, summ.comm_dist)
+comm_decay.dist.k<-MergeCommNDecaydists_byCodePair(decayparam.dist=k.dist, summ.comm_dist)
 ```
 
     ## Joining, by = "codePair"
 
 ``` r
-join.dist.alpha<-MergeCommNDecaydists_byCodePair(decayparam.dist=alpha.dist, summ.comm_dist)
+comm_decay.dist.alpha<-MergeCommNDecaydists_byCodePair(decayparam.dist=alpha.dist, summ.comm_dist)
 ```
 
     ## Joining, by = "codePair"
 
 ``` r
 # delta minAIC
-p.aic<-ggplot(join.dist.aic, aes(x=mean_comm_dist, y=abs(decayparam_dist), color=size)) + 
+p.aic<-ggplot(comm_decay.dist.aic, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
   geom_point() + 
   geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
   xlab('Mean microbial community distance') + ylab("Delta decay model AIC")
 
 # delta k
-p.k<-ggplot(join.dist.k, aes(x=mean_comm_dist, y=abs(decayparam_dist), color=size)) + 
+p.k<-ggplot(comm_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
   geom_point() + 
   geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
   xlab('Mean microbial community distance') + ylab("Delta decay model k")
 
 # delta alpha
-p.alpha<-ggplot(join.dist.alpha, aes(x=mean_comm_dist, y=abs(decayparam_dist), color=size)) + 
+p.alpha<-ggplot(comm_decay.dist.alpha, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
   geom_point() + 
   geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
   xlab('Mean microbial community distance') + ylab("Delta decay model alpha")
@@ -569,94 +569,126 @@ grid.arrange(p.aic, p.k, p.alpha)
 
 ``` r
 #dev.off()
-
-
-#combine delta decay param columns
-j1<-rename(join.dist.aic, "aic_dist"="decayparam_dist") %>%
-  select(codePair, size, mean_comm_dist, aic_dist)
-j2<-rename(join.dist.k, "k_dist"="decayparam_dist") %>%
-  select(codePair, size, mean_comm_dist, k_dist)
-j3<-rename(join.dist.alpha, "alpha_dist"="decayparam_dist") %>%
-  select(codePair, size, mean_comm_dist, alpha_dist)
-
-left_join(j1, j2) %>%
-  left_join(j3) -> join.dist
-```
-
-    ## Joining, by = c("codePair", "size", "mean_comm_dist")
-
-    ## Joining, by = c("codePair", "size", "mean_comm_dist")
-
-``` r
-join.dist<-mutate(join.dist, aic_dist=abs(aic_dist)) %>%
-  mutate(k_dist=abs(k_dist)) %>%
-  mutate(alpha_dist=abs(alpha_dist))
 ```
 
 ### Plot beta diversity of wood traits vs distance in decay params
 
 ``` r
 #calculate pairwise wood trait distances
+traits.dist<-Calc_woodTraitDist(traits.mean)
 
-### LEFT OFF HERE
-calc_woodTraitDist <- function(traits.mean){
-  
-  # calculate wood functional trait distance in multivariate space 
-  
-  # identify rows with no missing values
-  x <- complete.cases(traits.mean[,-(1:2)]) 
-  traits.mean1<-traits.mean[x,-(1:2)]
-  View(traits.mean1)
-  # did you lose any species doing that?
-  length(unique(traits.mean$species_lower)); length(unique(traits.mean[x,]$species_lower)) #yes, lost 1 species
-  #unique(meta$species)[!unique(meta$species) %in% unique(traits.mean[x,]$species)] #this species is missing
-  # Olax stricta is missing because it doesn't have a waterperc value and it is only represented in small stem samples 
-  
-  #log-transform and scale, do PCA and take the first 3 axis, measures euc
-  
-  traits.scaled <- apply(log(traits.mean1+10), 2, scale)
-  pc <- princomp(traits.scaled)  # stats package
-  # pc=rda(traits.scaled) # vegan package
-  pc.scores <- pc$scores[, 1:3]  # the first 3 axes
-  
-  # make a unique identifier for each row
-  uniqNames<-paste(traits.mean[x,]$species, traits.mean[x,]$size, sep="_")
-  row.names(pc.scores)<-uniqNames
-  pc.dist.mat <- dist(pc.scores, method = "euclidean", diag=TRUE, upper=TRUE)
-  mat.traitDist<-as.matrix(pc.dist.mat)
-  
-  #make it long
-  traitDist.l <- extract_uniquePairDists(dist.mat=mat.traitDist) #make it long
-  colnames(traitDist.l)<-c("samp1_spSize","samp2_spSize","woodTraitDist")
-  #separate species and size identifiers
-  x<-separate(traitDist.l, col=samp1_spSize, into=c("samp1_sp","samp1_size"), sep="_")
-  xx<-separate(x, col=samp2_spSize, into=c("samp2_sp","samp2_size"), sep="_")
-  xx$samp1_sp<-gsub(" ", "_", xx$samp1_sp)
-  xx$samp2_sp<-gsub(" ", "_", xx$samp2_sp)#fix species names
-  traitDist.l<-xx
-  
-  #add speciesXsize vs itself
-  length(unique(traitDist.l$samp1_sp)); length(unique(traitDist.l$samp2_sp)) #missing 2 species (1 is ok)
-  length(unique(c(traitDist.l$samp1_sp, traitDist.l$samp2_sp))) #missing only 1 species, ok
-  allSp<-unique(c(traitDist.l$samp1_sp, traitDist.l$samp2_sp))
-  sp<-allSp
-  size<-unique(traitDist.l$samp1_size)
-  rep(sp, times=2)
-  rep(size, each=length(sp))
-  sameSp<-data.frame(samp1_sp=rep(sp, times=2), 
-                     samp1_size=rep(size, each=length(sp)),
-                     samp2_sp=rep(sp, times=2), 
-                     samp2_size=rep(size, each=length(sp)),
-                     woodTraitDist=rep(0,length(rep(sp, times=2)))
-  )
-  traitDist.l<-rbind(traitDist.l,sameSp)
-  #View(traitDist.l)
-  
-  traitDist <- traitDist.l
-  return(traitDist)
-}
+#calculate pairwise decay parameter distances
+spdf<-mutate(spdf, minAIC = pmin(neg.exp.aic, w.aic) ) #1. find the min AIC for each species+size
+spdf<-AddCodeID(sampTab) #2. add code to spdf using sampTab
+```
 
-#within species size class
+    ## Joining, by = c("species", "size", "code")
+
+``` r
+aic.dist<-Calc_decayParamDiffs(valueCol="minAIC", spdf, sampTab) #3. calc decay param diffs, e.g. minAIC
+```
+
+    ## Warning: Column `code1`/`code` joining factor and character vector,
+    ## coercing into character vector
+
+    ## Warning: Column `code2`/`code` joining factor and character vector,
+    ## coercing into character vector
+
+``` r
+k.dist<-Calc_decayParamDiffs(valueCol="k", spdf, sampTab)
+```
+
+    ## Warning: Column `code1`/`code` joining factor and character vector,
+    ## coercing into character vector
+
+    ## Warning: Column `code2`/`code` joining factor and character vector,
+    ## coercing into character vector
+
+``` r
+alpha.dist<-Calc_decayParamDiffs(valueCol="alpha", spdf, sampTab)
+```
+
+    ## Warning: Column `code1`/`code` joining factor and character vector,
+    ## coercing into character vector
+
+    ## Warning: Column `code2`/`code` joining factor and character vector,
+    ## coercing into character vector
+
+``` r
+#merge wood trait and decay param distances into the same dataframe
+wood_decay.dist.aic<-MergeWoodNDecaydists_byCodePair(decayparam.dist=aic.dist, traits.dist)
+```
+
+    ## Joining, by = "codePair"
+
+``` r
+wood_decay.dist.k<-MergeWoodNDecaydists_byCodePair(decayparam.dist=k.dist, traits.dist)
+```
+
+    ## Joining, by = "codePair"
+
+``` r
+wood_decay.dist.alpha<-MergeWoodNDecaydists_byCodePair(decayparam.dist=alpha.dist, traits.dist)
+```
+
+    ## Joining, by = "codePair"
+
+``` r
+# delta minAIC
+p.aic<-ggplot(wood_decay.dist.aic, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
+  geom_point() + 
+  xlab('Wood trait distance') + ylab("Delta decay model AIC")
+
+# delta k
+p.k<-ggplot(wood_decay.dist.k, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
+  geom_point() + 
+  xlab('Wood trait distance') + ylab("Delta decay model k")
+
+# delta alpha
+p.alpha<-ggplot(wood_decay.dist.alpha, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
+  geom_point() + 
+  xlab('Wood trait distance') + ylab("Delta decay model alpha")
+
+#pdf('output/woodTraitDist_decayparamDist_byCode.pdf', width=4, height=9)
+grid.arrange(p.aic, p.k, p.alpha)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-13-1.png)
+
+``` r
+#dev.off()
+```
+
+### Look at 3-way relationship between species+size distances: wood trait, microbial community, and k
+
+``` r
+comm_wood_decay.dist.k<-left_join(comm_decay.dist.k, wood_decay.dist.k)
+```
+
+    ## Joining, by = c("codePair", "size", "decayparam_dist")
+
+``` r
+p1<-ggplot(comm_wood_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist)) + 
+  geom_point() + xlab("Mean microbial community distance") + ylab("Decay rate (k) distance")
+
+p2<-ggplot(comm_wood_decay.dist.k, aes(x=woodTraitDist, y=decayparam_dist)) + 
+  geom_point() +  xlab("Wood trait distance") + ylab("Decay rate (k) distance")
+
+p3<-ggplot(comm_wood_decay.dist.k, aes(x=mean_comm_dist, y=woodTraitDist)) + 
+  geom_point() +  xlab("Mean microbial community distance") + ylab("Wood trait distance")
+
+#pdf('output/triDist_k_byCode.pdf', width=6, height=6)
+grid.arrange(p1,p2,p3, ncol=2)
+```
+
+    ## Warning: Removed 208 rows containing missing values (geom_point).
+
+    ## Warning: Removed 208 rows containing missing values (geom_point).
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
+
+``` r
+#dev.off()
 ```
 
 ### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
@@ -683,9 +715,8 @@ comm.dist<-Calc_commDists(sampTab, comm.otu) #2. calc the distances
 
 ``` r
 filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
-  select(sampID1, sampID2, code1, size1, dist) %>%
-  rename("code"="code1",
-         "size"="size1") %>% #rename the cols
+  select(sampID1, sampID2, code1, size, dist) %>%
+  rename("code"="code1") %>% #rename the cols
   group_by(code) %>%
   summarize(mean=mean(dist), #calculate the mean community dist within code classes
             se=sd(dist)/sqrt(length(dist)),
@@ -731,7 +762,7 @@ grid.arrange(p.negexp.aic, p.w.aic)
 
     ## Warning: Removed 2 rows containing missing values (geom_errorbarh).
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-15-1.png)
 
 ``` r
 #dev.off()
