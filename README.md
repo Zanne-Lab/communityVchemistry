@@ -281,8 +281,8 @@ plot_multiple_fits(time = out$time/12,
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
-    ## Number of successful fits:  986  out of 1000 
-    ## Number of successful fits:  1000  out of 1000
+    ## Number of successful fits:  995  out of 1000 
+    ## Number of successful fits:  999  out of 1000
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png) Checking that the fits are the same for weibull which they are
 
@@ -292,7 +292,7 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
 ```
 
-    ## Number of successful fits:  999  out of 1000
+    ## Number of successful fits:  998  out of 1000
 
 ``` r
 print(plot_1)
@@ -307,7 +307,7 @@ print(plot_1)
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       38       38 
+    ##       26       26 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -371,7 +371,7 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
 ```
 
-    ## Number of successful fits:  999  out of 1000
+    ## Number of successful fits:  1000  out of 1000
 
 ``` r
 print(plot_2)
@@ -386,7 +386,7 @@ print(plot_2)
     ## 
     ## $optimFit$counts
     ## function gradient 
-    ##       18       18 
+    ##       15       15 
     ## 
     ## $optimFit$convergence
     ## [1] 0
@@ -555,6 +555,7 @@ p.alpha<-ggplot(join.dist.alpha, aes(x=mean_comm_dist, y=abs(decayparam_dist), c
   geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
   xlab('Mean microbial community distance') + ylab("Delta decay model alpha")
 
+#pdf('output/commDist_decayparamDist_byCode.pdf', width=4, height=9)
 grid.arrange(p.aic, p.k, p.alpha)
 ```
 
@@ -567,6 +568,9 @@ grid.arrange(p.aic, p.k, p.alpha)
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)
 
 ``` r
+#dev.off()
+
+
 #combine delta decay param columns
 j1<-rename(join.dist.aic, "aic_dist"="decayparam_dist") %>%
   select(codePair, size, mean_comm_dist, aic_dist)
@@ -656,3 +660,79 @@ calc_woodTraitDist <- function(traits.mean){
 ```
 
 ### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
+
+``` r
+#calculate pairwise community distances
+sampTab<-CreateSeqSampTab(mass.data) #1. creat sample tab for community sequences samples
+```
+
+    ## Joining, by = "code"
+
+    ## Warning: Column `code` joining factor and character vector, coercing into
+    ## character vector
+
+``` r
+comm.dist<-Calc_commDists(sampTab, comm.otu) #2. calc the distances
+```
+
+    ## Warning: Column `sampID1`/`sampID` joining factors with different levels,
+    ## coercing to character vector
+
+    ## Warning: Column `sampID2`/`sampID` joining factors with different levels,
+    ## coercing to character vector
+
+``` r
+filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
+  select(sampID1, sampID2, code1, size1, dist) %>%
+  rename("code"="code1",
+         "size"="size1") %>% #rename the cols
+  group_by(code) %>%
+  summarize(mean=mean(dist), #calculate the mean community dist within code classes
+            se=sd(dist)/sqrt(length(dist)),
+            upper=mean+se,
+            lower=mean-se) -> comm.dist.wth
+
+#combine with decay trajectory params
+spdf.sub<-select(spdf, code, neg.exp.aic, w.aic)
+comm.dist.wth<-left_join(comm.dist.wth, spdf.sub)
+```
+
+    ## Joining, by = "code"
+
+``` r
+#add back the size and species columns
+comm.dist.wth$size<-"large"
+comm.dist.wth[tolower(comm.dist.wth$code) == comm.dist.wth$code, "size"]<-"small"
+comm.dist.wth$species<-tolower(comm.dist.wth$code)
+
+p.negexp.aic<-ggplot(comm.dist.wth, aes(x=mean, y=neg.exp.aic, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Mean microbial community distance") + 
+  ylab("Negative exponential model AIC") +
+  facet_grid(~size)
+
+p.w.aic<-ggplot(comm.dist.wth, aes(x=mean, y=w.aic, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Mean microbial community distance") + 
+  ylab("Weibull model AIC") +
+  facet_grid(~size)
+
+#pdf('output/commDist_decayparam_withinCode.pdf', width=8, height=6)
+grid.arrange(p.negexp.aic, p.w.aic)
+```
+
+    ## Warning: Removed 1 rows containing missing values (geom_point).
+
+    ## Warning: Removed 2 rows containing missing values (geom_errorbarh).
+
+    ## Warning: Removed 1 rows containing missing values (geom_point).
+
+    ## Warning: Removed 2 rows containing missing values (geom_errorbarh).
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
+
+``` r
+#dev.off()
+```

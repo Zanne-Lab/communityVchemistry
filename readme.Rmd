@@ -307,6 +307,45 @@ calc_woodTraitDist <- function(traits.mean){
 ### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
 ```{r}
 
+#calculate pairwise community distances
+sampTab<-CreateSeqSampTab(mass.data) #1. creat sample tab for community sequences samples
+comm.dist<-Calc_commDists(sampTab, comm.otu) #2. calc the distances
+filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
+  select(sampID1, sampID2, code1, size1, dist) %>%
+  rename("code"="code1",
+         "size"="size1") %>% #rename the cols
+  group_by(code) %>%
+  summarize(mean=mean(dist), #calculate the mean community dist within code classes
+            se=sd(dist)/sqrt(length(dist)),
+            upper=mean+se,
+            lower=mean-se) -> comm.dist.wth
+
+#combine with decay trajectory params
+spdf.sub<-select(spdf, code, neg.exp.aic, w.aic)
+comm.dist.wth<-left_join(comm.dist.wth, spdf.sub)
+
+#add back the size and species columns
+comm.dist.wth$size<-"large"
+comm.dist.wth[tolower(comm.dist.wth$code) == comm.dist.wth$code, "size"]<-"small"
+comm.dist.wth$species<-tolower(comm.dist.wth$code)
+
+p.negexp.aic<-ggplot(comm.dist.wth, aes(x=mean, y=neg.exp.aic, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Mean microbial community distance") + 
+  ylab("Negative exponential model AIC") +
+  facet_grid(~size)
+
+p.w.aic<-ggplot(comm.dist.wth, aes(x=mean, y=w.aic, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Mean microbial community distance") + 
+  ylab("Weibull model AIC") +
+  facet_grid(~size)
+
+#pdf('output/commDist_decayparam_withinCode.pdf', width=8, height=6)
+grid.arrange(p.negexp.aic, p.w.aic)
+#dev.off()
 
 ```
 
