@@ -1,7 +1,7 @@
 order,unique,drill,wetWeightExcess (g),dry WWE,wetWeight ,drilledWeight ,volMass ,volMassRetained,dryMass(piece used to do vol mass),total dry,notes
 2,BAAE25,yes,92.75,30.41,59.57,(58.33 total)  35.72,73.76,7.77,15.16,26.22,35.72 used for vol mass
 3,acel5f,yes,0,0,7.78,7.46,10.66,0.85,5.32,,
-8,ALLI111,yes,0.6,0.42,22.32,(220.5 total) 220.12,299.43,19.15,128.97,,
+8,ALLI111,yes,0.6,0.42,222.32,(220.5 total) 220.12,299.43,19.15,128.97,,"wetWeight initially recorded as 22.32 on datasheet, revised wetWeight is a guess based on how much drilled mass removed from other samples, could weigh shavings but sitting in CTAB"
 17,acpa3e,yes,0.26,0.05,12.76,10.32,11.8,1.21,5.2,5.57,
 18,cota3a,yes,1.07,0.4,1.13,0.79,1.18,0.38,0.56,,
 25,acel5a,yes,0,0,3.78,(3.54 total) 3.22,5.25,0.69,2.54,2.82,

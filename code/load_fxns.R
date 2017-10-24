@@ -61,26 +61,41 @@ read.samp2 <- function(){
 read.samp3 <- function(){
   samp3 <- read.csv('data/samp3data_201508.csv', stringsAsFactors=F)
   samp3$typesInsects <- ''
+  # wet weight excess measured separately on multiple pieces
   temp <- strsplit(samp3$wetWeightExcess, '+', fixed=T)
   samp3$wetWeightExcess <- sapply(temp, function(x){if(length(x) == 2) sum(as.numeric(x)) else if(length(x) == 1) as.numeric(x) else NA})
-  samp3$weightForVol <- samp3$dryMass
+  rm(temp)
+  # when recording wood volume for small stems broken into two, could not measure on whole piece so additional wet weights recorded for relevant fragment
+  # following code is for sorting this out
+  temp <- strsplit(samp3$volMass, 'gpiece=', fixed=T)
+  samp3$volMass <- sapply(temp, function(x) {if(length(x) == 2) x[2] else x[1]})
+  samp3$volMass <- as.numeric(samp3$volMass)
+  x <- is.na(samp3$weightForVol)
+  samp3$weightForVol[x] <- samp3$dryMass[x]
+  rm(temp, x)
+  # include excess wood in bag (fragments falling off during transit) for wet mass of whole harvested piece
+  # dry mass weighed for excess and nonexcess all at once
   samp3$wetWeightForMass <- apply(samp3[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
   samp3[is.na(samp3$wetWeight), 'wetWeightForMass'] <- NA
   samp3$time <- 25
-  samp3$volMass <- as.numeric(samp3$volMass) # this needs to be removed after fixing this column for time 3
   return(samp3)
 }
 
 read.samp4 <- function(s3){
   samp4 <- read.csv('data/samp4data_201608_quantitative.csv', stringsAsFactors=F)
+  # ensure consistency in column names
   names(samp4) <- gsub('wetWeightExcess..g.', 'wetWeightExcess', names(samp4))
+  # when recording wood volume, could not measure on whole piece so additional wet weights recorded for relevant fragment
+  # following code is for sorting this out
   temp <- strsplit(gsub('^\\(', '', samp4$drilledWeight), ' total) ', fixed=T)
   samp4$weightForVol <- sapply(temp, function(x){if(length(x) == 2) as.numeric(x)[2] else as.numeric(x)[1]})
   samp4[samp4$weightForVol == 0, 'weightForVol'] <- samp4[samp4$weightForVol == 0, 'wetWeight']
+  # include excess wood in bag (fragments falling off during transit) for wet and dry mass of whole harvested piece
   samp4$wetWeightForMass <- apply(samp4[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
   samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA
   samp4[is.na(samp4$total.dry), 'total.dry'] <- samp4[is.na(samp4$total.dry), 'dryMass.piece.used.to.do.vol.mass.']
   samp4$dryMass <- apply(samp4[, c('dry.WWE', 'total.dry')], 1, sum)
+  # include damage scoring data
   samp4.1 <- read.csv('data/samp4data_201608_qualitative.csv', stringsAsFactor=F)
   names(samp4.1) <- gsub('notes', 'notes1', names(samp4.1))
   samp4 <- merge(samp4, samp4.1)
