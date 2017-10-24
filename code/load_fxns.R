@@ -89,7 +89,9 @@ read.samp4 <- function(s3){
   # following code is for sorting this out
   temp <- strsplit(gsub('^\\(', '', samp4$drilledWeight), ' total) ', fixed=T)
   samp4$weightForVol <- sapply(temp, function(x){if(length(x) == 2) as.numeric(x)[2] else as.numeric(x)[1]})
-  samp4[samp4$weightForVol == 0, 'weightForVol'] <- samp4[samp4$weightForVol == 0, 'wetWeight']
+  x <- samp4$weightForVol %in% 0
+  samp4[x, 'weightForVol'] <- samp4[x, 'wetWeight']
+  rm(temp, x)
   # include excess wood in bag (fragments falling off during transit) for wet and dry mass of whole harvested piece
   samp4$wetWeightForMass <- apply(samp4[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
   samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA
@@ -118,7 +120,7 @@ CalcTotalDryMass<-function(data){
 
 CalcDensity<-function(data){
   data$density <- NA
-  data$density <- round(data$weightForVol / as.numeric(data$volMass), 2)
+  data$density <- round(data$weightForVol / data$volMass, 2)
   return(data)
 }
 
