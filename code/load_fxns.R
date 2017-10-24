@@ -95,14 +95,15 @@ read.samp4 <- function(s3){
 
 CalcTotalDryMass<-function(data){
   data$totalSampleDryMass <- NA
-  x <- which(data$drill == 'no' | data$dryMass == 0); data$totalSampleDryMass[x] <- data$dryMass[x]
-  x <- which(data$drill == 'yes' & data$dryMass > 0); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
+  x <- which(data$drill == 'no' | data$dryMass == 0 | data$weightForVol == 0); data$totalSampleDryMass[x] <- data$dryMass[x]
+  x <- which(data$drill == 'yes' & data$dryMass > 0 & data$weightForVol > 0); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
+  data$totalSampleDryMass <- round(data$totalSampleDryMass, 2)
   return(data)
 }
 
 CalcDensity<-function(data){
   data$density <- NA
-  data$density <- data$weightForVol / as.numeric(data$volMass)
+  data$density <- round(data$weightForVol / as.numeric(data$volMass), 2)
   return(data)
 }
 
@@ -122,7 +123,7 @@ ReorgDataFrame<-function(data){
   data2<-rename(data1, "fruiting"="fruitingBodies","insects"="insectDamage")
   
   #organize columns
-  data3<-data2[,c("unique","Species","size","time","totalSampleDryMass","density","fruiting","insects","drill")]
+  data3<-data2[,c("unique","Species","size","time","totalSampleDryMass","density","fruiting","insects","drill","notes")]
   
   return(data3)
   
