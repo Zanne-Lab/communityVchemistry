@@ -33,8 +33,8 @@ comm.otu<-add_oomycetes(fung.otu)
 
 ### Load wood trait data
 ```{r}
-trait.means<-mergeTraitData()
-traits.long<-as.data.frame(gather(trait.means, key=trait, value=value, -(1:3)))
+traits.mean<-mergeTraitData()
+traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
 
 ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
   geom_point() + 
@@ -236,10 +236,75 @@ join.dist<-mutate(join.dist, aic_dist=abs(aic_dist)) %>%
 
 #calculate pairwise wood trait distances
 
+### LEFT OFF HERE
+calc_woodTraitDist <- function(traits.mean){
+  
+  # calculate wood functional trait distance in multivariate space 
+  
+  # identify rows with no missing values
+  x <- complete.cases(traits.mean[,-(1:2)]) 
+  traits.mean1<-traits.mean[x,-(1:2)]
+  View(traits.mean1)
+  # did you lose any species doing that?
+  length(unique(traits.mean$species_lower)); length(unique(traits.mean[x,]$species_lower)) #yes, lost 1 species
+  #unique(meta$species)[!unique(meta$species) %in% unique(traits.mean[x,]$species)] #this species is missing
+  # Olax stricta is missing because it doesn't have a waterperc value and it is only represented in small stem samples 
+  
+  #log-transform and scale, do PCA and take the first 3 axis, measures euc
+  
+  traits.scaled <- apply(log(traits.mean1+10), 2, scale)
+  pc <- princomp(traits.scaled)  # stats package
+  # pc=rda(traits.scaled) # vegan package
+  pc.scores <- pc$scores[, 1:3]  # the first 3 axes
+  
+  # make a unique identifier for each row
+  uniqNames<-paste(traits.mean[x,]$species, traits.mean[x,]$size, sep="_")
+  row.names(pc.scores)<-uniqNames
+  pc.dist.mat <- dist(pc.scores, method = "euclidean", diag=TRUE, upper=TRUE)
+  mat.traitDist<-as.matrix(pc.dist.mat)
+  
+  #make it long
+  traitDist.l <- extract_uniquePairDists(dist.mat=mat.traitDist) #make it long
+  colnames(traitDist.l)<-c("samp1_spSize","samp2_spSize","woodTraitDist")
+  #separate species and size identifiers
+  x<-separate(traitDist.l, col=samp1_spSize, into=c("samp1_sp","samp1_size"), sep="_")
+  xx<-separate(x, col=samp2_spSize, into=c("samp2_sp","samp2_size"), sep="_")
+  xx$samp1_sp<-gsub(" ", "_", xx$samp1_sp)
+  xx$samp2_sp<-gsub(" ", "_", xx$samp2_sp)#fix species names
+  traitDist.l<-xx
+  
+  #add speciesXsize vs itself
+  length(unique(traitDist.l$samp1_sp)); length(unique(traitDist.l$samp2_sp)) #missing 2 species (1 is ok)
+  length(unique(c(traitDist.l$samp1_sp, traitDist.l$samp2_sp))) #missing only 1 species, ok
+  allSp<-unique(c(traitDist.l$samp1_sp, traitDist.l$samp2_sp))
+  sp<-allSp
+  size<-unique(traitDist.l$samp1_size)
+  rep(sp, times=2)
+  rep(size, each=length(sp))
+  sameSp<-data.frame(samp1_sp=rep(sp, times=2), 
+                     samp1_size=rep(size, each=length(sp)),
+                     samp2_sp=rep(sp, times=2), 
+                     samp2_size=rep(size, each=length(sp)),
+                     woodTraitDist=rep(0,length(rep(sp, times=2)))
+  )
+  traitDist.l<-rbind(traitDist.l,sameSp)
+  #View(traitDist.l)
+  
+  traitDist <- traitDist.l
+  return(traitDist)
+}
+
+#within species size class
+
+
 
 
 
 ```
 
+### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
+```{r}
 
+
+```
 
