@@ -13,6 +13,7 @@ library(dplyr)
 library(ggplot2)
 library(readr)
 library(vegan)
+library(knitr)
 library(litterfitter)
 library(magrittr)
 library(tidyr)
@@ -29,8 +30,6 @@ fung.otu<-load_matotu()
 comm.otu<-add_oomycetes(fung.otu)
 ```
 
-    ## Joining, by = "seqSamp"
-
     ## Warning: Column `seqSamp` joining factors with different levels, coercing
     ## to character vector
 
@@ -44,15 +43,8 @@ comm.otu<-add_oomycetes(fung.otu)
 traits.mean<-mergeTraitData()
 ```
 
-    ## Joining, by = "SampleCode"
-
     ## Warning: Column `SampleCode` joining character vector and factor, coercing
     ## into character vector
-
-    ## Joining, by = "code"
-
-    ## Joining, by = "code"
-    ## Joining, by = "code"
 
 ``` r
 traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
@@ -125,16 +117,52 @@ initial_mass <- read_in_initial_mass()
 
 #mass at harvest
 harvest_mass<-LoadHarvestFiles()
-```
 
-    ## Warning in read.samp3(): NAs introduced by coercion
-
-``` r
 #create a complete sample mass df for all time points
 mass.data<-bind_rows(initial_mass, harvest_mass)
+
+#check for missing data
+mass.data %>%
+  filter(is.na(totalSampleDryMass)) %>%
+  knitr::kable()
 ```
 
-Identify outliers in mass loss data
+| unique   | Species    | size     |     time|  totalSampleDryMass|  density| fruiting | insects | drill | notes |
+|:---------|:-----------|:---------|--------:|-------------------:|--------:|:---------|:--------|:------|:------|
+| olst1e   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1j   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1i   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2j   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2d   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4h   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst3a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst3b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4e   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4f   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2i   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2e   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4i   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2g   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1d   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2h   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2f   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst2a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1k   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1g   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1h   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4g   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst3c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst1f   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| olst4d   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
+| Identify | outliers i | n mass l |  oss dat|                   a|         |          |         |       |       |
 
 ``` r
 mass.data %>% 
@@ -150,18 +178,17 @@ mass.data[which.max(mass.data$totalSampleDryMass),]
 ```
 
     ## # A tibble: 1 x 10
-    ##    unique Species  size  time totalSampleDryMass density
-    ##     <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>
-    ## 1 ALLI111    ALLI large    37            1242.64    0.74
-    ## # ... with 4 more variables: fruiting <chr>, insects <chr>, drill <chr>,
-    ## #   notes <chr>
+    ##   unique Species  size  time totalSampleDryMass density fruiting insects
+    ##    <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>    <chr>   <chr>
+    ## 1 EUTE15    EUTE large     0           339.8099      NA     <NA>    <NA>
+    ## # ... with 2 more variables: drill <chr>, notes <chr>
 
 ``` r
 outlier.uniques<-as.character(mass.data[which.max(mass.data$totalSampleDryMass),"unique"])
 outlier.uniques
 ```
 
-    ## [1] "ALLI111"
+    ## [1] "EUTE15"
 
 ...another view...might want to check out those two high mass value outliers from harvest 3
 
@@ -227,7 +254,74 @@ mass.data %>%
   left_join(time_zero,by="unique") %>%
   mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
   mutate(SpeciesCode=tolower(Species)) -> plotting_df
+  write_csv(plotting_df,"derived_data/plotting_df.csv")
+  
+  
+  # here are the matching failures which are currently due to the time zero adjustment for moisture
+  plotting_df %>%
+    filter(is.na(pmr)) %>%
+    knitr::kable()
 ```
+
+| unique | Species | size  |  time|  totalSampleDryMass|  density| fruiting                | insects        | drill | notes                            |  timeZeroMass|  timeZeroDensity|  pmr| SpeciesCode |
+|:-------|:--------|:------|-----:|-------------------:|--------:|:------------------------|:---------------|:------|:---------------------------------|-------------:|----------------:|----:|:------------|
+| olst1e | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1j | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1i | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2j | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2d | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4h | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst3a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst3b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4e | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4f | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2i | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2e | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4i | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2g | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1d | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2h | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2f | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst2a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1k | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1g | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1h | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4g | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst3c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1f | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst4d | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
+| olst1j | olst    | small |     7|               10.41|     0.57| NA                      |                | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst1i | olst    | small |     7|               10.20|     0.60| NA                      | 1 lg, 5mm diam | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst1a | olst    | small |     7|                3.15|     0.63| NA                      |                | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst4f | olst    | small |     7|                5.55|     0.61| NA                      |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst2i | olst    | small |     7|                5.91|     0.61| NA                      |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst2f | olst    | small |     7|               11.06|     0.59| NA                      |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst4h | olst    | small |    13|                2.13|     0.56|                         |                | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst4e | olst    | small |    13|                2.99|     0.55|                         |                | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst4c | olst    | small |    13|                4.60|     0.63|                         |                | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst4b | olst    | small |    13|                7.37|     0.52|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst1k | olst    | small |    13|                6.40|     0.49|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst1h | olst    | small |    13|                8.64|     0.45|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst2d | olst    | small |    25|                3.94|     0.09| hyphae                  |                | yes   | 2 pieces                         |            NA|               NA|   NA| olst        |
+| olst3a | olst    | small |    25|                2.93|     0.52| fuzzy brown hyphae      |                | yes   |                                  |            NA|               NA|   NA| olst        |
+| olst2e | olst    | small |    25|                5.31|     0.51| fuzzy brown hyphae      |                | yes   | bark flaking off                 |            NA|               NA|   NA| olst        |
+| olst2g | olst    | small |    25|                2.75|     0.38|                         |                | no    | thin bark almost all gone        |            NA|               NA|   NA| olst        |
+| olst2c | olst    | small |    25|                4.65|     0.32| hyphae                  |                | no    | broken, rotted                   |            NA|               NA|   NA| olst        |
+| olst1b | olst    | small |    25|                4.28|     0.49|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
+| olst2b | olst    | small |    37|                4.85|     0.65| brown mycellium at ends | NA             | yes   | -- bark all off                  |            NA|               NA|   NA| olst        |
+| olst1c | olst    | small |    37|                0.99|      NaN|                         | NA             | yes   | all wwe -- all wet weight excess |            NA|               NA|   NA| olst        |
+| olst3b | olst    | small |    37|                1.53|     0.65| brown mycellium at ends | 1              | no    | --                               |            NA|               NA|   NA| olst        |
+| olst1e | olst    | small |    37|                0.77|      NaN|                         | NA             | yes   | all crumbled once handled --     |            NA|               NA|   NA| olst        |
+| olst4g | olst    | small |    37|                3.32|     0.50|                         | 0              | no    | -- intact, no rot                |            NA|               NA|   NA| olst        |
+| olst4a | olst    | small |    37|                2.58|     0.41|                         | 1              | no    | -- looks intact/slightly soft    |            NA|               NA|   NA| olst        |
 
 ### Non-linear curve fits of decay trajectories
 
@@ -235,228 +329,17 @@ Using `litterfitter` to apply both negative exponenial and weibull to all specie
 
 ``` r
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
-spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
+spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
   geom_point()+
   labs(x="Time to 30% mass loss (negative exponential)", 
-       y="weibull time to 30% mass loss")+
+       y="Time to 30% mass loss (Weibull)")+
   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
-
-``` r
-# #Here is an example where the neg.exp and the weibull curves are almost identical
-# plotting_df %>%
-#   filter(SpeciesCode=="eute",size=="small")  ->one_example
-# plot_multiple_fits(time = one_example$time/12,
-#                    mass.remaining = one_example$pmr,
-#                    bty = 'n', model = c('neg.exp', 'weibull'),
-#                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-# #and one where they are pretty different:
-# plotting_df %>%
-#   filter(SpeciesCode=="ripi",size=="small") -> another_example
-# plot_multiple_fits(time = another_example$time/12,
-#                    mass.remaining = another_example$pmr,
-#                    bty = 'n', model = c('neg.exp', 'weibull'),
-#                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-```
-
-### Testing effects of t=0 points
-
-replotting the last example without the t=0 points
-
-``` r
-#why filtering for ripi small?
-
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small",time>0) ->out
-
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-```
-
-    ## Number of successful fits:  988  out of 1000 
-    ## Number of successful fits:  1000  out of 1000
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png) Checking that the fits are the same for weibull which they are
-
-``` r
-out%$%
-fit_litter(time = time/12, 
-        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
-```
-
-    ## Number of successful fits:  1000  out of 1000
-
-``` r
-print(plot_1)
-```
-
-    ## $optimFit
-    ## $optimFit$par
-    ## [1] 2.167791 1.576424
-    ## 
-    ## $optimFit$value
-    ## [1] 0.5690418
-    ## 
-    ## $optimFit$counts
-    ## function gradient 
-    ##       22       22 
-    ## 
-    ## $optimFit$convergence
-    ## [1] 0
-    ## 
-    ## $optimFit$message
-    ## [1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
-    ## 
-    ## 
-    ## $logLik
-    ## [1] 10.84774
-    ## 
-    ## $fitAIC
-    ## [1] -17.69548
-    ## 
-    ## $fitAICc
-    ## [1] -17.12405
-    ## 
-    ## $fitBIC
-    ## [1] -15.33937
-    ## 
-    ## $time
-    ##  [1] 0.5833333 0.5833333 0.5833333 0.5833333 0.5833333 0.5833333 1.0833333
-    ##  [8] 1.0833333 1.0833333 1.0833333 1.0833333 1.0833333 2.0833333 2.0833333
-    ## [15] 2.0833333 2.0833333 2.0833333 2.0833333 3.0833333 3.0833333 3.0833333
-    ## [22] 3.0833333 3.0833333 3.0833333
-    ## 
-    ## $mass
-    ##  [1] 0.80702715 0.70635658 0.73831715 0.98531286 0.98532447 0.97733591
-    ##  [7] 0.44745619 0.48033810 0.60704277 0.88422473 0.92666205 0.89016632
-    ## [13] 0.22928849 0.25228526 0.40869266 0.47153137 0.60294025 0.59227957
-    ## [19] 0.00000000 0.14378464 0.03073876 0.39355135 0.16262361 0.14137293
-    ## 
-    ## $predicted
-    ##  [1] 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822 0.7153111
-    ##  [8] 0.7153111 0.7153111 0.7153111 0.7153111 0.7153111 0.3909110 0.3909110
-    ## [15] 0.3909110 0.3909110 0.3909110 0.3909110 0.1750647 0.1750647 0.1750647
-    ## [22] 0.1750647 0.1750647 0.1750647
-    ## 
-    ## $model
-    ## [1] "weibull"
-    ## 
-    ## $nparams
-    ## [1] 2
-    ## 
-    ## attr(,"class")
-    ## [1] "litfit"
-
-``` r
-plot(plot_1)
-```
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)
-
-``` r
-#why filtering for ripi small?
-
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small") ->out
-out%$%
-fit_litter(time = time/12, 
-        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
-```
-
-    ## Number of successful fits:  1000  out of 1000
-
-    ## Warning in multioptimFit(time, mass.remaining, model, iters = iters, upper
-    ## = upper, : May not have found global best fit; increase iterations
-
-``` r
-print(plot_2)
-```
-
-    ## $optimFit
-    ## $optimFit$par
-    ## [1] 2.167791 1.576424
-    ## 
-    ## $optimFit$value
-    ## [1] 0.5690418
-    ## 
-    ## $optimFit$counts
-    ## function gradient 
-    ##       32       32 
-    ## 
-    ## $optimFit$convergence
-    ## [1] 0
-    ## 
-    ## $optimFit$message
-    ## [1] "CONVERGENCE: REL_REDUCTION_OF_F <= FACTR*EPSMCH"
-    ## 
-    ## 
-    ## $logLik
-    ## [1] 54.60807
-    ## 
-    ## $fitAIC
-    ## [1] -105.2161
-    ## 
-    ## $fitAICc
-    ## [1] -105.0056
-    ## 
-    ## $fitBIC
-    ## [1] -101.0274
-    ## 
-    ## $time
-    ##  [1] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
-    ##  [8] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
-    ## [15] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
-    ## [22] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
-    ## [29] 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000 0.0000000
-    ## [36] 0.0000000 0.5833333 0.5833333 0.5833333 0.5833333 0.5833333 0.5833333
-    ## [43] 1.0833333 1.0833333 1.0833333 1.0833333 1.0833333 1.0833333 2.0833333
-    ## [50] 2.0833333 2.0833333 2.0833333 2.0833333 2.0833333 3.0833333 3.0833333
-    ## [57] 3.0833333 3.0833333 3.0833333 3.0833333
-    ## 
-    ## $mass
-    ##  [1] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
-    ##  [7] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
-    ## [13] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
-    ## [19] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
-    ## [25] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
-    ## [31] 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000 1.00000000
-    ## [37] 0.80702715 0.70635658 0.73831715 0.98531286 0.98532447 0.97733591
-    ## [43] 0.44745619 0.48033810 0.60704277 0.88422473 0.92666205 0.89016632
-    ## [49] 0.22928849 0.25228526 0.40869266 0.47153137 0.60294025 0.59227957
-    ## [55] 0.00000000 0.14378464 0.03073876 0.39355135 0.16262361 0.14137293
-    ## 
-    ## $predicted
-    ##  [1] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ##  [8] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [15] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [22] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [29] 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000 1.0000000
-    ## [36] 1.0000000 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822 0.8813822
-    ## [43] 0.7153111 0.7153111 0.7153111 0.7153111 0.7153111 0.7153111 0.3909110
-    ## [50] 0.3909110 0.3909110 0.3909110 0.3909110 0.3909110 0.1750647 0.1750647
-    ## [57] 0.1750647 0.1750647 0.1750647 0.1750647
-    ## 
-    ## $model
-    ## [1] "weibull"
-    ## 
-    ## $nparams
-    ## [1] 2
-    ## 
-    ## attr(,"class")
-    ## [1] "litfit"
-
-``` r
-plot(plot_2)
-```
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-2.png) Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation. Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.
 
 ### Plot beta diversity of microbial community vs distance in decay params
 
@@ -568,7 +451,7 @@ grid.arrange(p.aic, p.k, p.alpha)
 
     ## Warning: Removed 5 rows containing missing values (geom_errorbarh).
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
 
 ``` r
 #dev.off()
@@ -658,7 +541,7 @@ p.alpha<-ggplot(wood_decay.dist.alpha, aes(x=woodTraitDist, y=decayparam_dist, c
 grid.arrange(p.aic, p.k, p.alpha)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-13-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)
 
 ``` r
 #dev.off()
@@ -692,7 +575,7 @@ p3<-ggplot(df.k, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) +
 grid.arrange(p1,p2,p3, ncol=2)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)
 
 ``` r
 #dev.off()
@@ -778,7 +661,7 @@ grid.arrange(p.negexp.aic, p.w.aic)
 
     ## Warning: Removed 2 rows containing missing values (geom_errorbarh).
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-15-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-13-1.png)
 
 ``` r
 #dev.off()

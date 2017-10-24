@@ -15,6 +15,7 @@ library(dplyr)
 library(ggplot2)
 library(readr)
 library(vegan)
+library(knitr)
 library(litterfitter)
 library(magrittr)
 library(tidyr)
@@ -25,14 +26,14 @@ library(gridExtra)
 ```
 
 ### Load microbial community data
-```{r }
+```{r message=FALSE}
 fung.otu<-load_matotu()
 comm.otu<-add_oomycetes(fung.otu)
 #plot_sampleEffortCurves(comm.otu)
 ```
 
 ### Load wood trait data
-```{r}
+```{r message=FALSE}
 traits.mean<-mergeTraitData()
 traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
 
@@ -66,9 +67,14 @@ harvest_mass<-LoadHarvestFiles()
 #create a complete sample mass df for all time points
 mass.data<-bind_rows(initial_mass, harvest_mass)
 
+#check for missing data
+mass.data %>%
+  filter(is.na(totalSampleDryMass)) %>%
+  knitr::kable()
+
 ```
 Identify outliers in mass loss data
-```{r}
+```{r message=FALSE}
 mass.data %>% 
   ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
 mass.data[which.max(mass.data$totalSampleDryMass),]
@@ -106,7 +112,14 @@ mass.data %>%
   left_join(time_zero,by="unique") %>%
   mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
   mutate(SpeciesCode=tolower(Species)) -> plotting_df
-
+  write_csv(plotting_df,"derived_data/plotting_df.csv")
+  
+  
+  # here are the matching failures which are currently due to the time zero adjustment for moisture
+  plotting_df %>%
+    filter(is.na(pmr)) %>%
+    knitr::kable()
+  
 ```
 
 
@@ -115,65 +128,18 @@ Using `litterfitter` to apply both negative exponenial and weibull to all specie
 ```{r,warning=FALSE,message=FALSE,results=FALSE}
 
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
-spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
+spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
   geom_point()+
   labs(x="Time to 30% mass loss (negative exponential)", 
-       y="weibull time to 30% mass loss")+
+       y="Time to 30% mass loss (Weibull)")+
   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
-# #Here is an example where the neg.exp and the weibull curves are almost identical
-# plotting_df %>%
-#   filter(SpeciesCode=="eute",size=="small")  ->one_example
-# plot_multiple_fits(time = one_example$time/12,
-#                    mass.remaining = one_example$pmr,
-#                    bty = 'n', model = c('neg.exp', 'weibull'),
-#                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-# #and one where they are pretty different:
-# plotting_df %>%
-#   filter(SpeciesCode=="ripi",size=="small") -> another_example
-# plot_multiple_fits(time = another_example$time/12,
-#                    mass.remaining = another_example$pmr,
-#                    bty = 'n', model = c('neg.exp', 'weibull'),
-#                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
 
-### Testing effects of t=0 points
-replotting the last example without the t=0 points
-```{r}
-#why filtering for ripi small?
-
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small",time>0) ->out
-
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-```
-Checking that the fits are the same for weibull which they are 
-```{r}
-
-out%$%
-fit_litter(time = time/12, 
-        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
-print(plot_1)
-plot(plot_1)
-
-#why filtering for ripi small?
-
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small") ->out
-out%$%
-fit_litter(time = time/12, 
-        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
-print(plot_2)
-plot(plot_2)
-```
-Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.  
 
 ### Plot beta diversity of microbial community vs distance in decay params
 ```{r}
