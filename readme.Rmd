@@ -22,99 +22,78 @@ source("code/load_fxns.R")
 source("code/curve_fitting_fxns.R")
 ```
 
-
-############
-Load microbial community data
-
-```{r , message=FALSE}
-
+### Load microbial community data
+```{r }
 fung.otu<-load_matotu()
 comm.otu<-add_oomycetes(fung.otu)
-
-plot_sampleEffortCurves(comm.otu)
-
+#plot_sampleEffortCurves(comm.otu)
 ```
 
-
-############
-Load wood trait data
-
-```{r , message=FALSE}
-
+### Load wood trait data
+```{r}
 trait.means<-mergeTraitData()
 traits.long<-as.data.frame(gather(trait.means, key=trait, value=value, -(1:3)))
 
 ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
   geom_point() + 
   facet_wrap(~trait, scales="free") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  mytheme + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-#the Fe values are vastly different between the size classes
-subset(traits.long, trait=="Fe") %>%
-  ggplot(aes(x=species_lower, y=value, color=size)) + 
-  geom_point() +
-  facet_wrap(~size, scales="free")
-
+# #the Fe values for large stems are not 0, they are just small values
+# subset(traits.long, trait=="Fe") %>%
+#   ggplot(aes(x=species_lower, y=value, color=size)) + 
+#   geom_point() +
+#   facet_wrap(~size, scales="free")
 ```
 
+### Load mass loss data
+```{r}
 
-############
-Load harvest data
-
-```{r setup, message=FALSE}
 #initial mass
 initial_mass <- read_in_initial_mass()
+# initial_mass %>%
+#   mutate(SpeciesCode=tolower(Species))%>%
+#   ggplot(aes(y=totalSampleDryMass,x=SpeciesCode,fill=size))+
+#   geom_violin()+ 
+#   theme(axis.text.x=element_text(angle=90,hjust=1)) + 
+#   scale_y_log10()
 
-initial_mass %>%
-  mutate(SpeciesCode=tolower(Species))%>%
-  ggplot(aes(y=totalSampleDryMass,x=SpeciesCode,fill=size))+
-  geom_violin()+ 
-  theme(axis.text.x=element_text(angle=90,hjust=1)) + 
-  scale_y_log10()
+#mass at harvest
+harvest_mass<-LoadHarvestFiles()
 
-#mass at harvests
-harvest_data<-LoadHarvestFiles()
-harvest_data1<-CalcTotalDryMass(harvest_data)
-harvest_data2<-CalcDensity(harvest_data1)
-harvest_mass<-ReorgDataFrame(harvest_data2)
-```
-
-A first pass at plotting to look for outliers
-
-```{r}
 #create a complete sample mass df for all time points
 mass.data<-rbind(initial_mass, harvest_mass)
-mass.data %>%
+
+```
+Identify outliers in mass loss data
+```{r}
+mass.data %>% 
   ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
-
-#funky outlier
-max(mass.data$totalSampleDryMass, na.rm=TRUE)
 mass.data[which.max(mass.data$totalSampleDryMass),]
+outlier.uniques<-as.character(mass.data[which.max(mass.data$totalSampleDryMass),"unique"])
+outlier.uniques
 ```
-
-and another view.  Might want to check out those two high mass value outliers from harvest 3.  
-
+...another view...might want to check out those two high mass value outliers from harvest 3
 ```{r}
 mass.data %>%
-  ggplot(aes(x=time, y=totalSampleDryMass,col=size)) + geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
+  ggplot(aes(x=time, y=totalSampleDryMass,col=size)) +
+  geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
+
+#Might want to check out those two high mass value outliers from harvest 3
+filter(mass.data, size=="small", time==25) %>%
+  arrange(-totalSampleDryMass)->tmp
+tmp[1:2,]
+outlier.uniques<-c(outlier.uniques, tmp$unique[1:2])
 ```
-Looking for outliers in the other direction, but I guess these are real 0's?
-
+Are these real 0's?
 ```{r}
-
-#funky outlier
-min(mass.data$totalSampleDryMass, na.rm=TRUE)
 mass.data[which(mass.data$totalSampleDryMass==0),]
-
-#colnames(mass.data)
-#unique(mass.data$unique)
 ```
-
-
-
-Merge time zero with the other harvests to calculate proportion mass remaining at each time point
-
+Remove outliers from mass.data and merge time zero with the other harvests to calculate proportion mass remaining at each time point
 ```{r}
+mass.data<-mass.data[!mass.data$unique %in% outlier.uniques,]
+
+#Merge time zero with the other harvests to calculate proportion mass remaining at each time point
 mass.data %>%
   filter(time==0) %>%
   rename(timeZeroDensity=density) %>%
@@ -124,58 +103,44 @@ mass.data %>%
 mass.data %>%
   left_join(time_zero,by="unique") %>%
   mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
-  filter(pmr<2) %>% #remove outlier noted above
   mutate(SpeciesCode=tolower(Species)) -> plotting_df
+
 ```
 
+
 ### Non-linear curve fits of decay trajectories
-
 Using `litterfitter` to apply both negative exponenial and weibull to all species/size classes
-
 ```{r,warning=FALSE,message=FALSE,results=FALSE}
 
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
 spdf <- read_csv("derived_data/mass_loss_parameters.csv")
+#write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 
 
 ggplot(spdf,aes(x=t70,y=w.t70,col=size))+geom_point()+labs(x="Time to 30% mass loss (negative exponential)", y="weibull time to 30% mass loss")+geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
-write_csv(spdf,"derived_data/mass_loss_parameters.csv")
-
-spdf[which(-spdf$neg.exp.aic+spdf$w.aic < -2),]
+# #Here is an example where the neg.exp and the weibull curves are almost identical
+# plotting_df %>%
+#   filter(SpeciesCode=="eute",size=="small")  ->one_example
+# plot_multiple_fits(time = one_example$time/12,
+#                    mass.remaining = one_example$pmr,
+#                    bty = 'n', model = c('neg.exp', 'weibull'),
+#                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
+# #and one where they are pretty different:
+# plotting_df %>%
+#   filter(SpeciesCode=="ripi",size=="small") -> another_example
+# plot_multiple_fits(time = another_example$time/12,
+#                    mass.remaining = another_example$pmr,
+#                    bty = 'n', model = c('neg.exp', 'weibull'),
+#                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
 
-Here is an example where the neg.exp and the weibull curves are almost identical
 
-```{r}
-plotting_df %>%
-  filter(SpeciesCode=="eute",size=="small")  ->one_example
-
-plot_multiple_fits(time = one_example$time/12,
-                   mass.remaining = one_example$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-
-```
-
-and one where they are pretty different:
-
-```{r}
-
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small") -> another_example
-
-plot_multiple_fits(time = another_example$time/12,
-                   mass.remaining = another_example$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-
-```
 ### Testing effects of t=0 points
-
 replotting the last example without the t=0 points
-
 ```{r}
+#why filtering for ripi small?
+
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small",time>0) ->out
 
@@ -184,10 +149,7 @@ plot_multiple_fits(time = out$time/12,
                    bty = 'n', model = c('neg.exp', 'weibull'),
                    xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
 ```
-
-
 Checking that the fits are the same for weibull which they are 
-
 ```{r}
 
 out%$%
@@ -196,6 +158,7 @@ fit_litter(time = time/12,
 print(plot_1)
 plot(plot_1)
 
+#why filtering for ripi small?
 
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small") ->out
@@ -205,6 +168,15 @@ fit_litter(time = time/12,
 print(plot_2)
 plot(plot_2)
 ```
-
 Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.  
+
+### Plot beta diversity of microbial community vs beta diversity of decay params
+```{r}
+
+```
+
+
+
+
+
 
