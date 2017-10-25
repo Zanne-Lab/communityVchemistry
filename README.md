@@ -127,49 +127,62 @@ mass.data %>%
   knitr::kable()
 ```
 
-| unique   | Species    | size     |     time|  totalSampleDryMass|  density| fruiting | insects | drill | notes |
-|:---------|:-----------|:---------|--------:|-------------------:|--------:|:---------|:--------|:------|:------|
-| olst1e   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1j   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1i   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2j   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2d   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4h   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst3a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst3b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4e   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4f   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2i   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2e   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4i   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2g   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1d   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2h   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2f   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst2a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1b   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1k   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1g   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1h   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4g   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4a   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst3c   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst1f   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| olst4d   | olst       | small    |        0|                  NA|       NA| NA       | NA      | NA    | NA    |
-| Identify | outliers i | n mass l |  oss dat|                   a|         |          |         |       |       |
+| unique     | Species    | size    |     time|  totalSampleDryMass|  density| fruiting      | insects | drill | notes                                                       |
+|:-----------|:-----------|:--------|--------:|-------------------:|--------:|:--------------|:--------|:------|:------------------------------------------------------------|
+| olst1e     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1j     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1i     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2j     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2b     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2d     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4h     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1c     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst3a     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst3b     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4e     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1a     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4f     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2i     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2e     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4i     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2g     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1d     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2h     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2c     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4c     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2f     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst2a     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4b     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1b     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1k     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1g     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1h     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4g     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4a     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst3c     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst1f     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| olst4d     | olst       | small   |        0|                  NA|       NA| NA            | NA      | NA    | NA                                                          |
+| ripi1j     | ripi       | small   |       37|                  NA|       NA|               | 4       | yes   | completely rotted, no sample -- completely rotted/no sample |
+| eute2b     | eute       | small   |       37|                  NA|       NA|               | NA      | yes   | all wwe -- all wet weight excess                            |
+| acel2f     | acel       | small   |       37|                  NA|       NA|               | 3       | yes   | all wwe -- all wet weight excess                            |
+| olst1c     | olst       | small   |       37|                  NA|       NA|               | NA      | yes   | all wwe -- all wet weight excess                            |
+| eusc3j     | eusc       | small   |       37|                  NA|       NA|               | 3       | yes   | all wwe -- all wet weight excess                            |
+| ALLI311    | ALLI       | large   |       37|                  NA|       NA|               | NA      | no    | missing from plot -- missing                                |
+| hase2b     | hase       | small   |       37|                  NA|       NA|               | 4       | no    | completely rotted, no sample -- completely rotted/no sample |
+| anba3g     | anba       | small   |       37|                  NA|       NA| orange hyphae | 3       | no    | all wwe -- all wet weight excess                            |
+| anba3f     | anba       | small   |       37|                  NA|       NA|               | 3       | no    | all wwe -- all wet weight excess                            |
+| baae1a     | baae       | small   |       37|                  NA|       NA|               | NA      | no    | missing from plot -- missing from plot                      |
+| eute1e     | eute       | small   |       37|                  NA|       NA|               | 4       | no    | missing/rotted -- missing/rotted                            |
+| eute1l     | eute       | small   |       37|                  NA|       NA|               | 4       | no    | all wwe -- completely rotted                                |
+| cota1d     | cota       | small   |       37|                  NA|       NA|               | NA      | yes   | -- most crumbled                                            |
+| Identify o | utliers in | mass lo |  ss data|                    |         |               |         |       |                                                             |
 
 ``` r
 mass.data %>% 
   ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
 ```
 
-    ## Warning: Removed 33 rows containing missing values (geom_point).
+    ## Warning: Removed 46 rows containing missing values (geom_point).
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-5-1.png)
 
@@ -198,9 +211,7 @@ mass.data %>%
   geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
 ```
 
-    ## Warning: Transformation introduced infinite values in continuous y-axis
-
-    ## Warning: Removed 33 rows containing missing values (geom_point).
+    ## Warning: Removed 46 rows containing missing values (geom_point).
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-6-1.png)
 
@@ -228,15 +239,10 @@ Are these real 0's?
 mass.data[which(mass.data$totalSampleDryMass==0),]
 ```
 
-    ## # A tibble: 5 x 10
-    ##    unique Species  size  time totalSampleDryMass density fruiting insects
-    ##     <chr>   <chr> <chr> <dbl>              <dbl>   <dbl>    <chr>   <chr>
-    ## 1  ripi1j    ripi small    37                  0     NaN                4
-    ## 2 ALLI311    ALLI large    37                  0     NaN             <NA>
-    ## 3  hase2b    hase small    37                  0     NaN                4
-    ## 4  baae1a    baae small    37                  0     NaN             <NA>
-    ## 5  eute1e    eute small    37                  0     NaN                4
-    ## # ... with 2 more variables: drill <chr>, notes <chr>
+    ## # A tibble: 0 x 10
+    ## # ... with 10 variables: unique <chr>, Species <chr>, size <chr>,
+    ## #   time <dbl>, totalSampleDryMass <dbl>, density <dbl>, fruiting <chr>,
+    ## #   insects <chr>, drill <chr>, notes <chr>
 
 Remove outliers from mass.data and merge time zero with the other harvests to calculate proportion mass remaining at each time point
 
@@ -263,65 +269,77 @@ mass.data %>%
     knitr::kable()
 ```
 
-| unique | Species | size  |  time|  totalSampleDryMass|  density| fruiting                | insects        | drill | notes                            |  timeZeroMass|  timeZeroDensity|  pmr| SpeciesCode |
-|:-------|:--------|:------|-----:|-------------------:|--------:|:------------------------|:---------------|:------|:---------------------------------|-------------:|----------------:|----:|:------------|
-| olst1e | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1j | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1i | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2j | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2d | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4h | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst3a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst3b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4e | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4f | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2i | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2e | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4i | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2g | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1d | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2h | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2f | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst2a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1b | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1k | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1g | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1h | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4g | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4a | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst3c | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1f | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst4d | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                               |            NA|               NA|   NA| olst        |
-| olst1j | olst    | small |     7|               10.41|     0.57| NA                      |                | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst1i | olst    | small |     7|               10.20|     0.60| NA                      | 1 lg, 5mm diam | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst1a | olst    | small |     7|                3.15|     0.63| NA                      |                | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst4f | olst    | small |     7|                5.55|     0.61| NA                      |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst2i | olst    | small |     7|                5.91|     0.61| NA                      |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst2f | olst    | small |     7|               11.06|     0.59| NA                      |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst4h | olst    | small |    13|                2.13|     0.56|                         |                | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst4e | olst    | small |    13|                2.99|     0.55|                         |                | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst4c | olst    | small |    13|                4.60|     0.63|                         |                | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst4b | olst    | small |    13|                7.37|     0.52|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst1k | olst    | small |    13|                6.40|     0.49|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst1h | olst    | small |    13|                8.64|     0.45|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst2d | olst    | small |    25|                3.94|     0.09| hyphae                  |                | yes   | 2 pieces                         |            NA|               NA|   NA| olst        |
-| olst3a | olst    | small |    25|                2.93|     0.52| fuzzy brown hyphae      |                | yes   |                                  |            NA|               NA|   NA| olst        |
-| olst2e | olst    | small |    25|                5.31|     0.51| fuzzy brown hyphae      |                | yes   | bark flaking off                 |            NA|               NA|   NA| olst        |
-| olst2g | olst    | small |    25|                2.75|     0.38|                         |                | no    | thin bark almost all gone        |            NA|               NA|   NA| olst        |
-| olst2c | olst    | small |    25|                4.65|     0.32| hyphae                  |                | no    | broken, rotted                   |            NA|               NA|   NA| olst        |
-| olst1b | olst    | small |    25|                4.28|     0.49|                         |                | no    |                                  |            NA|               NA|   NA| olst        |
-| olst2b | olst    | small |    37|                4.85|     0.65| brown mycellium at ends | NA             | yes   | -- bark all off                  |            NA|               NA|   NA| olst        |
-| olst1c | olst    | small |    37|                0.99|      NaN|                         | NA             | yes   | all wwe -- all wet weight excess |            NA|               NA|   NA| olst        |
-| olst3b | olst    | small |    37|                1.53|     0.65| brown mycellium at ends | 1              | no    | --                               |            NA|               NA|   NA| olst        |
-| olst1e | olst    | small |    37|                0.77|      NaN|                         | NA             | yes   | all crumbled once handled --     |            NA|               NA|   NA| olst        |
-| olst4g | olst    | small |    37|                3.32|     0.50|                         | 0              | no    | -- intact, no rot                |            NA|               NA|   NA| olst        |
-| olst4a | olst    | small |    37|                2.58|     0.41|                         | 1              | no    | -- looks intact/slightly soft    |            NA|               NA|   NA| olst        |
+| unique  | Species | size  |  time|  totalSampleDryMass|  density| fruiting                | insects        | drill | notes                                                       |  timeZeroMass|  timeZeroDensity|  pmr| SpeciesCode |
+|:--------|:--------|:------|-----:|-------------------:|--------:|:------------------------|:---------------|:------|:------------------------------------------------------------|-------------:|----------------:|----:|:------------|
+| olst1e  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1j  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1i  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2j  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2b  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2d  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4h  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1c  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst3a  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst3b  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4e  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1a  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4f  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2i  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2e  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4i  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2g  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1d  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2h  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2c  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4c  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2f  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst2a  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4b  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1b  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1k  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1g  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1h  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4g  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4a  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst3c  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1f  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst4d  | olst    | small |     0|                  NA|       NA| NA                      | NA             | NA    | NA                                                          |            NA|               NA|   NA| olst        |
+| olst1j  | olst    | small |     7|               10.41|     0.57| NA                      |                | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst1i  | olst    | small |     7|               10.20|     0.60| NA                      | 1 lg, 5mm diam | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst1a  | olst    | small |     7|                3.15|     0.63| NA                      |                | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst4f  | olst    | small |     7|                5.55|     0.61| NA                      |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst2i  | olst    | small |     7|                5.91|     0.61| NA                      |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst2f  | olst    | small |     7|               11.06|     0.59| NA                      |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst4h  | olst    | small |    13|                2.13|     0.56|                         |                | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst4e  | olst    | small |    13|                2.99|     0.55|                         |                | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst4c  | olst    | small |    13|                4.60|     0.63|                         |                | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst4b  | olst    | small |    13|                7.37|     0.52|                         |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst1k  | olst    | small |    13|                6.40|     0.49|                         |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst1h  | olst    | small |    13|                8.64|     0.45|                         |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst2d  | olst    | small |    25|                3.94|     0.09| hyphae                  |                | yes   | 2 pieces                                                    |            NA|               NA|   NA| olst        |
+| olst3a  | olst    | small |    25|                2.93|     0.52| fuzzy brown hyphae      |                | yes   |                                                             |            NA|               NA|   NA| olst        |
+| olst2e  | olst    | small |    25|                5.31|     0.51| fuzzy brown hyphae      |                | yes   | bark flaking off                                            |            NA|               NA|   NA| olst        |
+| olst2g  | olst    | small |    25|                2.75|     0.38|                         |                | no    | thin bark almost all gone                                   |            NA|               NA|   NA| olst        |
+| olst2c  | olst    | small |    25|                4.65|     0.32| hyphae                  |                | no    | broken, rotted                                              |            NA|               NA|   NA| olst        |
+| olst1b  | olst    | small |    25|                4.28|     0.49|                         |                | no    |                                                             |            NA|               NA|   NA| olst        |
+| olst2b  | olst    | small |    37|                4.85|     0.65| brown mycellium at ends | NA             | yes   | -- bark all off                                             |            NA|               NA|   NA| olst        |
+| ripi1j  | ripi    | small |    37|                  NA|       NA|                         | 4              | yes   | completely rotted, no sample -- completely rotted/no sample |      4.963313|               NA|   NA| ripi        |
+| eute2b  | eute    | small |    37|                  NA|       NA|                         | NA             | yes   | all wwe -- all wet weight excess                            |      4.961757|               NA|   NA| eute        |
+| acel2f  | acel    | small |    37|                  NA|       NA|                         | 3              | yes   | all wwe -- all wet weight excess                            |      4.593875|               NA|   NA| acel        |
+| olst1c  | olst    | small |    37|                  NA|       NA|                         | NA             | yes   | all wwe -- all wet weight excess                            |            NA|               NA|   NA| olst        |
+| eusc3j  | eusc    | small |    37|                  NA|       NA|                         | 3              | yes   | all wwe -- all wet weight excess                            |      7.501345|               NA|   NA| eusc        |
+| olst3b  | olst    | small |    37|                1.53|     0.65| brown mycellium at ends | 1              | no    | --                                                          |            NA|               NA|   NA| olst        |
+| olst1e  | olst    | small |    37|                0.77|       NA|                         | NA             | yes   | all crumbled once handled --                                |            NA|               NA|   NA| olst        |
+| ALLI311 | ALLI    | large |    37|                  NA|       NA|                         | NA             | no    | missing from plot -- missing                                |    189.120160|               NA|   NA| alli        |
+| hase2b  | hase    | small |    37|                  NA|       NA|                         | 4              | no    | completely rotted, no sample -- completely rotted/no sample |      7.463783|               NA|   NA| hase        |
+| anba3g  | anba    | small |    37|                  NA|       NA| orange hyphae           | 3              | no    | all wwe -- all wet weight excess                            |      4.570550|               NA|   NA| anba        |
+| anba3f  | anba    | small |    37|                  NA|       NA|                         | 3              | no    | all wwe -- all wet weight excess                            |      4.477830|               NA|   NA| anba        |
+| baae1a  | baae    | small |    37|                  NA|       NA|                         | NA             | no    | missing from plot -- missing from plot                      |     10.880365|               NA|   NA| baae        |
+| eute1e  | eute    | small |    37|                  NA|       NA|                         | 4              | no    | missing/rotted -- missing/rotted                            |      9.579975|               NA|   NA| eute        |
+| eute1l  | eute    | small |    37|                  NA|       NA|                         | 4              | no    | all wwe -- completely rotted                                |      7.401324|               NA|   NA| eute        |
+| olst4g  | olst    | small |    37|                3.32|     0.50|                         | 0              | no    | -- intact, no rot                                           |            NA|               NA|   NA| olst        |
+| olst4a  | olst    | small |    37|                2.58|     0.41|                         | 1              | no    | -- looks intact/slightly soft                               |            NA|               NA|   NA| olst        |
+| cota1d  | cota    | small |    37|                  NA|       NA|                         | NA             | yes   | -- most crumbled                                            |      3.284180|               NA|   NA| cota        |
 
 ### Non-linear curve fits of decay trajectories
 
