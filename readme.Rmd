@@ -123,38 +123,6 @@ ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
 ```
 
 
-### Testing effects of t=0 points
-replotting the last example without the t=0 points
-```{r}
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small",time>0, !is.na(pmr)) ->out
-
-plot_multiple_fits(time = out$time/12,
-                   mass.remaining = out$pmr,
-                   bty = 'n', model = c('neg.exp', 'weibull'),
-                   xlab = 'Time', ylab = 'Proportion mass remaining',iters=1000)
-```
-Checking that the fits are the same for weibull which they are 
-```{r}
-
-out%$%
-fit_litter(time = time/12, 
-        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
-print(plot_1)
-plot(plot_1)
-
-
-plotting_df %>%
-  filter(SpeciesCode=="ripi",size=="small", !is.na(pmr)) ->out
-out%$%
-fit_litter(time = time/12, 
-        mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_2
-print(plot_2)
-plot(plot_2)
-```
-Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.  
-
-
 ### Plot beta diversity of microbial community vs distance in decay params
 ```{r}
 

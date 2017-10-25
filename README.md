@@ -288,6 +288,7 @@ ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-6-1.png)
 
+<<<<<<< HEAD
 ### Testing effects of t=0 points
 
 replotting the last example without the t=0 points
@@ -478,6 +479,8 @@ plot(plot_2)
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-2.png) Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation. Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.
 
+=======
+>>>>>>> 5db72701a4d710e091391f28820ba70d657c9673
 ### Plot beta diversity of microbial community vs distance in decay params
 
 ``` r
@@ -588,7 +591,7 @@ grid.arrange(p.aic, p.k, p.alpha)
 
     ## Warning: Removed 5 rows containing missing values (geom_errorbarh).
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
 
 ``` r
 #dev.off()
@@ -678,7 +681,7 @@ p.alpha<-ggplot(wood_decay.dist.alpha, aes(x=woodTraitDist, y=decayparam_dist, c
 grid.arrange(p.aic, p.k, p.alpha)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png)
 
 ``` r
 #dev.off()
@@ -830,7 +833,11 @@ p3<-ggplot(df.k, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) +
 grid.arrange(p1,p2,p3, ncol=2)
 ```
 
+<<<<<<< HEAD
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)
+=======
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
+>>>>>>> 5db72701a4d710e091391f28820ba70d657c9673
 
 ``` r
 #dev.off()
@@ -916,7 +923,11 @@ grid.arrange(p.negexp.aic, p.w.aic)
 
     ## Warning: Removed 2 rows containing missing values (geom_errorbarh).
 
+<<<<<<< HEAD
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-13-1.png)
+=======
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+>>>>>>> 5db72701a4d710e091391f28820ba70d657c9673
 
 ``` r
 #dev.off()
