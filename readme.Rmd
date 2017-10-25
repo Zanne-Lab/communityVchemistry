@@ -18,10 +18,13 @@ library(vegan)
 library(litterfitter)
 library(magrittr)
 library(tidyr)
+library(gridExtra)
+
+#fxns
 source("code/load_fxns.R")
 source("code/curve_fitting_fxns.R")
 source("code/distance_fxns.R")
-library(gridExtra)
+
 ```
 
 ### Load microbial community data
@@ -35,6 +38,9 @@ comm.otu<-add_oomycetes(fung.otu)
 ```{r}
 traits.mean<-mergeTraitData()
 traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
+
+#missing data
+filter(traits.long, is.na(value))
 
 ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
   geom_point() + 
@@ -53,12 +59,6 @@ ggplot(traits.long, aes(x=species_lower, y=value, color=size)) +
 
 #initial mass
 initial_mass <- read_in_initial_mass()
-# initial_mass %>%
-#   mutate(SpeciesCode=tolower(Species))%>%
-#   ggplot(aes(y=totalSampleDryMass,x=SpeciesCode,fill=size))+
-#   geom_violin()+ 
-#   theme(axis.text.x=element_text(angle=90,hjust=1)) + 
-#   scale_y_log10()
 
 #mass at harvest
 harvest_mass<-LoadHarvestFiles()
@@ -66,34 +66,17 @@ harvest_mass<-LoadHarvestFiles()
 #create a complete sample mass df for all time points
 mass.data<-bind_rows(initial_mass, harvest_mass)
 
-```
-Identify outliers in mass loss data
-```{r}
-mass.data %>% 
-  ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
-mass.data[which.max(mass.data$totalSampleDryMass),]
-outlier.uniques<-as.character(mass.data[which.max(mass.data$totalSampleDryMass),"unique"])
-outlier.uniques
-```
-...another view...might want to check out those two high mass value outliers from harvest 3
-```{r}
-mass.data %>%
-  ggplot(aes(x=time, y=totalSampleDryMass,col=size)) +
-  geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
+#look for outliers
 
-#Might want to check out those two high mass value outliers from harvest 3
-filter(mass.data, size=="small", time==25) %>%
-  arrange(-totalSampleDryMass)->tmp
-tmp[1:2,]
-outlier.uniques<-c(outlier.uniques, tmp$unique[1:2])
-```
-Are these real 0's?
-```{r}
-mass.data[which(mass.data$totalSampleDryMass==0),]
-```
-Remove outliers from mass.data and merge time zero with the other harvests to calculate proportion mass remaining at each time point
-```{r}
-mass.data<-mass.data[!mass.data$unique %in% outlier.uniques,]
+# mass.data %>% ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
+#looks good
+
+# mass.data %>% ggplot(aes(x=time, y=totalSampleDryMass,col=size)) + geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
+# two high values in size==small and harvest 3 are likely real, they have been checked
+
+#mass.data[which(mass.data$totalSampleDryMass==0),]
+#no longer any samples with 0 totalSampleDryMass in the dataset
+
 
 #Merge time zero with the other harvests to calculate proportion mass remaining at each time point
 mass.data %>%
@@ -144,7 +127,6 @@ ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
 ### Testing effects of t=0 points
 replotting the last example without the t=0 points
 ```{r}
-#why filtering for ripi small?
 
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small",time>0) ->out
@@ -163,7 +145,6 @@ fit_litter(time = time/12,
 print(plot_1)
 plot(plot_1)
 
-#why filtering for ripi small?
 
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small") ->out

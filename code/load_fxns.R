@@ -9,6 +9,10 @@ read_in_initial_mass <- function(){
   big <- read_csv("data/covariates_bigStems.csv")
   small <- read_csv("data/covariates_smallStems.csv")
   
+  #look for missing data in olst small
+  filter(small, Species == 'olst') -> tmp
+  #View(tmp) #no samples with `Dry mass total (g)`
+  
   big_out <- process_initial_file(big,"large")
   small_out <- process_initial_file(small,"small")
   
@@ -81,7 +85,7 @@ read.samp3 <- function(){
   return(samp3)
 }
 
-read.samp4 <- function(s3){
+read.samp4 <- function(){
   samp4 <- read.csv('data/samp4data_201608_quantitative.csv', stringsAsFactors=F)
   # ensure consistency in column names
   names(samp4) <- gsub('wetWeightExcess..g.', 'wetWeightExcess', names(samp4))
@@ -104,9 +108,11 @@ read.samp4 <- function(s3){
   samp4$notes <- with(samp4, paste(notes, notes1, sep=' -- '))
   samp4$notes1 <- samp4$dry.WWE <- samp4$dryMass.piece.used.to.do.vol.mass. <- NULL
   samp4$time <- 37
-
-  samp4<-samp4[, names(s3)]
-  
+  #select columns to keep
+  keepCols<-c("order","unique","drill","wetWeight","fruitingBodies","wetWeightExcess",
+              "drilledWeight","volMass","volMassRetained","insectDamage","weightForVol","dryMass",
+              "notes","typesInsects","wetWeightForMass","time")
+  samp4<-samp4[, keepCols]
   return(samp4)
 }
 
@@ -152,7 +158,7 @@ LoadHarvestFiles<-function(){
   s1 <- read.samp1()
   s2 <- read.samp2()
   s3 <- read.samp3()
-  s4 <- read.samp4(s3)
+  s4 <- read.samp4()
   
   #bind everything together
   s.data<-rbind(s1,s2,s3,s4)
@@ -167,7 +173,9 @@ LoadHarvestFiles<-function(){
   s.data<-ReorgDataFrame(s.data)
   
   #check for missing data
-  filter(s.data, is.na(totalSampleDryMass)) 
+  #filter(s.data, is.na(totalSampleDryMass))
+  filter(s.data, is.na(totalSampleDryMass), notes =="all wwe -- all wet weight excess") #what does this note mean?
+  filter(s.data, is.na(totalSampleDryMass), notes !="all wwe -- all wet weight excess") #for missing samples, we don't know if they rotted away completely or were moved/missing, so entered as NA
 
   return(s.data)
   
@@ -193,7 +201,7 @@ load_waterPercent<-function(){
                               StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
                               water.percent, stringsAsFactors=F)
   
-  #why is this so sparse?
+  #why is this so sparse? other stems were deployed into field
   #View(water.percent)
   
   ## aggregate by code
