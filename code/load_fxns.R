@@ -96,7 +96,8 @@ read.samp4 <- function(s3){
   samp4$wetWeightForMass <- apply(samp4[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
   samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA
   samp4[is.na(samp4$total.dry), 'total.dry'] <- samp4[is.na(samp4$total.dry), 'dryMass.piece.used.to.do.vol.mass.']
-  samp4$dryMass <- apply(samp4[, c('dry.WWE', 'total.dry')], 1, sum)
+  samp4$dryMass <- apply(samp4[, c('dry.WWE', 'total.dry')], 1, sum, na.rm=T)
+  samp4[with(samp4, which(is.na(dry.WWE) & is.na(total.dry))), 'dryMass'] <- NA
   # include damage scoring data
   samp4.1 <- read.csv('data/samp4data_201608_qualitative.csv', stringsAsFactor=F)
   names(samp4.1) <- gsub('notes', 'notes1', names(samp4.1))
