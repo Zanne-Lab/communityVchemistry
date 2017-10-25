@@ -240,6 +240,53 @@ grid.arrange(p.aic, p.k, p.alpha)
 ```
 Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial mean communities distances
 
+### Plot beta *richness* of microbial community vs distance in decay params
+```{r}
+
+#calculate pairwise community distances
+sampTab<-CreateSeqSampTab(mass.data) #1. creat sample tab for community sequences samples
+rich.dist<-Calc_richDists(sampTab, comm.otu) #2. calc the distances
+summ.rich_dist<-SummarizeCommDist_byCodePair(rich.dist) #3. summarize the distances by codePair
+ 
+#calculate pairwise decay parameter distances
+spdf<-mutate(spdf, minAIC = pmin(neg.exp.aic, w.aic) ) #1. find the min AIC for each species+size
+spdf<-AddCodeID(sampTab) #2. add code to spdf using sampTab
+aic.dist<-Calc_decayParamDiffs(valueCol="minAIC", spdf, sampTab) #3. calc decay param diffs, e.g. minAIC
+k.dist<-Calc_decayParamDiffs(valueCol="k", spdf, sampTab)
+alpha.dist<-Calc_decayParamDiffs(valueCol="alpha", spdf, sampTab)
+
+#merge community and decay param distances into the same dataframe
+rich_decay.dist.aic<-MergeCommNDecaydists_byCodePair(decayparam.dist=aic.dist, summ.rich_dist)
+rich_decay.dist.k<-MergeCommNDecaydists_byCodePair(decayparam.dist=k.dist, summ.rich_dist)
+rich_decay.dist.alpha<-MergeCommNDecaydists_byCodePair(decayparam.dist=alpha.dist, summ.rich_dist)
+
+# delta minAIC
+p.aic<-ggplot(rich_decay.dist.aic, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
+  xlab('Mean microbial richness distance') + ylab("Delta decay model AIC")
+
+# delta k
+p.k<-ggplot(rich_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
+  xlab('Mean microbial richness distance') + ylab("Delta decay model k")
+
+# delta alpha
+p.alpha<-ggplot(rich_decay.dist.alpha, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
+  xlab('Mean microbial richness distance') + ylab("Delta decay model alpha")
+
+# #pdf('output/richDist_decayparamDist_byCode.pdf', width=4, height=9)
+grid.arrange(p.aic, p.k, p.alpha)
+# #dev.off()
+
+```
+Really not a lot of information in mean inital richness distance about species+size decay trajectories
+
+
+
 ### Look at 3-way relationship between species+size distances: wood trait, microbial community, and k
 ```{r}
 
@@ -267,7 +314,7 @@ cor(df.k[,-1])
 ```
 Another view that emphasizes the relationship between wood trait distance and decay rate distances between species+size classes.  Mean microbial community distance is not correlated with either variable.
 
-### Plot with species+size beta diversity of microbial community vs AIC of neg.exponential
+### Plot species+size beta diversity of microbial community vs AIC of neg.exponential
 ```{r}
 
 #calculate pairwise community distances
@@ -314,3 +361,4 @@ Expected to see a positive relationship between AIC and within species+size clas
 
 The large size samples show no pattern
 The small size samples show (maybe) the opposite pattern
+

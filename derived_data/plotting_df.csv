@@ -1942,7 +1942,7 @@ peli3c,peli,small,37,0.83,0.69,,3,yes, -- 1/2 log rotted,5.471293284820954,NA,0.
 anba3e,anba,small,37,0.13,NA,,3,yes,not enough sample post drill -- only fragment intact,3.397914819038271,NA,0.03825875777450906,anba
 acpa3e,acpa,small,37,4.45,0.87,,1,yes, -- ,12.618813830025022,NA,0.352648042830439,acpa
 BAAE214,BAAE,large,37,13.03,0.65,white mycellium,3,yes, -- ,106.60550869796963,NA,0.12222632919388869,baae
-ripi1j,ripi,small,37,NA,NA,,4,yes,"completely rotted, no sample -- completely rotted/no sample",4.963313107047745,NA,NA,ripi
+ripi1j,ripi,small,37,0,NA,,4,yes,"completely rotted, no sample -- completely rotted/no sample",4.963313107047745,NA,0,ripi
 alli1a,alli,small,37,8.36,0.74,,1,yes, -- ,13.87757317720599,NA,0.602410802901141,alli
 cota3a,cota,small,37,0.34,0.67,,NA,yes," -- looked intact, but crumbled when handled",3.5002446774594542,NA,0.09713606656971725,cota
 BAAE28,BAAE,large,37,6.53,0.61,,3,yes, -- ,111.81120506336049,NA,0.05840201790419502,baae
@@ -1951,8 +1951,8 @@ mede3f,mede,small,37,1.2,0.67,,0,yes, -- ,4.527658254616521,NA,0.265037671245714
 BAAE25,BAAE,large,37,13.28,0.48,white mycellium,3,yes,35.72 used for vol mass -- ,130.0152470861509,NA,0.10214186641663947,baae
 EXCU211,EXCU,large,37,84.16,0.67,cream mycellium,2,yes, -- ,175.68067248720786,NA,0.4790509895511021,excu
 cali1f,cali,small,37,8.1,0.68,,0,yes, -- ,11.473617762236719,NA,0.7059673912669153,cali
-eute2b,eute,small,37,NA,NA,,NA,yes,all wwe -- all wet weight excess,4.961757202375717,NA,NA,eute
-acel2f,acel,small,37,NA,NA,,3,yes,all wwe -- all wet weight excess,4.593875015786795,NA,NA,acel
+eute2b,eute,small,37,0.5,NA,,NA,yes,all wwe -- all wet weight excess,4.961757202375717,NA,0.10077075108806155,eute
+acel2f,acel,small,37,0.33,NA,,3,yes,all wwe -- all wet weight excess,4.593875015786795,NA,0.0718347797591269,acel
 cota4d,cota,small,37,2.56,0.86,white fuzz/brown hyphae,2,no, -- ,5.171143371226107,NA,0.4950549261976873,cota
 PEPU26,PEPU,large,37,5.96,0.67,orange,3,yes, -- ,183.07027244514984,NA,0.03255580450280747,pepu
 PELI36,PELI,large,37,123.43,0.62,white mycellium/orange fruit,3,yes, -- ,205.19222377427485,NA,0.6015335168635886,peli
@@ -1971,7 +1971,7 @@ PELI116,PELI,large,37,87.27,0.61,bright orange mat/white,2,yes, -- ,200.28426127
 jasc1g,jasc,small,37,2.57,NA,,0,yes, -- ,9.019118772735874,NA,0.28495023347169113,jasc
 anba2b,anba,small,37,1.87,0.98,brown hyphae,2,no, -- only fragment intact,4.745081689507697,NA,0.3940922669750735,anba
 isan5b,isan,small,37,0.78,NA,white mycellium,2,yes, -- ,7.297100999805504,NA,0.10689176428019703,isan
-olst1c,olst,small,37,NA,NA,,NA,yes,all wwe -- all wet weight excess,NA,NA,NA,olst
+olst1c,olst,small,37,0.99,NA,,NA,yes,all wwe -- all wet weight excess,NA,NA,NA,olst
 isan5h,isan,small,37,1.5,NA,orange hyphae,3,yes,fell apart with drilling -- ,11.872820013560387,NA,0.12633898250683448,isan
 EXCU12,EXCU,large,37,25.95,0.77,,3,yes,total dry from 86.14 -- ,156.0783294790236,NA,0.16626267135622816,excu
 acel5f,acel,small,37,5.1,0.7,,0,yes," -- intact, no rot",7.592192862559362,NA,0.6717426825588788,acel
@@ -1982,7 +1982,7 @@ BAAE33,BAAE,large,37,128.14,0.72,yellow mycellium,2,no, -- ,219.01675967825685,N
 LEPA26,LEPA,large,37,30.99,0.56,,1,yes, -- ,88.89788536321691,NA,0.3486022178523345,lepa
 BAAE314,BAAE,large,37,55.47,0.52,yellow mycellium,0,no, -- ,134.2910709710063,NA,0.41305799111525504,baae
 hase2f,hase,small,37,0.29,NA,,3,yes," -- rotted, may not survive drilling",10.007619522750433,NA,0.028977920207771662,hase
-eusc3j,eusc,small,37,NA,NA,,3,yes,all wwe -- all wet weight excess,7.501344606358952,NA,NA,eusc
+eusc3j,eusc,small,37,0.78,NA,,3,yes,all wwe -- all wet weight excess,7.501344606358952,NA,0.10398135813395208,eusc
 MEDE213,MEDE,large,37,97.2,0.9,,2,yes,total dry from 185.15 -- ,255.9256895906395,NA,0.3797977458045505,mede
 peli3k,peli,small,37,1.56,0.5,white mouldy,1,yes, -- ,6.1949821714623745,NA,0.25181670533068695,peli
 EUTE113,EUTE,large,37,175.6,0.83,"yellow hyphae, 1 end covered",2,no, -- ,229.81501575266836,NA,0.764092804923523,eute
@@ -2061,8 +2061,8 @@ ACPA14,ACPA,large,37,187.47,0.83,brown hyphal mat,1,no, -- ,242.92897624926925,N
 hase1c,hase,small,37,4.9,0.85,brown hyphae,2,no, -- ,13.199994242018867,NA,0.3712122831388881,hase
 eusc3d,eusc,small,37,2.81,0.71,,0,no," -- intact, no rot",4.8601054018677,NA,0.5781767611295301,eusc
 EUSC39,EUSC,large,37,109.49,0.69,"purple, flat, velvety mat",0,no, -- most bark gone,237.04007824510234,NA,0.4619050112141205,eusc
-hase2b,hase,small,37,NA,NA,,4,no,"completely rotted, no sample -- completely rotted/no sample",7.4637832753473905,NA,NA,hase
-anba3g,anba,small,37,NA,NA,orange hyphae,3,no,all wwe -- all wet weight excess,4.570549949203967,NA,NA,anba
+hase2b,hase,small,37,0,NA,,4,no,"completely rotted, no sample -- completely rotted/no sample",7.4637832753473905,NA,0,hase
+anba3g,anba,small,37,1.1,NA,orange hyphae,3,no,all wwe -- all wet weight excess,4.570549949203967,NA,0.24067125668139397,anba
 EXCU15,EXCU,large,37,65.22,0.65,,3,no, -- 1/4 rotted,138.45220094258838,NA,0.4710651008505427,excu
 BAAE215,BAAE,large,37,36.05,0.87,,3,no, -- mostly rotted,104.53515159387145,NA,0.3448600729069349,baae
 basp2m,basp,small,37,5.01,0.73,,2,no, -- ,13.358346603277868,NA,0.3750464147090365,basp
@@ -2073,7 +2073,7 @@ PELI114,PELI,large,37,96.49,0.68,yellow/white mycellium,1,no, -- ,172.1034007016
 pepu2i,pepu,small,37,9.1,0.78,yellow mycellium,0,no," -- intact, no WWE",13.362890897352763,NA,0.6809903687683885,pepu
 PELI118,PELI,large,37,121.3,0.69,white hyphae,1,no, -- ,189.08431215622528,NA,0.6415127654788171,peli
 LEPA41,LEPA,large,37,69.96,0.89,,1,no, -- ,92.0283214385148,NA,0.7602007610965836,lepa
-anba3f,anba,small,37,NA,NA,,3,no,all wwe -- all wet weight excess,4.477829962167609,NA,NA,anba
+anba3f,anba,small,37,1.4,NA,,3,no,all wwe -- all wet weight excess,4.477829962167609,NA,0.3126514431830488,anba
 leer10e,leer,small,37,4.33,0.74,,0,yes, -- looks intact,5.452830959568724,NA,0.7940829327198636,leer
 JASC219,JASC,large,37,86.05,0.67,,0,no, -- ,115.52796375838106,NA,0.744841311147557,jasc
 acel5i,acel,small,37,2.49,0.86,orange mat,0,no, -- ,7.43263714565794,NA,0.3350089545881611,acel
@@ -2086,7 +2086,7 @@ PELI38,PELI,large,37,152.91,0.68,,3,no, -- ,209.36558884649918,NA,0.730349246227
 ALLI111,ALLI,large,37,127.76,0.74,"tan mycellium, white fuzz",1,yes,"wetWeight initially recorded as 22.32 on datasheet, revised wetWeight is a guess based on how much drilled mass removed from other samples, could weigh shavings but sitting in CTAB -- ",202.60888543556186,NA,0.6305745166375394,alli
 lepa2d,lepa,small,37,4.42,0.88,,0,no," -- bark flaked off in lab, intact underneath",5.29078990021003,NA,0.8354140087521785,lepa
 penu2g,penu,small,37,6.69,0.71,,0,no," -- intact, no rot",12.030084918208006,NA,0.5561058002071475,penu
-eute1e,eute,small,37,NA,NA,,4,no,missing/rotted -- missing/rotted,9.579974686094396,NA,NA,eute
+eute1e,eute,small,37,0,NA,,4,no,missing/rotted -- missing/rotted,9.579974686094396,NA,0,eute
 alli1i,alli,small,37,6.29,0.81,,0,no," -- intact, no rot",8.48685802327368,NA,0.7411458967206483,alli
 jasc3g,jasc,small,37,0.26,NA,,3,yes, -- mostly WWE,4.235996371685204,NA,0.06137871168585642,jasc
 ACPA49,ACPA,large,37,138.38,0.9,yellow mycellium,0,no," -- bark falling off, intact underneath",168.25122854339236,NA,0.82246056208921825,acpa
@@ -2099,7 +2099,7 @@ baae3l,baae,small,37,2.02,0.86,,NA,no, -- in 3 pieces,4.713460299934156,NA,0.428
 jasc2j,jasc,small,37,3.22,0.72,white mycellium,1,no, -- ,5.663036427659048,NA,0.5685995562862844,jasc
 jasc3a,jasc,small,37,3.87,0.92,,0,no, -- little bark off at 1 end/otherwise fine,6.779850384508142,NA,0.5708090563241474,jasc
 acpa1j,acpa,small,37,3.61,0.82,,2,no," -- 1 end rotted, rest is hard",8.046119952443789,NA,0.4486634578326863,acpa
-eute1l,eute,small,37,NA,NA,,4,no,all wwe -- completely rotted,7.401324065244058,NA,NA,eute
+eute1l,eute,small,37,0.73,NA,,4,no,all wwe -- completely rotted,7.401324065244058,NA,0.09863100082700248,eute
 PEPU211,PEPU,large,37,86.92,0.78,,3,no, -- ,146.69566461387402,NA,0.592519214721083,pepu
 penu2b,penu,small,37,3.07,0.64,,0,no, -- no WWE,3.984796667289573,NA,0.7704282693270242,penu
 ripi2j,ripi,small,37,0.52,0.51,,NA,no, -- completely rotted,3.67821470828105,NA,0.14137293258854186,ripi
@@ -2129,4 +2129,4 @@ MEDE32,MEDE,large,37,85.69,0.8,white mouldy,1,no, -- ,116.20790055293607,NA,0.73
 lepa3c,lepa,small,37,3.23,0.82,,NA,no," -- rotted, part fallen off, bark flaked off",5.966598506565973,NA,0.5413469661894512,lepa
 olst4a,olst,small,37,2.58,0.41,,1,no, -- looks intact/slightly soft,NA,NA,NA,olst
 excu3h,excu,small,37,8.19,0.72,,0,no," -- intact, no rot",10.357651359352293,NA,0.7907197989054687,excu
-cota1d,cota,small,37,NA,NA,,NA,yes, -- most crumbled,3.2841801911965245,NA,NA,cota
+cota1d,cota,small,37,0.04,NA,,NA,yes, -- most crumbled,3.2841801911965245,NA,0.012179599678246281,cota

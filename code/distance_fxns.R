@@ -51,6 +51,40 @@ Calc_commDists<-function(sampTab, comm.otu){
   
 }
 
+Calc_richDists<-function(sampTab, comm.otu){
+  
+  #1. create sample table for the community data
+  #sampTab
+  
+  #2. calc richnesses, make it long format
+  comm.otu.pa<-comm.otu
+  comm.otu.pa[comm.otu.pa > 0] <- 1 # convert to presence/absence
+  richness<-rowSums(comm.otu.pa)
+  z <- outer(richness,richness,'-') # sp1 - sp2 = dist
+  z<-abs(z)
+  dist.df<-extract_uniquePairDists(z) #make the distance matrix long and add metadata
+  dist.df<-rename(dist.df, "sampID1"="sp1", "sampID2"="sp2")
+  
+  #3. annotate distances with sample info
+  indx<-rename(sampTab, "sampID"="seq_sampName")
+  left_join(dist.df, indx, by=c("sampID1" = "sampID")) %>%
+    rename("code1"="code",
+           "size1"="size") -> dist.df1 # use the index to add info for 1st sample
+  left_join(dist.df1, indx, by=c("sampID2" = "sampID")) %>%
+    rename("code2"="code",
+           "size2"="size") -> dist.df2 # use the index to add info for the 2nd sample
+
+  #4. remove distances between size classes
+  rich.dist<-subset(dist.df2, size1 == size2)
+  
+  #keep just one of the size columns, since they are now the same
+  select(rich.dist, -size2) %>%
+    rename("size"="size1") -> rich.dist
+  
+  return(rich.dist)
+  
+}
+
 #--- probs want to move this to load_fxns and not use mass.data
 AddCodeID<-function(sampTab){
   
