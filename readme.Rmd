@@ -7,7 +7,7 @@ output: github_document
 
 ```{r,message=FALSE}
 #chunk options
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 #libraries
 devtools::install_github("cornwell-lab-unsw/litterfitter")
@@ -29,24 +29,26 @@ source("code/distance_fxns.R")
 ```
 
 ### Load microbial community data
-```{r message=FALSE}
-fung.otu<-load_matotu()
-comm.otu<-add_oomycetes(fung.otu)
+```{r }
+stemSamples<-load_stemSamples() #load stem sample meta data
+fung.otu<-load_matotu() #load the fungal OTU table
+comm.otu<-add_oomycetes(fung.otu) #add the oomycetes
+seqSamples<-load_seqSamples(comm.otu, stemSamples)
 #plot_sampleEffortCurves(comm.otu)
 ```
 
 ### Load wood trait data
-```{r message=FALSE}
+```{r }
 traits.mean<-mergeTraitData()
 traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
 
 #missing data
 filter(traits.long, is.na(value))
 
-ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
-  geom_point() + 
-  facet_wrap(~trait, scales="free") +
-  mytheme + theme(axis.text.x = element_text(angle = 90, hjust = 1))
+# ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
+#   geom_point() + 
+#   facet_wrap(~trait, scales="free") +
+#   mytheme + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 # #the Fe values for large stems are not 0, they are just small values
 # subset(traits.long, trait=="Fe") %>%
@@ -92,202 +94,74 @@ mass.data %>%
 mass.data %>%
   left_join(time_zero,by="unique") %>%
   mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
-  mutate(SpeciesCode=tolower(Species)) -> plotting_df
+  mutate(SpeciesCode=tolower(species)) -> plotting_df
   write_csv(plotting_df,"derived_data/plotting_df.csv")
   
   
 # here are the matching failures which are currently due to the time zero adjustment for moisture
 plotting_df %>%
   filter(is.na(pmr)) %>%
-  select(unique, Species, size, time, totalSampleDryMass, notes) %>%
+  select(unique, species, size, time, totalSampleDryMass, notes) %>%
   spread(key=time, value=totalSampleDryMass) %>%
   knitr::kable()
+
+#remove NA rows
+plotting_df %>%
+  filter(!is.na(pmr)) -> plotting_df
   
 ```
 
 
 ### Non-linear curve fits of decay trajectories
 Using `litterfitter` to apply both negative exponenial and weibull to all species/size classes
-```{r,warning=FALSE,message=FALSE,results=FALSE}
+```{r, results=FALSE}
 
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 spdf <- read_csv("derived_data/mass_loss_parameters.csv")
+indx<-select(stemSamples, code, species, size)
+spdf<-left_join(spdf, indx) #add code
 
-ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
-  geom_point()+
-  labs(x="Time to 30% mass loss (negative exponential)", 
-       y="Time to 30% mass loss (Weibull)")+
-  geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+# ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
+#   geom_point()+
+#   labs(x="Time to 30% mass loss (negative exponential)", 
+#        y="Time to 30% mass loss (Weibull)")+
+#   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
 ```
 
 
-### Plot beta diversity of microbial community vs distance in decay params
+### Plot microbial community distances vs decay param distances between species+size
 ```{r}
 
-#calculate pairwise community distances
-sampTab<-CreateSeqSampTab(mass.data) #1. creat sample tab for community sequences samples
-comm.dist<-Calc_commDists(sampTab, comm.otu) #2. calc the distances
-summ.comm_dist<-SummarizeCommDist_byCodePair(comm.dist) #3. summarize the distances by codePair
+# community composition, bray
+pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['k']], pList[['alpha']])
 
-#calculate pairwise decay parameter distances
-spdf<-mutate(spdf, minAIC = pmin(neg.exp.aic, w.aic) ) #1. find the min AIC for each species+size
-spdf<-AddCodeID(sampTab) #2. add code to spdf using sampTab
-aic.dist<-Calc_decayParamDiffs(valueCol="minAIC", spdf, sampTab) #3. calc decay param diffs, e.g. minAIC
-k.dist<-Calc_decayParamDiffs(valueCol="k", spdf, sampTab)
-alpha.dist<-Calc_decayParamDiffs(valueCol="alpha", spdf, sampTab)
+# community composition, jaccard
+pList<-Make_commDistvDist_Fig(distType="jaccard", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['k']], pList[['alpha']])
 
-#merge community and decay param distances into the same dataframe
-comm_decay.dist.aic<-MergeCommNDecaydists_byCodePair(decayparam.dist=aic.dist, summ.comm_dist)
-comm_decay.dist.k<-MergeCommNDecaydists_byCodePair(decayparam.dist=k.dist, summ.comm_dist)
-comm_decay.dist.alpha<-MergeCommNDecaydists_byCodePair(decayparam.dist=alpha.dist, summ.comm_dist)
-
-# delta minAIC
-p.aic<-ggplot(comm_decay.dist.aic, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
-  geom_point() + 
-  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
-  xlab('Mean microbial community distance') + ylab("Delta decay model AIC")
-
-# delta k
-p.k<-ggplot(comm_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
-  geom_point() + 
-  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
-  xlab('Mean microbial community distance') + ylab("Delta decay model k")
-
-# delta alpha
-p.alpha<-ggplot(comm_decay.dist.alpha, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
-  geom_point() + 
-  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
-  xlab('Mean microbial community distance') + ylab("Delta decay model alpha")
-
-#pdf('output/commDist_decayparamDist_byCode.pdf', width=4, height=9)
-grid.arrange(p.aic, p.k, p.alpha)
-#dev.off()
+# richness
+pList<-Make_commDistvDist_Fig(distType="richness", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['k']], pList[['alpha']])
 
 ```
-Not a lot of information in mean inital community distance about species+size decay trajectories
+Not a lot of information in initial mean microbial composition distance (bray or jaccard) about differences in species+size decay trajectories. Likewise, richness is not useful.
 
-### Plot beta diversity of wood traits vs distance in decay params
+### Plot wood trait distances vs decay param distances between species+size
 ```{r}
-
-#calculate pairwise wood trait distances
-traits.dist<-Calc_woodTraitDist(traits.mean)
-
-#calculate pairwise decay parameter distances
-spdf<-mutate(spdf, minAIC = pmin(neg.exp.aic, w.aic) ) #1. find the min AIC for each species+size
-spdf<-AddCodeID(sampTab) #2. add code to spdf using sampTab
-aic.dist<-Calc_decayParamDiffs(valueCol="minAIC", spdf, sampTab) #3. calc decay param diffs, e.g. minAIC
-k.dist<-Calc_decayParamDiffs(valueCol="k", spdf, sampTab)
-alpha.dist<-Calc_decayParamDiffs(valueCol="alpha", spdf, sampTab)
-
-#merge wood trait and decay param distances into the same dataframe
-wood_decay.dist.aic<-MergeWoodNDecaydists_byCodePair(decayparam.dist=aic.dist, traits.dist)
-wood_decay.dist.k<-MergeWoodNDecaydists_byCodePair(decayparam.dist=k.dist, traits.dist)
-wood_decay.dist.alpha<-MergeWoodNDecaydists_byCodePair(decayparam.dist=alpha.dist, traits.dist)
-
-# delta minAIC
-p.aic<-ggplot(wood_decay.dist.aic, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
-  geom_point() + 
-  xlab('Wood trait distance') + ylab("Delta decay model AIC")
-
-# delta k
-p.k<-ggplot(wood_decay.dist.k, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
-  geom_point() + 
-  xlab('Wood trait distance') + ylab("Delta decay model k")
-
-# delta alpha
-p.alpha<-ggplot(wood_decay.dist.alpha, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
-  geom_point() + 
-  xlab('Wood trait distance') + ylab("Delta decay model alpha")
-
-#pdf('output/woodTraitDist_decayparamDist_byCode.pdf', width=4, height=9)
-grid.arrange(p.aic, p.k, p.alpha)
-#dev.off()
-
+pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
+grid.arrange(pList[['k']], pList[['alpha']])
 ```
-Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial mean communities distances
+Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial community composition/richness
 
-### Plot beta *richness* of microbial community vs distance in decay params
-```{r}
-
-#calculate pairwise community distances
-sampTab<-CreateSeqSampTab(mass.data) #1. creat sample tab for community sequences samples
-rich.dist<-Calc_richDists(sampTab, comm.otu) #2. calc the distances
-summ.rich_dist<-SummarizeCommDist_byCodePair(rich.dist) #3. summarize the distances by codePair
- 
-#calculate pairwise decay parameter distances
-spdf<-mutate(spdf, minAIC = pmin(neg.exp.aic, w.aic) ) #1. find the min AIC for each species+size
-spdf<-AddCodeID(sampTab) #2. add code to spdf using sampTab
-aic.dist<-Calc_decayParamDiffs(valueCol="minAIC", spdf, sampTab) #3. calc decay param diffs, e.g. minAIC
-k.dist<-Calc_decayParamDiffs(valueCol="k", spdf, sampTab)
-alpha.dist<-Calc_decayParamDiffs(valueCol="alpha", spdf, sampTab)
-
-#merge community and decay param distances into the same dataframe
-rich_decay.dist.aic<-MergeCommNDecaydists_byCodePair(decayparam.dist=aic.dist, summ.rich_dist)
-rich_decay.dist.k<-MergeCommNDecaydists_byCodePair(decayparam.dist=k.dist, summ.rich_dist)
-rich_decay.dist.alpha<-MergeCommNDecaydists_byCodePair(decayparam.dist=alpha.dist, summ.rich_dist)
-
-# delta minAIC
-p.aic<-ggplot(rich_decay.dist.aic, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) +
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
-  xlab('Mean microbial richness distance') + ylab("Delta decay model AIC")
-
-# delta k
-p.k<-ggplot(rich_decay.dist.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) +
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
-  xlab('Mean microbial richness distance') + ylab("Delta decay model k")
-
-# delta alpha
-p.alpha<-ggplot(rich_decay.dist.alpha, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) +
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower_comm_dist, xmax=upper_comm_dist)) +
-  xlab('Mean microbial richness distance') + ylab("Delta decay model alpha")
-
-# #pdf('output/richDist_decayparamDist_byCode.pdf', width=4, height=9)
-grid.arrange(p.aic, p.k, p.alpha)
-# #dev.off()
-
-```
-Really not a lot of information in mean inital richness distance about species+size decay trajectories
-
-
-
-### Look at 3-way relationship between species+size distances: wood trait, microbial community, and k
-```{r}
-
-comm_wood_decay.dist.k<-left_join(comm_decay.dist.k, wood_decay.dist.k)
-
-#what is up with the missing data in woodTraitDist?
-select(comm_wood_decay.dist.k, size, mean_comm_dist, woodTraitDist, decayparam_dist) %>%
-  filter(complete.cases(size, comm_wood_decay.dist.k, mean_comm_dist, woodTraitDist, decayparam_dist)) -> df.k
-
-p1<-ggplot(df.k, aes(x=mean_comm_dist, y=decayparam_dist, color=size)) + 
-  geom_point() + xlab("Mean microbial community distance") + ylab("Decay rate (k) distance")
-
-p2<-ggplot(df.k, aes(x=woodTraitDist, y=decayparam_dist, color=size)) + 
-  geom_point() +  xlab("Wood trait distance") + ylab("Decay rate (k) distance")
-
-p3<-ggplot(df.k, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) + 
-  geom_point() +  xlab("Mean microbial community distance") + ylab("Wood trait distance")
-
-#pdf('output/triDist_k_byCode.pdf', width=6, height=6)
-grid.arrange(p1,p2,p3, ncol=2)
-#dev.off()
-
-cor(df.k[,-1])
-
-```
-Another view that emphasizes the relationship between wood trait distance and decay rate distances between species+size classes.  Mean microbial community distance is not correlated with either variable.
 
 ### Plot species+size beta diversity of microbial community vs AIC of neg.exponential
 ```{r}
 
 #calculate pairwise community distances
-sampTab<-CreateSeqSampTab(mass.data) #1. creat sample tab for community sequences samples
-comm.dist<-Calc_commDists(sampTab, comm.otu) #2. calc the distances
+comm.dist<-Calc_commDists(seqSamples, comm.otu, distType="bray") #2. calc the distances
 filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
   select(sampID1, sampID2, code1, size, dist) %>%
   rename("code"="code1") %>% #rename the cols
@@ -325,8 +199,5 @@ grid.arrange(p.negexp.aic, p.w.aic)
 #dev.off()
 
 ```
-Expected to see a positive relationship between AIC and within species+size class microbial community distance. In other words, expected that samples with similar initial microbial communities would have better-fitting decay models.
-
-The large size samples show no pattern
-The small size samples show (maybe) the opposite pattern
+Expect to see a positive relationship between R2 and within species+size class microbial community distance. In other words, expect that samples with similar initial microbial communities will have better-fitting decay models.
 

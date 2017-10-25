@@ -1,4 +1,4 @@
-unique,Species,size,time,totalSampleDryMass,density,fruiting,insects,drill,notes,timeZeroMass,timeZeroDensity,pmr,SpeciesCode
+unique,species,size,time,totalSampleDryMass,density,fruiting,insects,drill,notes,timeZeroMass,timeZeroDensity,pmr,SpeciesCode
 ACPA41,ACPA,large,0,241.6466310866431,NA,NA,NA,NA,NA,241.6466310866431,NA,1,acpa
 ACPA110,ACPA,large,0,229.22548382512687,NA,NA,NA,NA,NA,229.22548382512687,NA,1,acpa
 ACPA18,ACPA,large,0,223.17206033684744,NA,NA,NA,NA,NA,223.17206033684744,NA,1,acpa

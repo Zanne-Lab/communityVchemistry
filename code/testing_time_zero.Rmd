@@ -8,7 +8,7 @@ output: html_notebook
 ## Testing effects of t=0 points
 replotting the last example without the t=0 points
 ```{r}
-#why filtering for ripi small?
+
 devtools::install_github("cornwell-lab-unsw/litterfitter")
 library(dplyr)
 library(ggplot2)

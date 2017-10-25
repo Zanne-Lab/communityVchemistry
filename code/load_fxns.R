@@ -1,11 +1,40 @@
 #load data and clean initial dataframes
 
 #############
+# Sample codes
+
+load_stemSamples<-function(){
+  
+  deployment <- read_csv("data/deployment.csv")
+  deployment<-rename(deployment, "code"="species") #Code column
+  
+  #summarize by code
+  deployment %>%
+    group_by(code) %>%
+    summarize(nStems=length(unique(unique))) %>%
+    mutate(species=tolower(code)) -> deploy.new
+  
+  #add size
+  deploy.new$size<-"large"
+  deploy.new[tolower(deploy.new$code) == deploy.new$code, "size"]<-"small"
+  
+  #add species info
+  species <- read_csv("data/species.csv")
+  species %>%
+    mutate(species=tolower(Code)) %>%
+    select(-Code)-> species.new
+  stemSamples<-left_join(deploy.new, species.new)
+  
+  return(stemSamples)
+}
+
+
+#############
 # Sample mass & volume data
 
 read_in_initial_mass <- function(){
-  library(readr)
-  library(dplyr)
+  require(readr)
+  require(dplyr)
   big <- read_csv("data/covariates_bigStems.csv")
   small <- read_csv("data/covariates_smallStems.csv")
   
@@ -36,7 +65,8 @@ process_initial_file<-function(df,size){
   df %>%
     left_join(moisture) %>%
     mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
-    select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) -> df_out
+    select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) %>%
+    rename("species"="Species") -> df_out
   
   return(df_out)
 }
@@ -132,24 +162,21 @@ CalcDensity<-function(data){
 }
 
 ReorgDataFrame<-function(data){
-  
   require(tidyr)
   
   #add a species column
-  data1<-separate(data, unique, into=c("Species","extraCode"), 4, remove=FALSE)
+  data<-separate(data, unique, into=c("species","extraCode"), 4, remove=FALSE)
   
   #add a size column
-  data1$size<-NA
-  data1[tolower(data1$Species) == data1$Species,"size"]<-"small"
-  data1[tolower(data1$Species) != data1$Species,"size"]<-"large"
+  data$size<-"large"
+  data[tolower(data$species) == data$species,"size"]<-"small"
   
-  #rename
-  data2<-rename(data1, "fruiting"="fruitingBodies","insects"="insectDamage")
+  #rename and select columns
+  data %>%
+    rename("fruiting"="fruitingBodies","insects"="insectDamage") %>%
+    select(unique, species, size, time, totalSampleDryMass, density, fruiting, insects, drill, notes) -> data
   
-  #organize columns
-  data3<-data2[,c("unique","Species","size","time","totalSampleDryMass","density","fruiting","insects","drill","notes")]
-  
-  return(data3)
+  return(data)
   
 }
 
@@ -394,9 +421,6 @@ mergeTraitData<-function(){
 
 load_matotu<-function(){
   
-  # read in taxonomy
-  tax <- read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors=F)
-  
   # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
   data.otu <- read.csv('data/sequencing_T0/DP16_OTUtable.csv', stringsAsFactors = FALSE)
   mat.otu <- as.matrix(data.otu[, 2:ncol(data.otu)]); rownames(mat.otu) <- data.otu[, 1]
@@ -418,6 +442,7 @@ load_matotu<-function(){
   mat.otu <- mat.otu[-c(grep('blank', rownames(mat.otu)), grep('mock', rownames(mat.otu))), ]
   
   # otus, taxa in mock (select cut-off of >=9 reads in a sample)
+  tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
   mock <- data.frame(reads=sort(mock[mock > 0]))
   mock <- cbind(mock, tax[match(rownames(mock), tax$OTU), 'species'])
   # mock
@@ -429,6 +454,14 @@ load_matotu<-function(){
   
   return(mat.otu)
   
+}
+
+load_seqSamples<-function(mat.otu, stemSamples){
+  stemSamples %>% select(code, species, size) -> codeindx
+  seq_sampName<-row.names(mat.otu)
+  seq_indx<-data.frame(seq_sampName=seq_sampName, code=substr(seq_sampName, 1, 4))
+  seqSamples<-left_join(seq_indx, codeindx)
+  return(seqSamples)
 }
 
 add_oomycetes<-function(fung.otu){
@@ -467,6 +500,7 @@ load_TaxAndFunguild <- function() {
   
   return(taxAndFunguild)
 }
+
 
 # calc_matotu_summStats<-function(mat.otu, meta){
 #   
