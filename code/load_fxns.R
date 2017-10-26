@@ -61,12 +61,14 @@ process_initial_large<-function(df,size){
     group_by(Species) %>%
     summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
   
-  #TODO ADD A REAL CALCULATION OF WOOD DENSITY ONCE WE UNDERSTAND HOW TO DO THAT
   df %>%
     left_join(moisture) %>%
     mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
     select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) %>%
     rename("species"="Species") -> df_out
+  
+  
+  #TODO ADD A REAL CALCULATION OF WOOD DENSITY ONCE WE UNDERSTAND HOW TO DO THAT
   
   return(df_out)
 }

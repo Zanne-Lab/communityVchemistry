@@ -244,6 +244,54 @@ MergeWoodNDecaydists_byCodePair<-function(decayparam.dist, traits.dist){
   
 }
 
+MergeCommNWoodTraitdists_byCodePair<-function(traits.dist, summ.comm_dist){
+  
+  #prep trait dist df for merging by repeating forward and reverse codePairs and adding distance = 0 rows
+  # elongate decayparm.dist by adding the forward and reverse combinations of codePair
+  traits.dist %>%
+    mutate(codePair=paste(code1, code2, sep="_")) %>%
+    mutate(codePair_rev=paste(code2, code1, sep="_")) %>%
+    select(codePair, codePair_rev, woodTraitDist) -> traits.dist.el
+  
+  # make forward and reverse dataframes
+  df_forward<-select(traits.dist.el, codePair, woodTraitDist)
+  df_reverse<-select(traits.dist.el, codePair_rev, woodTraitDist) %>%
+    rename("codePair"="codePair_rev")
+  
+  # add codePairs where the codes match and have a decayparm distance of 0
+  same_codePair<-paste(stemSamples$code, stemSamples$code, sep="_")
+  df_same<-data.frame(codePair=same_codePair, woodTraitDist=0, stringsAsFactors = FALSE)
+
+  dfs<-list(df_forward=df_forward, df_reverse=df_reverse, df_same=df_same)
+  
+  #join community distances with forward and reverse decay distance dataframes
+  summ.comm_dist %>%
+    left_join(dfs[['df_forward']]) %>% 
+    rename("woodTraitDist_forward"="woodTraitDist") %>%
+    left_join(dfs[['df_reverse']]) %>%
+    rename("woodTraitDist_reverse"="woodTraitDist") %>%
+    left_join(dfs[['df_same']]) -> join.dist
+  
+  #find the values that matched the forward, reverse, and same codePairs and put it all together
+  filter(join.dist, is.na(woodTraitDist_forward) & !is.na(woodTraitDist_reverse)) %>%
+    mutate(woodTraitDist=woodTraitDist_reverse) -> reverse.rows
+  filter(join.dist, !is.na(woodTraitDist_forward) & is.na(woodTraitDist_reverse)) %>%
+    mutate(woodTraitDist=woodTraitDist_forward) -> forward.rows
+  filter(join.dist, !is.na(woodTraitDist)) -> same.rows
+  join.dist<-bind_rows(reverse.rows, forward.rows, same.rows)
+  
+  #select columns and rename
+  join.dist %>%
+    select(codePair, size, mean, lower, upper, woodTraitDist) %>%
+    rename("mean_comm_dist"="mean",
+           "lower_comm_dist"="lower",
+           "upper_comm_dist"="upper") -> join.dist
+  
+  return(join.dist)
+  
+}
+
+
 Plot_DistvDist<-function(comm_decay.distList, distType, xCol){
   
   #figure out the x data and label
