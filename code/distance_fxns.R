@@ -334,10 +334,10 @@ Make_commDistvDist_Fig<-function(distType, valueCol_vec, seqSamples, stemSamples
   summ.comm_dist<-SummarizeCommDist_byCodePair(comm.dist) #3. summarize the distances by codePair
   
   #calculate pairwise decay parameter distances
-  valueCol_vec<-c("k","alpha")
   decayDistList<-list()
   for(i in 1:length(valueCol_vec)){
-    decayDistList[[i]]<-Calc_decayParamDiffs(valueCol=valueCol_vec[i], spdf, stemSamples)
+    valueCol<-valueCol_vec[i]
+    decayDistList[[i]]<-Calc_decayParamDiffs(valueCol, spdf, stemSamples)
   }
   names(decayDistList)<-valueCol_vec
   
@@ -357,10 +357,10 @@ Make_woodTraitDistvDist_Fig<-function(valueCol_vec, seqSamples, stemSamples, tra
   traits.dist<-Calc_woodTraitDist(traits.mean)
   
   #calculate pairwise decay parameter distances
-  valueCol_vec<-c("k","alpha")
   decayDistList<-list()
   for(i in 1:length(valueCol_vec)){
-    decayDistList[[i]]<-Calc_decayParamDiffs(valueCol=valueCol_vec[i], spdf, stemSamples)
+    valueCol<-valueCol_vec[i]
+    decayDistList[[i]]<-Calc_decayParamDiffs(valueCol, spdf, stemSamples)
   }
   names(decayDistList)<-valueCol_vec
   

@@ -1,0 +1,35 @@
+"","code","nStems","species","size","Family","Binomial","Collection site","Fine branch (1-2 cm diameter)","Wood (5-9 cm diameter)"
+"1","acel",30,"acel","small","Fabaceae","Acacia elongata","Agnes Banks","x",NA
+"2","acpa",30,"acpa","small","Fabaceae","Acacia parramattensis","Castlreagh","x","x"
+"3","ACPA",30,"acpa","large","Fabaceae","Acacia parramattensis","Castlreagh","x","x"
+"4","alli",30,"alli","small","Casuarinaceae","Allocasuarina littoralis","Castlreagh","x","x"
+"5","ALLI",30,"alli","large","Casuarinaceae","Allocasuarina littoralis","Castlreagh","x","x"
+"6","anba",30,"anba","small","Myrtaceae","Angophora bakeri","Castlreagh","x","x"
+"7","ANBA",30,"anba","large","Myrtaceae","Angophora bakeri","Castlreagh","x","x"
+"8","baae",30,"baae","small","Proteaceae","Banksia aemula","Agnes Banks","x","x"
+"9","BAAE",30,"baae","large","Proteaceae","Banksia aemula","Agnes Banks","x","x"
+"10","basp",30,"basp","small","Proteaceae","Banksia spinulosa","Castlreagh","x",NA
+"11","cali",30,"cali","small","Myrtaceae","Callistemon linearis","Agnes Banks","x",NA
+"12","cota",30,"cota","small","Proteaceae","Conospermum taxifolium","Agnes Banks","x",NA
+"13","eusc",30,"eusc","small","Myrtaceae","Eucalyptus sclerophylla","Castlreagh","x","x"
+"14","EUSC",30,"eusc","large","Myrtaceae","Eucalyptus sclerophylla","Castlreagh","x","x"
+"15","eute",30,"eute","small","Myrtaceae","Eucalyptus tereticornis","UWS near Face","x","x"
+"16","EUTE",30,"eute","large","Myrtaceae","Eucalyptus tereticornis","UWS near Face","x","x"
+"17","excu",30,"excu","small","Santalaceae","Exocarpos cupressiformis","Castlreagh","x","x"
+"18","EXCU",30,"excu","large","Santalaceae","Exocarpos cupressiformis","Castlreagh","x","x"
+"19","hase",30,"hase","small","Proteaceae","Hakea sericea","Castlreagh","x",NA
+"20","isan",30,"isan","small","Proteaceae","Isopogon anemonifolius","Agnes Banks","x",NA
+"21","jasc",30,"jasc","small","Fabaceae","Jacksonia scoparia","UWS Flux","x","x"
+"22","JASC",30,"jasc","large","Fabaceae","Jacksonia scoparia","UWS Flux","x","x"
+"23","leer",30,"leer","small","Ericaceae","Leucopogon ericoides","Agnes Banks","x",NA
+"24","lepa",30,"lepa","small","Myrtaceae","Leptospermum parvifolium","Agnes Banks","x","x"
+"25","LEPA",30,"lepa","large","Myrtaceae","Leptospermum parvifolium","Agnes Banks","x","x"
+"26","mede",30,"mede","small","Myrtaceae","Melaleuca decora","UWS Flux","x","x"
+"27","MEDE",30,"mede","large","Myrtaceae","Melaleuca decora","UWS Flux","x","x"
+"28","olst",30,"olst","small","Olacaceae","Olax stricta","Agnes Banks","x",NA
+"29","peli",30,"peli","small","Proteaceae","Persoonia linearis","Castlreagh","x","x"
+"30","PELI",30,"peli","large","Proteaceae","Persoonia linearis","Castlreagh","x","x"
+"31","penu",30,"penu","small","Proteaceae","Persoonia nutans","Agnes Banks","x",NA
+"32","pepu",30,"pepu","small","Proteaceae","Petrophile pulchella","Agnes Banks","x","x"
+"33","PEPU",30,"pepu","large","Proteaceae","Petrophile pulchella","Agnes Banks","x","x"
+"34","ripi",30,"ripi","small","Euphorbiaceae","Ricinocarpus pinifolius","Agnes Banks","x",NA

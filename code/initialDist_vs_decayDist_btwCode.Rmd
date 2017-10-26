@@ -2,7 +2,7 @@
 title: "Initial community and wood distances versus decay parameter distances"
 author: "Marissa Lee"
 date: "10/26/2017"
-output: git_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -21,75 +21,58 @@ library(tidyr)
 library(gridExtra)
 
 #fxns
-source("code/load_fxns.R")
-source("code/curve_fitting_fxns.R")
-source("code/distance_fxns.R")
+source("load_fxns.R")
+source("curve_fitting_fxns.R")
+source("distance_fxns.R")
 
+#load sample info
+stemSamples<-read.csv("../derived_data/stemSamples.csv", row.names=1)
 
 #load microbial community
-stemSamples<-load_stemSamples() #load stem sample meta data
-fung.otu<-load_matotu() #load the fungal OTU table
-comm.otu<-add_oomycetes(fung.otu) #add the oomycetes
-seqSamples<-load_seqSamples(comm.otu, stemSamples)
+comm.otu<-read.csv("../derived_data/comm_otu.csv", row.names=1, stringsAsFactors = FALSE)
+seqSamples<-read.csv("../derived_data/seqSamples.csv", row.names=1, stringsAsFactors = FALSE)
 
 #load wood trait data
-traits.mean<-mergeTraitData()
-traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
-
-#load mass loss data
-initial_mass <- read_in_initial_mass()
-harvest_mass<-LoadHarvestFiles()
-mass.data<-bind_rows(initial_mass, harvest_mass)
-#Merge time zero with the other harvests to calculate proportion mass remaining at each time point
-mass.data %>%
-  filter(time==0) %>%
-  rename(timeZeroDensity=density) %>%
-  rename(timeZeroMass=totalSampleDryMass) %>%
-  select(unique,timeZeroMass,timeZeroDensity)->time_zero
-mass.data %>%
-  left_join(time_zero,by="unique") %>%
-  mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
-  mutate(SpeciesCode=tolower(species)) -> plotting_df
-  write_csv(plotting_df,"derived_data/plotting_df.csv")
-#remove NA rows
-plotting_df %>%
-  filter(!is.na(pmr)) -> plotting_df
+traits.mean<-read.csv("../derived_data/traits_mean.csv", row.names=1, stringsAsFactors = FALSE)
 
 #fit decay trajectories
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
-spdf <- read_csv("derived_data/mass_loss_parameters.csv")
+spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
 indx<-select(stemSamples, code, species, size)
 spdf<-left_join(spdf, indx) #add code
-
-
 
 ```
 
 ### Plot microbial community distances vs decay param distances between species+size
+
+Community composition, bray
 ```{r}
-
-# community composition, bray
-pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
-
-# community composition, jaccard
-pList<-Make_commDistvDist_Fig(distType="jaccard", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
-
-# richness
-pList<-Make_commDistvDist_Fig(distType="richness", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
-
+pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
 ```
-Not a lot of information in initial mean microbial composition distance (bray or jaccard) about differences in species+size decay trajectories. Likewise, richness is not useful.
+
+Community composition, jaccard
+```{r}
+pList<-Make_commDistvDist_Fig(distType="jaccard", valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
+```
+
+Richness
+```{r}
+pList<-Make_commDistvDist_Fig(distType="richness", valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
+```
+
+Not a lot of information in initial mean microbial composition distance (bray or jaccard) about differences in species+size decay trajectories (communities are all really dissimilar). Likewise, richness is not useful.
 
 
 
 ### Plot wood trait distances vs decay param distances between species+size
 ```{r}
-pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
+pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
 ```
+
 Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial community composition/richness
 

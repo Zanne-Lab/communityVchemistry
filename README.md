@@ -29,9 +29,15 @@ source("code/distance_fxns.R")
 
 ``` r
 stemSamples<-load_stemSamples() #load stem sample meta data
+write.csv(stemSamples, "derived_data/stemSamples.csv")
+
 fung.otu<-load_matotu() #load the fungal OTU table
 comm.otu<-add_oomycetes(fung.otu) #add the oomycetes
-seqSamples<-load_seqSamples(comm.otu, stemSamples)
+write.csv(comm.otu, "derived_data/comm_otu.csv")
+
+seqSamples<-load_seqSamples(comm.otu, stemSamples) #create sequence sample meta data table
+write.csv(seqSamples, "derived_data/seqSamples.csv")
+
 #plot_sampleEffortCurves(comm.otu)
 
 #load taxon lookup info
@@ -43,9 +49,10 @@ seqSamples<-load_seqSamples(comm.otu, stemSamples)
 
 ``` r
 traits.mean<-mergeTraitData()
-traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
+write.csv(traits.mean, "derived_data/traits_mean.csv")
 
 #missing data
+traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
 filter(traits.long, is.na(value))
 ```
 
@@ -160,12 +167,13 @@ spdf<-left_join(spdf, indx) #add code
 
 ``` r
 # community composition (bray) vs delta k
-pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-p.commVdecay<-pList[['k']] + guides(color=FALSE)
+pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("ne.r2", "k","alpha"), 
+                              seqSamples, stemSamples, comm.otu, spdf)
+p.commVdecay.k<-pList[['k']] + guides(color=FALSE)
 
 # wood trait vs delta k
-pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
-p.traitVdecay<-pList[['k']] + guides(color=FALSE)
+pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
+p.traitVdecay.k<-pList[['k']] + guides(color=FALSE)
 
 # wood trait vs community composition (bray)
 traits.dist<-Calc_woodTraitDist(traits.mean)
@@ -175,10 +183,11 @@ trait_comm.dist<-MergeCommNWoodTraitdists_byCodePair(traits.dist, summ.comm_dist
 p.commVtrait<-ggplot(trait_comm.dist, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) + geom_point() + 
   guides(color=FALSE) + xlab("Microb comm distance (bray)")
 
-grid.arrange(p.commVdecay, p.traitVdecay, p.commVtrait, ncol=2)
+# decay param == k
+grid.arrange(p.commVdecay.k, p.traitVdecay.k, p.commVtrait, ncol=2)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png) Differences between Code initial microbial community composition does not explain differences in decay model fit (r2), rate (k -- shown here), or lagginess (alpha). Wood trait distances tend to have have more explainatory power. Check out code/initialDist\_vs\_decayDist\_btwCode.Rmd for full set of plots.
 
 ### Plot presence of key players vs decay param distances between species+size
 
@@ -201,7 +210,7 @@ filter(comm.dist, code1==code2) %>% #3. isolate just the distances within specie
             lower=mean-se) -> comm.dist.wth
 
 #combine with decay trajectory params
-spdf.sub<-select(spdf, code, neg.exp.aic, w.aic)
+spdf.sub<-select(spdf, code, ne.r2, w.r2)
 comm.dist.wth<-left_join(comm.dist.wth, spdf.sub)
 
 #add back the size and species columns
@@ -209,22 +218,20 @@ comm.dist.wth$size<-"large"
 comm.dist.wth[tolower(comm.dist.wth$code) == comm.dist.wth$code, "size"]<-"small"
 comm.dist.wth$species<-tolower(comm.dist.wth$code)
 
-p.negexp.aic<-ggplot(comm.dist.wth, aes(x=mean, y=neg.exp.aic, color=species, shape=size)) + 
+p.ne.r2<-ggplot(comm.dist.wth, aes(x=mean, y=ne.r2, color=species, shape=size)) + 
   geom_point() +
   geom_errorbarh(aes(xmin=lower, xmax=upper)) +
   xlab("Mean microbial community distance") + 
-  ylab("Negative exponential model AIC") +
-  facet_grid(~size)
+  ylab("Negative exponential R2") 
 
-p.w.aic<-ggplot(comm.dist.wth, aes(x=mean, y=w.aic, color=species, shape=size)) + 
+p.w.r2<-ggplot(comm.dist.wth, aes(x=mean, y=w.r2, color=species, shape=size)) + 
   geom_point() +
   geom_errorbarh(aes(xmin=lower, xmax=upper)) +
   xlab("Mean microbial community distance") + 
-  ylab("Weibull model AIC") +
-  facet_grid(~size)
+  ylab("Weibull model R2") 
 
 #pdf('output/commDist_decayparam_withinCode.pdf', width=8, height=6)
-grid.arrange(p.negexp.aic, p.w.aic)
+grid.arrange(p.ne.r2, p.w.r2)
 ```
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
@@ -233,4 +240,6 @@ grid.arrange(p.negexp.aic, p.w.aic)
 #dev.off()
 ```
 
-Expect to see a positive relationship between R2 and within species+size class microbial community distance. In other words, expect that samples with similar initial microbial communities will have better-fitting decay models.
+Expect to see a positive relationship between R2 and within species+size class microbial community distance. In other words, expect that samples with similar initial microbial communities will have better-fitting decay models. It doesn't look like there is any relationship.
+
+It's kind of nice to see that generally the R2 rank holds between the negative exponential and weibull models.
