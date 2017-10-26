@@ -29,6 +29,8 @@ load_stemSamples<-function(){
 }
 
 
+
+
 #############
 # Sample mass & volume data
 
@@ -112,9 +114,6 @@ process_initial_small<-function(df,size){
   
   return(df_out)
 }
-
-
-
 
 read.samp1 <- function(){
   samp1 <- read.csv('data/samp1data_201402.csv', stringsAsFactors=F)
@@ -461,6 +460,8 @@ mergeTraitData<-function(){
 }
 
 
+
+
 #############
 # Initial microbial community data
 
@@ -532,18 +533,50 @@ add_oomycetes<-function(fung.otu){
   return(comm.mat)
 }
 
-#need to add oomycete taxa
-load_TaxAndFunguild <- function() {
+load_TaxAndFunguild <- function(comm.otu) {
   require(dplyr)
   
+  # load fungal OTU info
   funguild <-read.delim('data/sequencing_T0/DP16_funguild.txt', stringsAsFactors = F)
   tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
   
   # merge the dataframes by OTUId
   colnames(tax)[1] <- "OTUId" #make this match the column name in funguild
-  taxAndFunguild <- full_join(tax, funguild)
+  taxAndFunguild <- left_join(tax, funguild)
   
-  return(taxAndFunguild)
+  # create a kingdom column
+  taxAndFunguild$kingdom<-NA
+  taxAndFunguild[grepl("Fungi", taxAndFunguild$taxonomy),"kingdom"]<-"Fungi"
+  
+  # add oomycete OTUs as rows
+  ooOTUs<-colnames(comm.otu)[!colnames(comm.otu) %in% taxAndFunguild$OTUId]
+  oo.df<-data.frame(OTUId=ooOTUs, kingdom="Protist")
+  taxAndFunguild<-bind_rows(taxAndFunguild, oo.df)
+
+  # reorder taxAndFunguild to make OTU table
+  o<-match(colnames(comm.otu), taxAndFunguild$OTUId)
+  o.taxAndFunguild<-taxAndFunguild[o,]
+  sum(o.taxAndFunguild$OTUId != colnames(comm.otu)) #this need to be 0
+  
+  # only use FUNGuild info with confidence ranking of Probable or Highly Probable
+  o.taxAndFunguild[!o.taxAndFunguild$Confidence.Ranking %in% c("Probable","Highly Probable"),c("Trophic.Mode","Guild")]<-"unclassified"
+  
+  # select cols 
+  o.taxAndFunguild %>%
+    select(OTUId, taxonomy, kingdom, phylum, genus, species, 
+           Trophic.Mode, Guild) -> o.taxAndFunguild
+  
+  #clean Trophic.Mode
+  #unique(o.taxAndFunguild$Trophic.Mode)
+  
+  #clean Guild
+  #unique(o.taxAndFunguild$Guild)
+  o.taxAndFunguild[o.taxAndFunguild$Guild=="NULL","Guild"]<-"unclassified"
+  
+  #clean oomycetes
+  o.taxAndFunguild[o.taxAndFunguild$kingdom=="Protist", c("taxonomy","phylum","genus","species")]<-"unclassified"
+  
+  return(o.taxAndFunguild)
 }
 
 
@@ -585,6 +618,33 @@ plot_sampleEffortCurves<-function(mat.otu){
   dev.off()
   
 }
+
+
+load_boralResidCors<-function(taxAndFunguild){
+  
+  #load
+  residCor <- read.csv('data/sig_residCorTable.csv', stringsAsFactors=F, row.names=1)
+  
+  #annotate with OTU info
+  taxAndFunguild %>% select(OTUId, kingdom, taxonomy, phylum, species, Trophic.Mode) -> taxIndx
+  
+  residCor %>%
+    left_join(taxIndx, by=c("otu1"="OTUId")) %>%
+    rename("kingdom1"="kingdom",
+           "taxonomy1"="taxonomy",
+           "phylum1"="phylum",
+           "species1"="species",
+           "Trophic.Mode1"="Trophic.Mode") %>%
+    left_join(taxIndx, by=c("otu2"="OTUId")) %>%
+    rename("kingdom2"="kingdom",
+           "taxonomy2"="taxonomy",
+           "phylum2"="phylum",
+           "species2"="species",
+           "Trophic.Mode2"="Trophic.Mode") -> residCor.ann
+  
+  return(residCor.ann)
+}
+
 
 
 ##############

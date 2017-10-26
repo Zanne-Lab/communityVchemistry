@@ -41,8 +41,10 @@ write.csv(seqSamples, "derived_data/seqSamples.csv")
 #plot_sampleEffortCurves(comm.otu)
 
 #load taxon lookup info
+taxAndFunguild<-load_TaxAndFunguild(comm.otu)
 
-#load signif positively and negatively correlated OTUs, taxa
+#load residual signif correlated OTUs from boral Env+LV model
+residCor<-load_boralResidCors(taxAndFunguild)
 ```
 
 ### Load wood trait data
@@ -191,6 +193,68 @@ grid.arrange(p.commVdecay.k, p.traitVdecay.k, p.commVtrait, ncol=2)
 
 ### Plot presence of key players vs decay param distances between species+size
 
+``` r
+source("code/otuIDs_fxns.R")
+
+# summarize the presence of ... in each sample
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu)  
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)  
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)  
+```
+
+Saprotrophs
+
+``` r
+pList<-Plot_richOTUtype(otutype.df=sapro.df, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Saprotroph", spdf)
+grid.arrange(pList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             pList[['k']] + guides(color=FALSE, shape=FALSE), 
+             pList[['alpha']] + guides(color=FALSE, shape=FALSE), ncol=2)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
+
+Basidios
+
+``` r
+pList<-Plot_richOTUtype(otutype.df=basidio.df, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Basidio", spdf)
+grid.arrange(pList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             pList[['k']] + guides(color=FALSE, shape=FALSE), 
+             pList[['alpha']] + guides(color=FALSE, shape=FALSE), ncol=2)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+
+Pathogens
+
+``` r
+pList<-Plot_richOTUtype(otutype.df=path.df, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Pathogens", spdf)
+grid.arrange(pList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             pList[['k']] + guides(color=FALSE, shape=FALSE), 
+             pList[['alpha']] + guides(color=FALSE, shape=FALSE), ncol=2)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)
+
+Oomycetes
+
+``` r
+pList<-Plot_richOTUtype(otutype.df=oomy.df, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Oomycete", spdf)
+grid.arrange(pList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             pList[['k']] + guides(color=FALSE, shape=FALSE), 
+             pList[['alpha']] + guides(color=FALSE, shape=FALSE), ncol=2)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)
+
 ### Plot frequency of negative/positive taxa 'interactions' vs decay param distances between species+size
 
 ### Plot microbial beta diversity WITHIN species+size vs R2 of neg.exponential
@@ -234,7 +298,7 @@ p.w.r2<-ggplot(comm.dist.wth, aes(x=mean, y=w.r2, color=species, shape=size)) +
 grid.arrange(p.ne.r2, p.w.r2)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
 
 ``` r
 #dev.off()
