@@ -90,25 +90,22 @@ process_initial_small<-function(df,size){
     group_by(Species) %>%
     summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
   
-  # # WOOD DENSITY, XYLEM DENSITY, AND BARK DENSITY
-  # df %>%
-  # mutate(xylem_density=`Dry mass wood (g)`/`Volume (g)`) %>%
-  #   mutate(total_volume=((`Diameter.wbark (mm)`/10)^2*length)) -> out
-  # 
-  # 
-  # %>% # convert to cm?
-  #   mutate(total_density=ifelse(
-  #     !is.na(`Dry mass (g)`),
-  #     `Dry mass (g)`/total_volume,
-  #     (`Dry mass wood (g)`+`Dry mass bark (g)`)/total_volume
-  #   )) %>%
-  #   mutate(bark_volume=((`Diameter.wbark (mm)`/20)^2*length)-((`Diameter.nobark (mm)`/20)^2*length)) %>% # convert to cm
-  #   mutate(bark_density=`Dry mass bark (g)`/bark_volume)->out
+   # WOOD DENSITY, XYLEM DENSITY, AND BARK DENSITY
+   df %>%
+   mutate(xylem_density=`Dry mass wood (g)`/`Volume (g)`) %>%
+     mutate(total_volume=(pi*(`Diameter.wbark (mm)`/20)^2*length)) %>% # converting to cm here
+     mutate(total_density=ifelse(
+        !is.na(`Dry mass (g)`),
+      `Dry mass (g)`/total_volume,
+       (`Dry mass wood (g)`+`Dry mass bark (g)`)/total_volume
+     )) %>%
+     mutate(bark_volume=(pi*(`Diameter.wbark (mm)`/20)^2*length)-(pi*(`Diameter.nobark (mm)`/20)^2*length)) %>% # convert to cm
+     mutate(bark_density=`Dry mass bark (g)`/bark_volume)->df
   
   df %>%
     left_join(moisture) %>%
-    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
-    select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) %>%
+    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,time=0,fruiting=NA,insects=NA,drill=NA) %>%
+    select(unique, Species, size,time,totalSampleDryMass,bark_density,xylem_density,total_density,fruiting,insects,drill) %>%
     rename("species"="Species") -> df_out
   
   return(df_out)
@@ -202,8 +199,8 @@ CalcTotalDryMass<-function(data){
 }
 
 CalcDensity<-function(data){
-  data$density <- NA
-  data$density <- round(data$weightForVol / data$volMass, 2)
+  data$total_density <- NA
+  data$total_density <- round(data$weightForVol / data$volMass, 2)
   return(data)
 }
 
@@ -220,7 +217,7 @@ ReorgDataFrame<-function(data){
   #rename and select columns
   data %>%
     rename("fruiting"="fruitingBodies","insects"="insectDamage") %>%
-    select(unique, species, size, time, totalSampleDryMass, density, fruiting, insects, drill, notes) -> data
+    select(unique, species, size, time, totalSampleDryMass, total_density, fruiting, insects, drill, notes) -> data
   
   return(data)
   

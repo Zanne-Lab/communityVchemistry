@@ -1,7 +1,7 @@
 ---
 title: "Testing t=0 points to non-linear decomposition curve fits"
 date: "10/23/2017"
-output: html_notebook
+output: github_document
 ---
 
 
@@ -11,8 +11,10 @@ replotting the last example without the t=0 points
 
 devtools::install_github("cornwell-lab-unsw/litterfitter")
 library(dplyr)
+library(litterfitter)
+library(magrittr)
 library(ggplot2)
-plotting_df<-read_csv("../derived_data/plotting_df.csv")
+plotting_df<-read.csv("../derived_data/plotting_df.csv")
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small",time>0) ->out
 
@@ -57,4 +59,4 @@ fit_litter(time = time/12,
 print(plot_2)
 plot(plot_2)
 ```
-Conclusion: including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.  
+Including t=0 points affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.  

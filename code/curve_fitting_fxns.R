@@ -4,7 +4,7 @@ fit_all_curves<-function(df_in){
   
   ne_fits <- lapply(split(df,factor(df$sp_size)),function(x){
     fit_litter(time = x$time/12, 
-               mass.remaining = x$pmr, model = c("neg.exp"), iters = 1000)
+               mass.remaining = x$pmr, model = c("neg.exp"), iters = 5000)
   })
   
   spdf<-data.frame(k=unlist(lapply(ne_fits,function(x)x$optimFit$par)))
@@ -19,7 +19,7 @@ fit_all_curves<-function(df_in){
   
   w.fits <- lapply(split(df,factor(df$sp_size)),function(x){
     fit_litter(time = x$time/12, 
-               mass.remaining = x$pmr, model = c("weibull"), iters = 1000)
+               mass.remaining = x$pmr, model = c("weibull"), iters = 5000)
   })
   
   spdf<-data.frame(k=unlist(lapply(ne_fits,
