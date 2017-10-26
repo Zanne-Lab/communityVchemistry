@@ -42,14 +42,14 @@ read_in_initial_mass <- function(){
   filter(small, Species == 'olst') -> tmp
   #View(tmp) #no samples with `Dry mass total (g)`
   
-  big_out <- process_initial_file(big,"large")
-  small_out <- process_initial_file(small,"small")
+  big_out <- process_initial_large(big,"large")
+  small_out <- process_initial_small(small,"small")
   
   df_out<-bind_rows(big_out,small_out)
   return(df_out)
 } 
 
-process_initial_file<-function(df,size){
+process_initial_large<-function(df,size){
   
   if ("Dry mass total (g)" %in% names(df)) {
     df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
@@ -70,6 +70,52 @@ process_initial_file<-function(df,size){
   
   return(df_out)
 }
+
+process_initial_small<-function(df,size){
+  
+  if ("Dry mass total (g)" %in% names(df)) {
+    df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
+  }
+  
+  length <- 10 # LENGTH OF STEMS IN CM, SHOULD PROBABLY BE HIGHER UP SOMEWHERE, IF NEEDED ELSEWHERE
+  
+  # CALCULATE INITIAL PROPORTION DRY MASS
+  df %>%
+    mutate(dry_mass_content=ifelse(
+           !is.na(`Dry mass (g)`),
+           `Dry mass (g)`/`Fresh mass (g)`,
+           (`Dry mass wood (g)`+`Dry mass bark (g)`)/`Fresh mass (g)`
+           )) %>%
+    filter(!is.na(dry_mass_content)) %>%
+    group_by(Species) %>%
+    summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
+  
+  # # WOOD DENSITY, XYLEM DENSITY, AND BARK DENSITY
+  # df %>%
+  # mutate(xylem_density=`Dry mass wood (g)`/`Volume (g)`) %>%
+  #   mutate(total_volume=((`Diameter.wbark (mm)`/10)^2*length)) -> out
+  # 
+  # 
+  # %>% # convert to cm?
+  #   mutate(total_density=ifelse(
+  #     !is.na(`Dry mass (g)`),
+  #     `Dry mass (g)`/total_volume,
+  #     (`Dry mass wood (g)`+`Dry mass bark (g)`)/total_volume
+  #   )) %>%
+  #   mutate(bark_volume=((`Diameter.wbark (mm)`/20)^2*length)-((`Diameter.nobark (mm)`/20)^2*length)) %>% # convert to cm
+  #   mutate(bark_density=`Dry mass bark (g)`/bark_volume)->out
+  
+  df %>%
+    left_join(moisture) %>%
+    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
+    select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) %>%
+    rename("species"="Species") -> df_out
+  
+  return(df_out)
+}
+
+
+
 
 read.samp1 <- function(){
   samp1 <- read.csv('data/samp1data_201402.csv', stringsAsFactors=F)
