@@ -33,6 +33,10 @@ fung.otu<-load_matotu() #load the fungal OTU table
 comm.otu<-add_oomycetes(fung.otu) #add the oomycetes
 seqSamples<-load_seqSamples(comm.otu, stemSamples)
 #plot_sampleEffortCurves(comm.otu)
+
+#load taxon lookup info
+
+#load signif positively and negatively correlated OTUs, taxa
 ```
 
 ### Load wood trait data
@@ -242,42 +246,37 @@ spdf<-left_join(spdf, indx) #add code
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
-### Plot microbial community distances vs decay param distances between species+size
+### Correlation between Code dissimilarities in (a) initial microbial community composition, (b) initial wood traits, and (b) decay trajectory params
 
 ``` r
-# community composition, bray
+# community composition (bray) vs delta k
 pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
+p.commVdecay<-pList[['k']] + guides(color=FALSE)
+
+# wood trait vs delta k
+pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
+p.traitVdecay<-pList[['k']] + guides(color=FALSE)
+
+# wood trait vs community composition (bray)
+traits.dist<-Calc_woodTraitDist(traits.mean)
+comm.dist<-Calc_commDists(seqSamples, comm.otu, distType="bray")
+summ.comm_dist<-SummarizeCommDist_byCodePair(comm.dist)
+trait_comm.dist<-MergeCommNWoodTraitdists_byCodePair(traits.dist, summ.comm_dist)
+p.commVtrait<-ggplot(trait_comm.dist, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) + geom_point() + 
+  guides(color=FALSE) + xlab("Microb comm distance (bray)")
+
+grid.arrange(p.commVdecay, p.traitVdecay, p.commVtrait, ncol=2)
 ```
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
 
-``` r
-# community composition, jaccard
-pList<-Make_commDistvDist_Fig(distType="jaccard", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
-```
+### Plot presence of key players vs decay param distances between species+size
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-2.png)
+### Plot frequency of negative/positive taxa 'interactions' vs decay param distances between species+size
 
-``` r
-# richness
-pList<-Make_commDistvDist_Fig(distType="richness", valueCol_vec=c("k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
-```
+### Plot microbial beta diversity WITHIN species+size vs R2 of neg.exponential
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-3.png) Not a lot of information in initial mean microbial composition distance (bray or jaccard) about differences in species+size decay trajectories. Likewise, richness is not useful.
-
-### Plot wood trait distances vs decay param distances between species+size
-
-``` r
-pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
-grid.arrange(pList[['k']], pList[['alpha']])
-```
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png) Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial community composition/richness
-
-### Plot species+size beta diversity of microbial community vs AIC of neg.exponential
+need to update this to reflect R2, not AIC
 
 ``` r
 #calculate pairwise community distances
@@ -318,7 +317,7 @@ p.w.aic<-ggplot(comm.dist.wth, aes(x=mean, y=w.aic, color=species, shape=size)) 
 grid.arrange(p.negexp.aic, p.w.aic)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-9-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-10-1.png)
 
 ``` r
 #dev.off()
