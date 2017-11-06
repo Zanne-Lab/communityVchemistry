@@ -243,9 +243,9 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png)
 
 H1a. Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
-H1b. Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another. **Maybe there's some indication that more saprotroph richness leads to better-fitting decay models (ne.r2)**
+H1b. Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another. **No apparent pattern**
 
-H2. Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that more oomycete richness/presence leads to slower (k) and more laggy (alpha) decay**
+H2. Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
 
 ### Plot frequency of positive/negative taxa 'interactions' vs decay param distances BETWEEN species+size
 
