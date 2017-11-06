@@ -143,6 +143,83 @@ spdf<-left_join(spdf, indx) #add code
 ```
 
 
+### Try out rioja... 
+Our data doesn't fit the tutorial because we have >1 'site' (where site = species+size) for the community data
+```{r}
+
+library(rioja)
+
+data(IK)
+spec <- IK$spec
+SumSST <- IK$env$SumSST
+core <- IK$core
+
+dim(spec)
+length(SumSST)
+
+fit <- WAPLS(spec, SumSST)
+fit
+# cross-validate model
+fit.cv <- crossval(fit, cv.method="loo")
+fit.cv
+
+# How many components to use?
+rand.t.test(fit.cv)
+screeplot(fit.cv)
+
+#predict the core
+pred <- predict(fit, core, npls=2)
+
+#plot predictions - depths are in rownames
+depth <- as.numeric(rownames(core))
+plot(depth, pred$fit[, 2], type="b", ylab="Predicted SumSST", las=1)
+
+# predictions with sample specific errors
+## Not run: 
+pred <- predict(fit, core, npls=2, sse=TRUE, nboot=1000)
+pred
+
+########
+
+#1. identify how many times that a community was sampled for each 'code'
+seqSamples %>%
+  group_by(code) %>%
+  summarize(num=length(seq_sampName)) -> numSitesSampled
+
+#2. randomly sample a community from each 'code'
+CODE<-unique(seqSamples$code)
+uniqCODEseqs.list<-list()
+for(i in 1:length(CODE)){
+  allSeqs<-seqSamples[seqSamples$code==CODE[i],"seq_sampName"]
+  selectNum<-sample(1:length(allSeqs),1,replace=T)
+  uniqCODEseqs.list[[i]]<-allSeqs[selectNum]
+}
+uniqCODEseqs.vec<-unlist(uniqCODEseqs.list)
+
+#3. filter to the selected sequences in that randomly-chosen set of communities
+curr.comm.otu<-comm.otu[row.names(comm.otu) %in% uniqCODEseqs.vec,]
+tmp<-data.frame(row.names(curr.comm.otu))
+new.row.names<-separate(tmp, row.names.curr.comm.otu., into=c("code","drop"), 4)[1]
+row.names(curr.comm.otu)<-new.row.names$code
+
+#4. get rid of empty OTU cols
+curr.comm.otu.trim<-curr.comm.otu[,colSums(curr.comm.otu)!=0]
+curr.spdf<-spdf[spdf$code %in% row.names(curr.comm.otu.trim),]
+
+#5. fit model
+fit <- WAPLS(curr.comm.otu.trim, curr.spdf$k)
+fit
+
+# cross-validate model
+fit.cv <- crossval(fit, cv.method="loo")
+fit.cv
+
+# How many components to use?
+rand.t.test(fit.cv)
+screeplot(fit.cv)
+
+```
+
 ### Correlation BETWEEN species+size dissimilarities in (a) initial microbial community composition, (b) initial wood traits, and (b) decay trajectory params
 ```{r}
 
@@ -165,7 +242,6 @@ p.commVtrait<-ggplot(trait_comm.dist, aes(x=mean_comm_dist, y=woodTraitDist, col
 
 # decay param == k
 grid.arrange(p.commVdecay.k, p.traitVdecay.k, p.commVtrait, ncol=2)
-
 ```
 *Check out code/initialDist_vs_decayDist_btwCode.Rmd for full set of plots.*
 
