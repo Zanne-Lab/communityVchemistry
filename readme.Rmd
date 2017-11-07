@@ -100,15 +100,12 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 ```{r}
 #scale traits
 traits.mean %>%
-  select(waterperc, density, barkthick, P, K, Ca, Mn, Fe, Zn, N, C) %>%
-  scale() %>% 
-  as.data.frame() -> pred
-row.names(pred)<-traits.mean$code
+  select(waterperc, density, barkthick, P, K, Ca, Mn, Fe, Zn, N, C, code) ->pred
 
 #merge into 1 df
 spdf %>%
-  select(code, species, size, ne.r2, k, alpha) %>%
-  bind_cols(pred) %>%
+  select(code, species, size, ne.r2, k, w.t70,t70,alpha) %>%
+  left_join(pred) %>% #  bind_cols(pred) %>%
   filter(!is.na(P)) %>%
   filter(!is.na(waterperc)) -> spdf.traits
 
@@ -116,186 +113,35 @@ spdf %>%
 mod.full.r<-lm(ne.r2 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
 mod.full.k<-lm(k ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
 mod.full.alpha<-lm(alpha ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+summary(mod.full.alpha)
+```
 
+
+```{r}
 #do stepwise model selection
-mod.select.r<-step(mod.full.r, direction="backward")
+#mod.select.r<-step(mod.full.r, direction="backward")
 mod.select.k<-step(mod.full.k, direction="backward")
-mod.select.alpha<-step(mod.full.alpha, direction="backward")
+#mod.select.alpha<-step(mod.full.alpha, direction="backward")
+summary(mod.select.k)
 ```
 *Results:*
 - r2
 ```{r}
-summary(mod.select.r) # density
-ggplot(spdf.traits, aes(x=density, y=ne.r2, color=species, shape=size)) + geom_point()
+#summary(mod.select.r) # density
+#ggplot(spdf.traits, aes(x=density, y=ne.r2, color=species, shape=size)) + geom_point()
 ```
 - k
 ```{r}
 summary(mod.select.k) # size, density
-ggplot(spdf.traits, aes(x=density, y=k, color=species, shape=size)) + geom_point() + facet_grid(~size)
+ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size)
 ```
 - alpha
 ```{r}
-summary(mod.select.alpha) # waterperc, barkthick, K, Zn
+#summary(mod.select.alpha) # waterperc, barkthick, K, Zn
 ggplot(spdf.traits, aes(x=waterperc, y=alpha, color=species, shape=size)) + geom_point()
 ggplot(spdf.traits, aes(x=barkthick, y=alpha, color=species, shape=size)) + geom_point()
 ggplot(spdf.traits, aes(x=K, y=alpha, color=species, shape=size)) + geom_point()
 ggplot(spdf.traits, aes(x=Zn, y=alpha, color=species, shape=size)) + geom_point()
 ```
-
-
-# LEFT OFF HERE
-
-2. Community as a predictor
-*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).  
-```{r}
-
-library(rioja)
-
-data(IK)
-spec <- IK$spec
-SumSST <- IK$env$SumSST
-core <- IK$core
-
-dim(spec)
-length(SumSST)
-
-fit <- WAPLS(spec, SumSST)
-fit
-# cross-validate model
-fit.cv <- crossval(fit, cv.method="loo")
-fit.cv
-
-# How many components to use?
-rand.t.test(fit.cv)
-screeplot(fit.cv)
-
-#predict the core
-pred <- predict(fit, core, npls=2)
-
-#plot predictions - depths are in rownames
-depth <- as.numeric(rownames(core))
-plot(depth, pred$fit[, 2], type="b", ylab="Predicted SumSST", las=1)
-
-# predictions with sample specific errors
-## Not run: 
-pred <- predict(fit, core, npls=2, sse=TRUE, nboot=1000)
-pred
-
-########
-
-#1. identify how many times that a community was sampled for each 'code'
-seqSamples %>%
-  group_by(code) %>%
-  summarize(num=length(seq_sampName)) -> numSitesSampled
-
-#2. randomly sample a community from each 'code'
-CODE<-unique(seqSamples$code)
-uniqCODEseqs.list<-list()
-for(i in 1:length(CODE)){
-  allSeqs<-seqSamples[seqSamples$code==CODE[i],"seq_sampName"]
-  selectNum<-sample(1:length(allSeqs),1,replace=T)
-  uniqCODEseqs.list[[i]]<-allSeqs[selectNum]
-}
-uniqCODEseqs.vec<-unlist(uniqCODEseqs.list)
-
-#3. filter to the selected sequences in that randomly-chosen set of communities
-curr.comm.otu<-comm.otu[row.names(comm.otu) %in% uniqCODEseqs.vec,]
-tmp<-data.frame(row.names(curr.comm.otu))
-new.row.names<-separate(tmp, row.names.curr.comm.otu., into=c("code","drop"), 4)[1]
-row.names(curr.comm.otu)<-new.row.names$code
-
-#4. get rid of empty OTU cols
-curr.comm.otu.trim<-curr.comm.otu[,colSums(curr.comm.otu)!=0]
-curr.spdf<-spdf[spdf$code %in% row.names(curr.comm.otu.trim),]
-
-#5. fit model
-fit <- WAPLS(curr.comm.otu.trim, curr.spdf$k)
-fit
-
-# cross-validate model
-fit.cv <- crossval(fit, cv.method="loo")
-fit.cv
-
-# How many components to use?
-rand.t.test(fit.cv)
-screeplot(fit.cv)
-
-```
-
-
-3. Community+traits as a predictor
-
-4. Diversity (and diversity of specific clades) as a predictor
-
-Plot richness of key players vs decay param distances BETWEEN species+size
-```{r}
-
-# summarize the presence of ... in each sample
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu)  
-sapList<-Plot_richOTUtype(otutype.df=sapro.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Saprotroph", spdf)
-
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu)
-basidList<-Plot_richOTUtype(otutype.df=basidio.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Basidio", spdf)
-
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
-pathList<-Plot_richOTUtype(otutype.df=path.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Pathogen", spdf)
-
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
-ooList<-Plot_richOTUtype(otutype.df=oomy.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Oomycete", spdf)
-
-#plot
-grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             sapList[['k']] + guides(color=FALSE, shape=FALSE), 
-             sapList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             basidList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             basidList[['k']] + guides(color=FALSE, shape=FALSE), 
-             basidList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             pathList[['k']] + guides(color=FALSE, shape=FALSE), 
-             pathList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ooList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             ooList[['k']] + guides(color=FALSE, shape=FALSE), 
-             ooList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ncol=3)
-
-```
-
-*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
-**No apparent pattern**
-
-*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
-**Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
-
-
-5. Diversity plus traits as a predictor
-
-
-
-
-##############################################
-
-# Extra pieces
-
-1. *code/testing_time_zero.Rmd* -- Including t=0 points to fit decay model affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity. 
-
-2. *code/initialDist_vs_decayDist_btwCode.Rmd* -- No apparent relationship between species+size dissimilarities in initial microbial community composition (bray and jaccard) and decay trajectory params
-
-3. *code/boralOTUpairs_vs_decay.Rmd* -- No apparent relationship between frequency of boral-ID'd positively/negatively correlated OTU pairs and decay params
-
-4. *code/withinInitialDist_vs_decayR2.Rmd* -- No apparent relationship between initial microbial diversity WITHIN species+size and decay model R2
-
 
 
