@@ -27,113 +27,65 @@ source("code/curve_fitting_fxns.R")
 source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
 
-```
 
-Load microbial community data
-```{r }
+### LOAD MICROBIAL COMMUNITY DATA
 
-stemSamples<-load_stemSamples() #load stem sample meta data
-write.csv(stemSamples, "derived_data/stemSamples.csv")
+#stem sample meta data
+#stemSamples<-load_stemSamples() #uncomment if the data changes
+#write_csv(stemSamples, "derived_data/stemSamples.csv")
+stemSamples<-read_csv("derived_data/stemSamples.csv")
 
-fung.otu<-load_matotu() #load the fungal OTU table
-comm.otu<-add_oomycetes(fung.otu) #add the oomycetes
-write.csv(comm.otu, "derived_data/comm_otu.csv")
+#OTU table
+#fung.otu<-load_matotu() #uncomment if the data changes
+#comm.otu<-add_oomycetes(fung.otu) #add the oomycetes #uncomment if the data changes
+#write.csv(comm.otu, "derived_data/comm_otu.csv")
+comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1)
 
-seqSamples<-load_seqSamples(comm.otu, stemSamples) #create sequence sample meta data table
-write.csv(seqSamples, "derived_data/seqSamples.csv")
+#create sequence sample meta data table
+#seqSamples<-load_seqSamples(comm.otu, stemSamples) #uncomment if the data changes
+#write_csv(seqSamples, "derived_data/seqSamples.csv")
+seqSamples<-read_csv("derived_data/seqSamples.csv")
+
+#taxon lookup info
+#taxAndFunguild<-load_TaxAndFunguild(comm.otu) #uncomment if the data changes
+#write_csv(taxAndFunguild, "derived_data/taxaAndFunguild.csv")
+taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 
 #plot_sampleEffortCurves(comm.otu)
 
-#load taxon lookup info
-taxAndFunguild<-load_TaxAndFunguild(comm.otu)
 
-```
-
-Load wood trait data
-```{r }
-traits.mean<-mergeTraitData()
-write.csv(traits.mean, "derived_data/traits_mean.csv")
-
+### LOAD WOOD TRAIT DATA
+#traits.mean<-mergeTraitData() #uncomment if the data changes
+#write_csv(traits.mean, "derived_data/traits_mean.csv") 
+traits.mean<-read_csv("derived_data/traits_mean.csv")
 #missing data
-traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
-filter(traits.long, is.na(value))
+#traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
+#filter(traits.long, is.na(value))
 
-# ggplot(traits.long, aes(x=species_lower, y=value, color=size)) + 
-#   geom_point() + 
-#   facet_wrap(~trait, scales="free") +
-#   mytheme + theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
-# #the Fe values for large stems are not 0, they are just small values
-# subset(traits.long, trait=="Fe") %>%
-#   ggplot(aes(x=species_lower, y=value, color=size)) + 
-#   geom_point() +
-#   facet_wrap(~size, scales="free")
-```
+### LOAD MASS LOSS DATA and CALCULATE % MASS REMAINING AT EACH TIMEPOINT
+#initial_mass <- read_in_initial_mass() #uncomment if the data changes
+#harvest_mass<-LoadHarvestFiles()
+#mass.data<-bind_rows(initial_mass, harvest_mass)
+#missing data
+#mass.data %>% filter(is.na(totalSampleDryMass))
+#plotting_df<-Calc_massRemaining(mass.data)
+#matching failures
+# plotting_df %>%
+#   filter(is.na(pmr)) %>%
+#   select(unique, species, size, time, totalSampleDryMass, notes) %>%
+#   spread(key=time, value=totalSampleDryMass)
+#remove NAs
+#plotting_df %>% filter(!is.na(pmr)) -> plotting_df
+#write_csv(plotting_df,"derived_data/plotting_df.csv")
+plotting_df<-read_csv("derived_data/plotting_df.csv")
 
-Load mass loss data
-```{r}
-
-initial_mass <- read_in_initial_mass()
-harvest_mass<-LoadHarvestFiles()
-mass.data<-bind_rows(initial_mass, harvest_mass)
-
-#look for outliers
-
-# mass.data %>% ggplot(aes(x=time, y=totalSampleDryMass)) + geom_point(alpha=0.6)+theme_bw() 
-#looks good
-
-# mass.data %>% ggplot(aes(x=time, y=totalSampleDryMass,col=size)) + geom_point(position="jitter",alpha=0.6)+theme_bw()+scale_y_log10()
-# two high values in size==small and harvest 3 are likely real, they have been checked
-
-#mass.data[which(mass.data$totalSampleDryMass==0),]
-#no longer any samples with 0 totalSampleDryMass in the dataset
-
-#check for missing data
-mass.data %>%
-  filter(is.na(totalSampleDryMass)) %>%
-  knitr::kable()
-```
-
-Merge time zero with the other harvests to calculate proportion mass remaining at each time point...
-Matching failures, all due to missing time 0 data
-```{r }
-#Merge time zero with the other harvests to calculate proportion mass remaining at each time point
-mass.data %>%
-  filter(time==0) %>%
-  rename(timeZeroDensity=density) %>%
-  rename(timeZeroMass=totalSampleDryMass) %>%
-  select(unique,timeZeroMass,timeZeroDensity)->time_zero
-
-mass.data %>%
-  left_join(time_zero,by="unique") %>%
-  mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
-  mutate(SpeciesCode=tolower(species)) -> plotting_df
-  write_csv(plotting_df,"derived_data/plotting_df.csv")
-  
-  
-# here are the matching failures which are currently due to the time zero adjustment for moisture
-plotting_df %>%
-  filter(is.na(pmr)) %>%
-  select(unique, species, size, time, totalSampleDryMass, notes) %>%
-  spread(key=time, value=totalSampleDryMass) %>%
-  knitr::kable()
-
-#remove NA rows
-plotting_df %>%
-  filter(!is.na(pmr)) -> plotting_df
-  
-```
-
-Non-linear curve fits of decay trajectories
-Using `litterfitter` to apply both negative exponenial and weibull to all species/size classes
-```{r, results=FALSE}
-
+### CALCULATE DECAY TRAJECTORY FITS
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
+#indx<-select(stemSamples, code, species, size)
+#spdf<-left_join(spdf, indx) #add code
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 spdf <- read_csv("derived_data/mass_loss_parameters.csv")
-indx<-select(stemSamples, code, species, size)
-spdf<-left_join(spdf, indx) #add code
-
 # ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
 #   geom_point()+
 #   labs(x="Time to 30% mass loss (negative exponential)", 
@@ -143,8 +95,58 @@ spdf<-left_join(spdf, indx) #add code
 ```
 
 
-### Try out rioja... 
-Our data doesn't fit the tutorial because we have >1 'site' (where site = species+size) for the community data
+1. Wood traits as a preditor
+*Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
+```{r}
+#scale traits
+traits.mean %>%
+  select(waterperc, density, barkthick, P, K, Ca, Mn, Fe, Zn, N, C) %>%
+  scale() %>% 
+  as.data.frame() -> pred
+row.names(pred)<-traits.mean$code
+
+#merge into 1 df
+spdf %>%
+  select(code, species, size, ne.r2, k, alpha) %>%
+  bind_cols(pred) %>%
+  filter(!is.na(P)) %>%
+  filter(!is.na(waterperc)) -> spdf.traits
+
+#fit full models
+mod.full.r<-lm(ne.r2 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+mod.full.k<-lm(k ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+mod.full.alpha<-lm(alpha ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+
+#do stepwise model selection
+mod.select.r<-step(mod.full.r, direction="backward")
+mod.select.k<-step(mod.full.k, direction="backward")
+mod.select.alpha<-step(mod.full.alpha, direction="backward")
+```
+*Results:*
+- r2
+```{r}
+summary(mod.select.r) # density
+ggplot(spdf.traits, aes(x=density, y=ne.r2, color=species, shape=size)) + geom_point()
+```
+- k
+```{r}
+summary(mod.select.k) # size, density
+ggplot(spdf.traits, aes(x=density, y=k, color=species, shape=size)) + geom_point() + facet_grid(~size)
+```
+- alpha
+```{r}
+summary(mod.select.alpha) # waterperc, barkthick, K, Zn
+ggplot(spdf.traits, aes(x=waterperc, y=alpha, color=species, shape=size)) + geom_point()
+ggplot(spdf.traits, aes(x=barkthick, y=alpha, color=species, shape=size)) + geom_point()
+ggplot(spdf.traits, aes(x=K, y=alpha, color=species, shape=size)) + geom_point()
+ggplot(spdf.traits, aes(x=Zn, y=alpha, color=species, shape=size)) + geom_point()
+```
+
+
+# LEFT OFF HERE
+
+2. Community as a predictor
+*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).  
 ```{r}
 
 library(rioja)
@@ -220,42 +222,12 @@ screeplot(fit.cv)
 
 ```
 
-### Correlation BETWEEN species+size dissimilarities in (a) initial microbial community composition, (b) initial wood traits, and (b) decay trajectory params
-```{r}
 
-# community composition (bray) vs delta k
-pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("ne.r2", "k","alpha"), 
-                              seqSamples, stemSamples, comm.otu, spdf)
-p.commVdecay.k<-pList[['k']] + guides(color=FALSE)
+3. Community+traits as a predictor
 
-# wood trait vs delta k
-pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
-p.traitVdecay.k<-pList[['k']] + guides(color=FALSE)
+4. Diversity (and diversity of specific clades) as a predictor
 
-# wood trait vs community composition (bray)
-traits.dist<-Calc_woodTraitDist(traits.mean)
-comm.dist<-Calc_commDists(seqSamples, comm.otu, distType="bray")
-summ.comm_dist<-SummarizeCommDist_byCodePair(comm.dist)
-trait_comm.dist<-MergeCommNWoodTraitdists_byCodePair(traits.dist, summ.comm_dist)
-p.commVtrait<-ggplot(trait_comm.dist, aes(x=mean_comm_dist, y=woodTraitDist, color=size)) + geom_point() + 
-  guides(color=FALSE) + xlab("Microb comm distance (bray)")
-
-# decay param == k
-grid.arrange(p.commVdecay.k, p.traitVdecay.k, p.commVtrait, ncol=2)
-```
-*Check out code/initialDist_vs_decayDist_btwCode.Rmd for full set of plots.*
-
-H1. Greater average distances between species+size initial microbial communitiy compositions will lead to greater differences in decay model fit (r2), rate (k -- shown here), and lagginess (alpha).  
-**There's not a lot of explanatory power because all microbial compositions are really different between species+size**  
-
-H2. Greater average distances between species+size initial wood traits will lead to greater differences in decay model fit (r2), rate (k -- shown here), and lagginess (alpha).  
-**Looks like there's some evidence to support this hypothesis**  
-
-H3. Greater average distances between species+size initial wood traits will correspond with greater distances between species+size initial microbial community compositions.  
-**All microbial compositions are really different between species+size. Variation in these composition differences do not appear to correspond to wood trait distances**
-
-
-### Plot richness of key players vs decay param distances BETWEEN species+size
+Plot richness of key players vs decay param distances BETWEEN species+size
 ```{r}
 
 # summarize the presence of ... in each sample
@@ -300,93 +272,30 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
 
 ```
 
-H1a. Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-H1b. Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
+*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
 **No apparent pattern**
 
-H2. Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
 **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
 
 
-### Plot frequency of positive/negative taxa 'interactions' vs decay param distances BETWEEN species+size
-```{r}
-
-#identify the negative and positive residually-correlated OTU pairs in a given community
-#this takes forever.... just read in the derived-data file unless input data changes
-#IDcorrelatedOTUsinEachSampl(taxaAndFunguild, comm.otu)
-pairsPresent.df<-read.csv(file="derived_data/pairsPresent.csv", row.names=1)
+5. Diversity plus traits as a predictor
 
 
-#merge the pairsPresent dataframes with the decay params data and plot
-posList<-Plot_signifCor(sign='pos', 
-                        valueCol_vec=c("ne.r2", "k", "alpha"), 
-                        pairsPresent.df, spdf, seqSamples)
-negList<-Plot_signifCor(sign='neg', 
-                        valueCol_vec=c("ne.r2", "k", "alpha"), 
-                        pairsPresent.df, spdf, seqSamples)
-
-grid.arrange(posList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             posList[['k']] + guides(color=FALSE, shape=FALSE), 
-             posList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             negList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             negList[['k']] + guides(color=FALSE, shape=FALSE), 
-             negList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ncol=3)
-
-```
-
-H1. A higher frequency of postively-correlated OTUs (after controlling for wood trait environmental influences) in a sample community will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha).  This could be because these OTUs facilitate each other thereby making it more difficult for later-colonizing OTUs that specialize in decay to establish. [Alternatively, a high frequency of positively-correlated taxa may indicate that these samples are dominated by co-occurring taxa that are in combat with one another...]
-**No pattern apparent**
-
-H2. A higher frequency of negatively-correlated OTUs (after controlling for wood trait environmental influences) in a sample community will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha). This could be because the occurance of negatively-correlated OTUs in the same sample indicates that there are negative biotic interactions among members of the initial community, thereby making it easier for later-colonizing OTUs that specialize in decay to establish.
-**No pattern apparent**
 
 
-### Plot microbial beta diversity WITHIN species+size vs R2 of neg.exponential
-```{r}
+##############################################
 
-#calculate pairwise community distances WITHIN code
-comm.dist<-Calc_commDists(seqSamples, comm.otu, distType="bray") #2. calc the distances
-filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
-  select(sampID1, sampID2, code1, size, dist) %>%
-  rename("code"="code1") %>% #rename the cols
-  group_by(code) %>%
-  summarize(mean=mean(dist), #calculate the mean community dist within code classes
-            se=sd(dist)/sqrt(length(dist)),
-            upper=mean+se,
-            lower=mean-se) -> comm.dist.wth
+# Extra pieces
 
-#combine with decay trajectory params
-comm.dist.wth<-left_join(comm.dist.wth, spdf)
+1. *code/testing_time_zero.Rmd* -- Including t=0 points to fit decay model affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity. 
 
-p.ne.r2<-ggplot(comm.dist.wth, aes(x=mean, y=ne.r2, color=species, shape=size)) + 
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
-  xlab("Microbial community distance within Code") + 
-  ylab("Negative exponential R2") 
+2. *code/initialDist_vs_decayDist_btwCode.Rmd* -- No apparent relationship between species+size dissimilarities in initial microbial community composition (bray and jaccard) and decay trajectory params
 
-p.w.r2<-ggplot(comm.dist.wth, aes(x=mean, y=w.r2, color=species, shape=size)) + 
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
-  xlab("Microbial community distance within Code") + 
-  ylab("Weibull model R2") 
+3. *code/boralOTUpairs_vs_decay.Rmd* -- No apparent relationship between frequency of boral-ID'd positively/negatively correlated OTU pairs and decay params
 
-p.k<-ggplot(comm.dist.wth, aes(x=mean, y=k, color=species, shape=size)) + 
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
-  xlab("Microbial community distance within Code") + 
-  ylab("k") 
-p.k
+4. *code/withinInitialDist_vs_decayR2.Rmd* -- No apparent relationship between initial microbial diversity WITHIN species+size and decay model R2
 
-#pdf('output/commDist_decayparam_withinCode.pdf', width=8, height=6)
-grid.arrange(p.ne.r2 + guides(color=FALSE, shape=FALSE), 
-             p.w.r2 + guides(color=FALSE, shape=FALSE))
-#dev.off()
-
-```
-H1. Expect that samples with similar initial microbial communities will have better-fitting decay models.
-**No pattern apparent**
 
 

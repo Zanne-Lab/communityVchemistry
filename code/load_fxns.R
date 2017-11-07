@@ -1,5 +1,22 @@
 #load data and clean initial dataframes
 
+##############
+
+# ggplot theme
+mytheme <- theme_bw(base_size = 10, base_family = "Helvetica") +
+  theme(panel.border = element_rect(colour = "black"),      #put a black box around the plotting area
+        axis.line = element_line(colour = "black"),                 #axis lines are in black
+        panel.grid.major = element_blank(),                         #turn off the gridlines
+        panel.grid.minor = element_blank(),
+        strip.text.x = element_text(face='bold.italic', hjust=0.05),         #turn off the x axis facet labels
+        strip.text.y = element_text(face='bold.italic', hjust=0.05),
+        strip.background = element_rect(fill = 'white', colour='black'),    #make y axis facet labels be italic and top justified
+        legend.key = element_blank(),                               #turn off box around legend
+        plot.title=element_text(hjust=0, vjust=0.5, face='bold'), #style and position of the panel label
+        plot.margin = unit(c(0.05,0.05,0.05,0.05),"in")
+  )
+
+
 #############
 # Sample codes
 
@@ -29,230 +46,186 @@ load_stemSamples<-function(){
 }
 
 
-
-
 #############
-# Sample mass & volume data
+# Initial microbial community data
 
-read_in_initial_mass <- function(){
-  require(readr)
+load_matotu<-function(){
+  
+  # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
+  data.otu <- read.csv('data/sequencing_T0/DP16_OTUtable.csv', stringsAsFactors = FALSE)
+  mat.otu <- as.matrix(data.otu[, 2:ncol(data.otu)]); rownames(mat.otu) <- data.otu[, 1]
+  
+  sum(colSums(mat.otu)==0) # if 0, then there are no empty columns
+  
+  # read in dataframe that contains sample information (also used to create meta and xrf)
+  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
+  # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
+  data <- data[!data$SampleCode == 'blank', ]
+  
+  # re-label rownames in 'mat.otu' with sample codes
+  rownames(mat.otu) <- gsub('.', '-', rownames(mat.otu), fixed=T)
+  rownames(mat.otu)[match(data$NextGenID, rownames(mat.otu))] <- data$SampleCode
+  
+  # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
+  blank <- mat.otu[grep('blank', rownames(mat.otu)), ]
+  mock <- mat.otu['mock', ]
+  mat.otu <- mat.otu[-c(grep('blank', rownames(mat.otu)), grep('mock', rownames(mat.otu))), ]
+  
+  # otus, taxa in mock (select cut-off of >=9 reads in a sample)
+  tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
+  mock <- data.frame(reads=sort(mock[mock > 0]))
+  mock <- cbind(mock, tax[match(rownames(mock), tax$OTU), 'species'])
+  # mock
+  mat.otu[mat.otu < 9] <- 0
+  
+  # re-order rows in 'mat.otu' to match rows in 'data'
+  mat.otu <- mat.otu[match(data$SampleCode, rownames(mat.otu)), ]
+  all(rownames(mat.otu) == data$SampleCode)  # is TRUE
+  
+  return(mat.otu)
+  
+}
+
+load_seqSamples<-function(mat.otu, stemSamples){
+  stemSamples %>% select(code, species, size) -> codeindx
+  seq_sampName<-row.names(mat.otu)
+  seq_indx<-data.frame(seq_sampName=seq_sampName, code=substr(seq_sampName, 1, 4))
+  seqSamples<-left_join(seq_indx, codeindx)
+  return(seqSamples)
+}
+
+add_oomycetes<-function(fung.otu){
+  
+  # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
+  data.otu <- read.csv('data/sequencing_T0/OTUtable_oomycetes_20171020.csv', row.names=1)
+  data.df<-data.frame(seqSamp=row.names(data.otu), data.otu)
+  
+  #make mat.otu of fungal taxa a dataframe
+  fung.df<-data.frame(seqSamp=row.names(fung.otu), fung.otu)
+  
+  #merge by seqSamp
+  comm.df<-left_join(fung.df, data.df)
+  
+  #make NAs into 0s
+  comm.df[is.na(comm.df)]<-0
+  
+  #make dataframe into a matrix again
+  row.names(comm.df)<-comm.df$seqSamp
+  comm.mat<-comm.df[,-1]
+  comm.mat<-as.matrix(comm.mat)
+  
+  return(comm.mat)
+}
+
+load_TaxAndFunguild <- function(comm.otu) {
   require(dplyr)
-  big <- read_csv("data/covariates_bigStems.csv")
-  small <- read_csv("data/covariates_smallStems.csv")
   
-  #look for missing data in olst small
-  filter(small, Species == 'olst') -> tmp
-  #View(tmp) #no samples with `Dry mass total (g)`
+  # load fungal OTU info
+  funguild <-read.delim('data/sequencing_T0/DP16_funguild.txt', stringsAsFactors = F)
+  tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
   
-  big_out <- process_initial_large(big,"large")
-  small_out <- process_initial_small(small,"small")
+  # merge the dataframes by OTUId
+  colnames(tax)[1] <- "OTUId" #make this match the column name in funguild
+  taxAndFunguild <- left_join(tax, funguild)
   
-  df_out<-bind_rows(big_out,small_out)
-  return(df_out)
-} 
-
-process_initial_large<-function(df,size){
+  # create a kingdom column
+  taxAndFunguild$kingdom<-NA
+  taxAndFunguild[grepl("Fungi", taxAndFunguild$taxonomy),"kingdom"]<-"Fungi"
   
-  if ("Dry mass total (g)" %in% names(df)) {
-    df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
-  }
+  # add oomycete OTUs as rows
+  ooOTUs<-colnames(comm.otu)[!colnames(comm.otu) %in% taxAndFunguild$OTUId]
+  oo.df<-data.frame(OTUId=ooOTUs, kingdom="Protist")
+  taxAndFunguild<-bind_rows(taxAndFunguild, oo.df)
   
-  df %>%
-    mutate(dry_mass_content=`Dry mass (g)`/`Fresh mass (g)`) %>%
-    filter(!is.na(dry_mass_content)) %>%
-    group_by(Species) %>%
-    summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
+  # reorder taxAndFunguild to make OTU table
+  o<-match(colnames(comm.otu), taxAndFunguild$OTUId)
+  o.taxAndFunguild<-taxAndFunguild[o,]
+  sum(o.taxAndFunguild$OTUId != colnames(comm.otu)) #this need to be 0
   
-  df %>%
-    left_join(moisture) %>%
-    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
-    select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) %>%
-    rename("species"="Species") -> df_out
+  # only use FUNGuild info with confidence ranking of Probable or Highly Probable
+  o.taxAndFunguild[!o.taxAndFunguild$Confidence.Ranking %in% c("Probable","Highly Probable"),c("Trophic.Mode","Guild")]<-"unclassified"
   
+  # select cols 
+  o.taxAndFunguild %>%
+    select(OTUId, taxonomy, kingdom, phylum, genus, species, 
+           Trophic.Mode, Guild) -> o.taxAndFunguild
   
-  #TODO ADD A REAL CALCULATION OF WOOD DENSITY ONCE WE UNDERSTAND HOW TO DO THAT
+  #clean Trophic.Mode
+  #unique(o.taxAndFunguild$Trophic.Mode)
   
-  return(df_out)
+  #clean Guild
+  #unique(o.taxAndFunguild$Guild)
+  o.taxAndFunguild[o.taxAndFunguild$Guild=="NULL","Guild"]<-"unclassified"
+  
+  #clean oomycetes
+  o.taxAndFunguild[o.taxAndFunguild$kingdom=="Protist", c("taxonomy","phylum","genus","species")]<-"unclassified"
+  
+  return(o.taxAndFunguild)
 }
 
-process_initial_small<-function(df,size){
-  
-  if ("Dry mass total (g)" %in% names(df)) {
-    df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
-  }
-  
-  length <- 10 # LENGTH OF STEMS IN CM, SHOULD PROBABLY BE HIGHER UP SOMEWHERE, IF NEEDED ELSEWHERE
-  
-  # CALCULATE INITIAL PROPORTION DRY MASS
-  df %>%
-    mutate(dry_mass_content=ifelse(
-           !is.na(`Dry mass (g)`),
-           `Dry mass (g)`/`Fresh mass (g)`,
-           (`Dry mass wood (g)`+`Dry mass bark (g)`)/`Fresh mass (g)`
-           )) %>%
-    filter(!is.na(dry_mass_content)) %>%
-    group_by(Species) %>%
-    summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
-  
-   # WOOD DENSITY, XYLEM DENSITY, AND BARK DENSITY
-   df %>%
-   mutate(xylem_density=`Dry mass wood (g)`/`Volume (g)`) %>%
-     mutate(total_volume=(pi*(`Diameter.wbark (mm)`/20)^2*length)) %>% # converting to cm here
-     mutate(total_density=ifelse(
-        !is.na(`Dry mass (g)`),
-      `Dry mass (g)`/total_volume,
-       (`Dry mass wood (g)`+`Dry mass bark (g)`)/total_volume
-     )) %>%
-     mutate(bark_volume=(pi*(`Diameter.wbark (mm)`/20)^2*length)-(pi*(`Diameter.nobark (mm)`/20)^2*length)) %>% # convert to cm
-     mutate(bark_density=`Dry mass bark (g)`/bark_volume)->df
-  
-  df %>%
-    left_join(moisture) %>%
-    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,time=0,fruiting=NA,insects=NA,drill=NA) %>%
-    select(unique, Species, size,time,totalSampleDryMass,bark_density,xylem_density,total_density,fruiting,insects,drill) %>%
-    rename("species"="Species") -> df_out
-  
-  return(df_out)
-}
+# calc_matotu_summStats<-function(mat.otu, meta){
+#   
+#   #total number of OTUs
+#   totalOTUs<-dim(mat.otu)[2]
+#   
+#   #mean sample richness
+#   richness<-apply(mat.otu,MARGIN = 1,function(x) sum(x>0))
+#   meanRichness<-mean(richness)
+#   seRichness<-sd(richness)/sqrt(length(richness))
+#   
+#   #mean sample evenness
+#   H <- diversity(mat.otu) 
+#   S <- specnumber(mat.otu) ## rowSums(BCI > 0) does the same...
+#   J <- H/log(S) #Pielou's evenness (J)
+#   meanJ<-mean(J)
+#   seJ<-sd(J)/sqrt(length(J))
+#   
+#   #mean number of reads per sample
+#   meanReads<-mean(rowSums(mat.otu))
+#   seReads<-sd(rowSums(mat.otu))/sqrt(length(rowSums(mat.otu)))
+#   seReads
+#   
+#   summaryStats<-data.frame(label=c("totalOTUs","meanRichness","seRichness","meanEvenness","seEvenness"),
+#                            value=c(totalOTUs, meanRichness, seRichness, meanJ, seJ))
+#   round(summaryStats$value, digits=4)
+#   write.csv(summaryStats, file="output/matotu_summary.csv")
+# }
 
-read.samp1 <- function(){
-  samp1 <- read.csv('data/samp1data_201402.csv', stringsAsFactors=F)
-  samp1$notes <- ''
-  samp1$typesInsects <- ''
-  samp1$weightForVol <- samp1$dryMass
-  samp1$wetWeightForMass <- apply(samp1[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
-  samp1[is.na(samp1$wetWeight), 'wetWeightForMass'] <- NA
-  samp1$time <- 7
-  return(samp1)
-}
-
-read.samp2 <- function(){
-  samp2 <- read.csv('data/samp2data_201408.csv', stringsAsFactors=F)
-  samp2$typesInsects <- ''
-  samp2$weightForVol <- samp2$dryMass
-  samp2$wetWeightForMass <- apply(samp2[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
-  samp2[is.na(samp2$wetWeight), 'wetWeightForMass'] <- NA
-  samp2$time <- 13
-  return(samp2)
-}
-
-read.samp3 <- function(){
-  samp3 <- read.csv('data/samp3data_201508.csv', stringsAsFactors=F)
-  samp3$typesInsects <- ''
-  # wet weight excess measured separately on multiple pieces
-  temp <- strsplit(samp3$wetWeightExcess, '+', fixed=T)
-  samp3$wetWeightExcess <- sapply(temp, function(x){if(length(x) == 2) sum(as.numeric(x)) else if(length(x) == 1) as.numeric(x) else NA})
-  rm(temp)
-  # when recording wood volume for small stems broken into two, could not measure on whole piece so additional wet weights recorded for relevant fragment
-  # following code is for sorting this out
-  temp <- strsplit(samp3$volMass, 'gpiece=', fixed=T)
-  samp3$volMass <- sapply(temp, function(x) {if(length(x) == 2) x[2] else x[1]})
-  samp3$volMass <- as.numeric(samp3$volMass)
-  x <- is.na(samp3$weightForVol)
-  samp3$weightForVol[x] <- samp3$dryMass[x]
-  rm(temp, x)
-  # include excess wood in bag (fragments falling off during transit) for wet mass of whole harvested piece
-  # dry mass weighed for excess and nonexcess all at once
-  samp3$wetWeightForMass <- apply(samp3[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
-  samp3[is.na(samp3$wetWeight), 'wetWeightForMass'] <- NA
-  samp3$time <- 25
-  return(samp3)
-}
-
-read.samp4 <- function(){
-  samp4 <- read.csv('data/samp4data_201608_quantitative.csv', stringsAsFactors=F)
-  # ensure consistency in column names
-  names(samp4) <- gsub('wetWeightExcess..g.', 'wetWeightExcess', names(samp4))
-  # when recording wood volume, could not measure on whole piece so additional wet weights recorded for relevant fragment
-  # following code is for sorting this out
-  temp <- strsplit(gsub('^\\(', '', samp4$drilledWeight), ' total) ', fixed=T)
-  samp4$weightForVol <- sapply(temp, function(x){if(length(x) == 2) as.numeric(x)[2] else as.numeric(x)[1]})
-  x <- samp4$weightForVol %in% 0
-  samp4[x, 'weightForVol'] <- samp4[x, 'wetWeight']
-  rm(temp, x)
-  # include excess wood in bag (fragments falling off during transit) for wet and dry mass of whole harvested piece
-  samp4$wetWeightForMass <- apply(samp4[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
-  samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA
-  samp4[is.na(samp4$total.dry), 'total.dry'] <- samp4[is.na(samp4$total.dry), 'dryMass.piece.used.to.do.vol.mass.']
-  samp4$dryMass <- apply(samp4[, c('dry.WWE', 'total.dry')], 1, sum, na.rm=T)
-  samp4[with(samp4, which(is.na(dry.WWE) & is.na(total.dry))), 'dryMass'] <- NA
-  # include damage scoring data
-  samp4.1 <- read.csv('data/samp4data_201608_qualitative.csv', stringsAsFactor=F)
-  names(samp4.1) <- gsub('notes', 'notes1', names(samp4.1))
-  samp4 <- merge(samp4, samp4.1)
-  samp4$notes <- with(samp4, paste(notes, notes1, sep=' -- '))
-  samp4$notes1 <- samp4$dry.WWE <- samp4$dryMass.piece.used.to.do.vol.mass. <- NULL
-  samp4$time <- 37
-  #select columns to keep
-  keepCols<-c("order","unique","drill","wetWeight","fruitingBodies","wetWeightExcess",
-              "drilledWeight","volMass","volMassRetained","insectDamage","weightForVol","dryMass",
-              "notes","typesInsects","wetWeightForMass","time")
-  samp4<-samp4[, keepCols]
-  return(samp4)
-}
-
-CalcTotalDryMass<-function(data){
-  data$totalSampleDryMass <- NA
-  x <- which(data$drill == 'no' | data$dryMass == 0 | data$weightForVol == 0); data$totalSampleDryMass[x] <- data$dryMass[x]
-  x <- which(data$drill == 'yes' & data$dryMass > 0 & data$weightForVol > 0); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
-  data$totalSampleDryMass <- round(data$totalSampleDryMass, 2)
-  return(data)
-}
-
-CalcDensity<-function(data){
-  data$total_density <- NA
-  data$total_density <- round(data$weightForVol / data$volMass, 2)
-  return(data)
-}
-
-ReorgDataFrame<-function(data){
-  require(tidyr)
+plot_sampleEffortCurves<-function(mat.otu){
   
-  #add a species column
-  data<-separate(data, unique, into=c("species","extraCode"), 4, remove=FALSE)
+  pdf(file="output/sampleEffortCurve.pdf", width=5, height=5)
   
-  #add a size column
-  data$size<-"large"
-  data[tolower(data$species) == data$species,"size"]<-"small"
-  
-  #rename and select columns
-  data %>%
-    rename("fruiting"="fruitingBodies","insects"="insectDamage") %>%
-    select(unique, species, size, time, totalSampleDryMass, total_density, fruiting, insects, drill, notes) -> data
-  
-  return(data)
+  rarecurve(mat.otu, step=100,
+            xlab="Number of reads per sample", 
+            ylab="Cumulative number of OTUs", label=FALSE)
+  dev.off()
   
 }
 
-LoadHarvestFiles<-function(){
+load_boralResidCors<-function(taxAndFunguild){
   
-  # load data
-  s1 <- read.samp1()
-  s2 <- read.samp2()
-  s3 <- read.samp3()
-  s4 <- read.samp4()
+  #load
+  residCor <- read.csv('data/sig_residCorTable.csv', stringsAsFactors=F, row.names=1)
   
-  #bind everything together
-  s.data<-rbind(s1,s2,s3,s4)
-
-  #calculate total dry mass
-  s.data<-CalcTotalDryMass(s.data)
-
-  #calculate density
-  s.data<-CalcDensity(s.data)
+  #annotate with OTU info
+  taxAndFunguild %>% select(OTUId, kingdom, taxonomy, phylum, species, Trophic.Mode) -> taxIndx
   
-  #reorganize data frame
-  s.data<-ReorgDataFrame(s.data)
+  residCor %>%
+    left_join(taxIndx, by=c("otu1"="OTUId")) %>%
+    rename("kingdom1"="kingdom",
+           "taxonomy1"="taxonomy",
+           "phylum1"="phylum",
+           "species1"="species",
+           "Trophic.Mode1"="Trophic.Mode") %>%
+    left_join(taxIndx, by=c("otu2"="OTUId")) %>%
+    rename("kingdom2"="kingdom",
+           "taxonomy2"="taxonomy",
+           "phylum2"="phylum",
+           "species2"="species",
+           "Trophic.Mode2"="Trophic.Mode") -> residCor.ann
   
-  #check for missing data
-  #filter(s.data, is.na(totalSampleDryMass))
-  filter(s.data, is.na(totalSampleDryMass), notes =="all wwe -- all wet weight excess") #what does this note mean?
-  filter(s.data, is.na(totalSampleDryMass), notes !="all wwe -- all wet weight excess") #for missing samples, we don't know if they rotted away completely or were moved/missing, so entered as NA
-
-  return(s.data)
-  
+  return(residCor.ann)
 }
-
 
 
 
@@ -433,27 +406,27 @@ mergeTraitData<-function(){
   traits<-rename(traits, "N"="n.perc", "C"="c.perc")
   
   # use species-level small-stem estimates of density and barkthick for large-stem samples
-  traits$species_lower<-tolower(traits$code)
+  traits$species<-tolower(traits$code)
   traits$size<-"small"
   traits[tolower(traits$code)!=traits$code,"size"]<-"large"
   largeCodes<-as.data.frame(traits[traits$size=="large","code"])[,1]
   for(i in 1:length(largeCodes)){
     curr.code<-largeCodes[i]
-    curr.species_lower<-tolower(curr.code)
-    filter(traits, species_lower==curr.species_lower) %>%
+    curr.species<-tolower(curr.code)
+    filter(traits, species==curr.species) %>%
       filter(size=="small") -> curr.row
     curr.data<-data.frame(curr.row[,c("density","barkthick")])
     traits[traits$code == curr.code, c("density","barkthick")]<-curr.data
   }
   
-  traits<-traits[,c("code", "species_lower","size",
+  traits<-traits[,c("code", "species","size",
                     "waterperc","density","barkthick","P" ,"K" ,"Ca" ,"Mn","Fe","Zn" ,"N","C")]
   
-  #summarize trait ranges
-  traits.long<-as.data.frame(gather(traits, key=trait, value=value, -(1:3)))
-  group_by(traits.long, trait) %>%
-    summarize(max=range(value, na.rm=TRUE)[1],
-              min=range(value, na.rm=TRUE)[2])
+  # #summarize trait ranges
+  # traits.long<-as.data.frame(gather(traits, key=trait, value=value, -(1:3)))
+  # group_by(traits.long, trait) %>%
+  #   summarize(max=range(value, na.rm=TRUE)[1],
+  #             min=range(value, na.rm=TRUE)[2])
   
   return(traits)
   
@@ -461,206 +434,244 @@ mergeTraitData<-function(){
 
 
 
-
 #############
-# Initial microbial community data
+# Sample mass & volume data
 
-load_matotu<-function(){
-  
-  # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
-  data.otu <- read.csv('data/sequencing_T0/DP16_OTUtable.csv', stringsAsFactors = FALSE)
-  mat.otu <- as.matrix(data.otu[, 2:ncol(data.otu)]); rownames(mat.otu) <- data.otu[, 1]
-  
-  sum(colSums(mat.otu)==0) # if 0, then there are no empty columns
-  
-  # read in dataframe that contains sample information (also used to create meta and xrf)
-  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
-  # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  data <- data[!data$SampleCode == 'blank', ]
-  
-  # re-label rownames in 'mat.otu' with sample codes
-  rownames(mat.otu) <- gsub('.', '-', rownames(mat.otu), fixed=T)
-  rownames(mat.otu)[match(data$NextGenID, rownames(mat.otu))] <- data$SampleCode
-  
-  # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  blank <- mat.otu[grep('blank', rownames(mat.otu)), ]
-  mock <- mat.otu['mock', ]
-  mat.otu <- mat.otu[-c(grep('blank', rownames(mat.otu)), grep('mock', rownames(mat.otu))), ]
-  
-  # otus, taxa in mock (select cut-off of >=9 reads in a sample)
-  tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
-  mock <- data.frame(reads=sort(mock[mock > 0]))
-  mock <- cbind(mock, tax[match(rownames(mock), tax$OTU), 'species'])
-  # mock
-  mat.otu[mat.otu < 9] <- 0
-  
-  # re-order rows in 'mat.otu' to match rows in 'data'
-  mat.otu <- mat.otu[match(data$SampleCode, rownames(mat.otu)), ]
-  all(rownames(mat.otu) == data$SampleCode)  # is TRUE
-  
-  return(mat.otu)
-  
-}
-
-load_seqSamples<-function(mat.otu, stemSamples){
-  stemSamples %>% select(code, species, size) -> codeindx
-  seq_sampName<-row.names(mat.otu)
-  seq_indx<-data.frame(seq_sampName=seq_sampName, code=substr(seq_sampName, 1, 4))
-  seqSamples<-left_join(seq_indx, codeindx)
-  return(seqSamples)
-}
-
-add_oomycetes<-function(fung.otu){
-  
-  # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
-  data.otu <- read.csv('data/sequencing_T0/OTUtable_oomycetes_20171020.csv', row.names=1)
-  data.df<-data.frame(seqSamp=row.names(data.otu), data.otu)
-  
-  #make mat.otu of fungal taxa a dataframe
-  fung.df<-data.frame(seqSamp=row.names(fung.otu), fung.otu)
-  
-  #merge by seqSamp
-  comm.df<-left_join(fung.df, data.df)
-  
-  #make NAs into 0s
-  comm.df[is.na(comm.df)]<-0
-  
-  #make dataframe into a matrix again
-  row.names(comm.df)<-comm.df$seqSamp
-  comm.mat<-comm.df[,-1]
-  comm.mat<-as.matrix(comm.mat)
-  
-  return(comm.mat)
-}
-
-load_TaxAndFunguild <- function(comm.otu) {
+read_in_initial_mass <- function(){
+  require(readr)
   require(dplyr)
+  big <- read_csv("data/covariates_bigStems.csv")
+  small <- read_csv("data/covariates_smallStems.csv")
   
-  # load fungal OTU info
-  funguild <-read.delim('data/sequencing_T0/DP16_funguild.txt', stringsAsFactors = F)
-  tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
+  #look for missing data in olst small
+  filter(small, Species == 'olst') -> tmp
+  #View(tmp) #no samples with `Dry mass total (g)`
   
-  # merge the dataframes by OTUId
-  colnames(tax)[1] <- "OTUId" #make this match the column name in funguild
-  taxAndFunguild <- left_join(tax, funguild)
+  big_out <- process_initial_large(big,"large")
+  small_out <- process_initial_small(small,"small")
   
-  # create a kingdom column
-  taxAndFunguild$kingdom<-NA
-  taxAndFunguild[grepl("Fungi", taxAndFunguild$taxonomy),"kingdom"]<-"Fungi"
-  
-  # add oomycete OTUs as rows
-  ooOTUs<-colnames(comm.otu)[!colnames(comm.otu) %in% taxAndFunguild$OTUId]
-  oo.df<-data.frame(OTUId=ooOTUs, kingdom="Protist")
-  taxAndFunguild<-bind_rows(taxAndFunguild, oo.df)
+  df_out<-bind_rows(big_out,small_out)
+  return(df_out)
+} 
 
-  # reorder taxAndFunguild to make OTU table
-  o<-match(colnames(comm.otu), taxAndFunguild$OTUId)
-  o.taxAndFunguild<-taxAndFunguild[o,]
-  sum(o.taxAndFunguild$OTUId != colnames(comm.otu)) #this need to be 0
+process_initial_large<-function(df,size){
   
-  # only use FUNGuild info with confidence ranking of Probable or Highly Probable
-  o.taxAndFunguild[!o.taxAndFunguild$Confidence.Ranking %in% c("Probable","Highly Probable"),c("Trophic.Mode","Guild")]<-"unclassified"
+  if ("Dry mass total (g)" %in% names(df)) {
+    df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
+  }
   
-  # select cols 
-  o.taxAndFunguild %>%
-    select(OTUId, taxonomy, kingdom, phylum, genus, species, 
-           Trophic.Mode, Guild) -> o.taxAndFunguild
+  df %>%
+    mutate(dry_mass_content=`Dry mass (g)`/`Fresh mass (g)`) %>%
+    filter(!is.na(dry_mass_content)) %>%
+    group_by(Species) %>%
+    summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
   
-  #clean Trophic.Mode
-  #unique(o.taxAndFunguild$Trophic.Mode)
+  df %>%
+    left_join(moisture) %>%
+    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,density=NA,time=0,fruiting=NA,insects=NA,drill=NA) %>%
+    select(unique, Species, size,time,totalSampleDryMass,density,fruiting,insects,drill) %>%
+    rename("species"="Species") -> df_out
   
-  #clean Guild
-  #unique(o.taxAndFunguild$Guild)
-  o.taxAndFunguild[o.taxAndFunguild$Guild=="NULL","Guild"]<-"unclassified"
   
-  #clean oomycetes
-  o.taxAndFunguild[o.taxAndFunguild$kingdom=="Protist", c("taxonomy","phylum","genus","species")]<-"unclassified"
+  #TODO ADD A REAL CALCULATION OF WOOD DENSITY ONCE WE UNDERSTAND HOW TO DO THAT
   
-  return(o.taxAndFunguild)
+  return(df_out)
+}
+
+process_initial_small<-function(df,size){
+  
+  if ("Dry mass total (g)" %in% names(df)) {
+    df <- rename(df,`Dry mass (g)`=`Dry mass total (g)`)
+  }
+  
+  length <- 10 # LENGTH OF STEMS IN CM, SHOULD PROBABLY BE HIGHER UP SOMEWHERE, IF NEEDED ELSEWHERE
+  
+  # CALCULATE INITIAL PROPORTION DRY MASS
+  df %>%
+    mutate(dry_mass_content=ifelse(
+      !is.na(`Dry mass (g)`),
+      `Dry mass (g)`/`Fresh mass (g)`,
+      (`Dry mass wood (g)`+`Dry mass bark (g)`)/`Fresh mass (g)`
+    )) %>%
+    filter(!is.na(dry_mass_content)) %>%
+    group_by(Species) %>%
+    summarize(dry_mass_prop=mean(dry_mass_content,na.rm=T),n()) -> moisture
+  
+  # WOOD DENSITY, XYLEM DENSITY, AND BARK DENSITY
+  df %>%
+    mutate(xylem_density=`Dry mass wood (g)`/`Volume (g)`) %>%
+    mutate(total_volume=(pi*(`Diameter.wbark (mm)`/20)^2*length)) %>% # converting to cm here
+    mutate(total_density=ifelse(
+      !is.na(`Dry mass (g)`),
+      `Dry mass (g)`/total_volume,
+      (`Dry mass wood (g)`+`Dry mass bark (g)`)/total_volume
+    )) %>%
+    mutate(bark_volume=(pi*(`Diameter.wbark (mm)`/20)^2*length)-(pi*(`Diameter.nobark (mm)`/20)^2*length)) %>% # convert to cm
+    mutate(bark_density=`Dry mass bark (g)`/bark_volume)->df
+  
+  df %>%
+    left_join(moisture) %>%
+    mutate(totalSampleDryMass=`Fresh mass (g)`*dry_mass_prop,size=size,time=0,fruiting=NA,insects=NA,drill=NA) %>%
+    select(unique, Species, size,time,totalSampleDryMass,bark_density,xylem_density,total_density,fruiting,insects,drill) %>%
+    rename("species"="Species") -> df_out
+  
+  return(df_out)
+}
+
+read.samp1 <- function(){
+  samp1 <- read.csv('data/samp1data_201402.csv', stringsAsFactors=F)
+  samp1$notes <- ''
+  samp1$typesInsects <- ''
+  samp1$weightForVol <- samp1$dryMass
+  samp1$wetWeightForMass <- apply(samp1[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
+  samp1[is.na(samp1$wetWeight), 'wetWeightForMass'] <- NA
+  samp1$time <- 7
+  return(samp1)
+}
+
+read.samp2 <- function(){
+  samp2 <- read.csv('data/samp2data_201408.csv', stringsAsFactors=F)
+  samp2$typesInsects <- ''
+  samp2$weightForVol <- samp2$dryMass
+  samp2$wetWeightForMass <- apply(samp2[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
+  samp2[is.na(samp2$wetWeight), 'wetWeightForMass'] <- NA
+  samp2$time <- 13
+  return(samp2)
+}
+
+read.samp3 <- function(){
+  samp3 <- read.csv('data/samp3data_201508.csv', stringsAsFactors=F)
+  samp3$typesInsects <- ''
+  # wet weight excess measured separately on multiple pieces
+  temp <- strsplit(samp3$wetWeightExcess, '+', fixed=T)
+  samp3$wetWeightExcess <- sapply(temp, function(x){if(length(x) == 2) sum(as.numeric(x)) else if(length(x) == 1) as.numeric(x) else NA})
+  rm(temp)
+  # when recording wood volume for small stems broken into two, could not measure on whole piece so additional wet weights recorded for relevant fragment
+  # following code is for sorting this out
+  temp <- strsplit(samp3$volMass, 'gpiece=', fixed=T)
+  samp3$volMass <- sapply(temp, function(x) {if(length(x) == 2) x[2] else x[1]})
+  samp3$volMass <- as.numeric(samp3$volMass)
+  x <- is.na(samp3$weightForVol)
+  samp3$weightForVol[x] <- samp3$dryMass[x]
+  rm(temp, x)
+  # include excess wood in bag (fragments falling off during transit) for wet mass of whole harvested piece
+  # dry mass weighed for excess and nonexcess all at once
+  samp3$wetWeightForMass <- apply(samp3[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
+  samp3[is.na(samp3$wetWeight), 'wetWeightForMass'] <- NA
+  samp3$time <- 25
+  return(samp3)
+}
+
+read.samp4 <- function(){
+  samp4 <- read.csv('data/samp4data_201608_quantitative.csv', stringsAsFactors=F)
+  # ensure consistency in column names
+  names(samp4) <- gsub('wetWeightExcess..g.', 'wetWeightExcess', names(samp4))
+  # when recording wood volume, could not measure on whole piece so additional wet weights recorded for relevant fragment
+  # following code is for sorting this out
+  temp <- strsplit(gsub('^\\(', '', samp4$drilledWeight), ' total) ', fixed=T)
+  samp4$weightForVol <- sapply(temp, function(x){if(length(x) == 2) as.numeric(x)[2] else as.numeric(x)[1]})
+  x <- samp4$weightForVol %in% 0
+  samp4[x, 'weightForVol'] <- samp4[x, 'wetWeight']
+  rm(temp, x)
+  # include excess wood in bag (fragments falling off during transit) for wet and dry mass of whole harvested piece
+  samp4$wetWeightForMass <- apply(samp4[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
+  samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA
+  samp4[is.na(samp4$total.dry), 'total.dry'] <- samp4[is.na(samp4$total.dry), 'dryMass.piece.used.to.do.vol.mass.']
+  samp4$dryMass <- apply(samp4[, c('dry.WWE', 'total.dry')], 1, sum, na.rm=T)
+  samp4[with(samp4, which(is.na(dry.WWE) & is.na(total.dry))), 'dryMass'] <- NA
+  # include damage scoring data
+  samp4.1 <- read.csv('data/samp4data_201608_qualitative.csv', stringsAsFactor=F)
+  names(samp4.1) <- gsub('notes', 'notes1', names(samp4.1))
+  samp4 <- merge(samp4, samp4.1)
+  samp4$notes <- with(samp4, paste(notes, notes1, sep=' -- '))
+  samp4$notes1 <- samp4$dry.WWE <- samp4$dryMass.piece.used.to.do.vol.mass. <- NULL
+  samp4$time <- 37
+  #select columns to keep
+  keepCols<-c("order","unique","drill","wetWeight","fruitingBodies","wetWeightExcess",
+              "drilledWeight","volMass","volMassRetained","insectDamage","weightForVol","dryMass",
+              "notes","typesInsects","wetWeightForMass","time")
+  samp4<-samp4[, keepCols]
+  return(samp4)
+}
+
+CalcTotalDryMass<-function(data){
+  data$totalSampleDryMass <- NA
+  x <- which(data$drill == 'no' | data$dryMass == 0 | data$weightForVol == 0); data$totalSampleDryMass[x] <- data$dryMass[x]
+  x <- which(data$drill == 'yes' & data$dryMass > 0 & data$weightForVol > 0); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
+  data$totalSampleDryMass <- round(data$totalSampleDryMass, 2)
+  return(data)
+}
+
+CalcDensity<-function(data){
+  data$total_density <- NA
+  data$total_density <- round(data$weightForVol / data$volMass, 2)
+  return(data)
+}
+
+ReorgDataFrame<-function(data){
+  require(tidyr)
+  
+  #add a species column
+  data<-separate(data, unique, into=c("species","extraCode"), 4, remove=FALSE)
+  
+  #add a size column
+  data$size<-"large"
+  data[tolower(data$species) == data$species,"size"]<-"small"
+  
+  #rename and select columns
+  data %>%
+    rename("fruiting"="fruitingBodies","insects"="insectDamage") %>%
+    select(unique, species, size, time, totalSampleDryMass, total_density, fruiting, insects, drill, notes) -> data
+  
+  return(data)
+  
+}
+
+LoadHarvestFiles<-function(){
+  
+  # load data
+  s1 <- read.samp1()
+  s2 <- read.samp2()
+  s3 <- read.samp3()
+  s4 <- read.samp4()
+  
+  #bind everything together
+  s.data<-rbind(s1,s2,s3,s4)
+  
+  #calculate total dry mass
+  s.data<-CalcTotalDryMass(s.data)
+  
+  #calculate density
+  s.data<-CalcDensity(s.data)
+  
+  #reorganize data frame
+  s.data<-ReorgDataFrame(s.data)
+  
+  #check for missing data
+  #filter(s.data, is.na(totalSampleDryMass))
+  filter(s.data, is.na(totalSampleDryMass), notes =="all wwe -- all wet weight excess") #what does this note mean?
+  filter(s.data, is.na(totalSampleDryMass), notes !="all wwe -- all wet weight excess") #for missing samples, we don't know if they rotted away completely or were moved/missing, so entered as NA
+  
+  return(s.data)
+  
+}
+
+Calc_massRemaining<-function(mass.data){
+  
+  mass.data %>%
+    filter(time==0) %>%
+    rename(timeZeroDensity=density) %>%
+    rename(timeZeroMass=totalSampleDryMass) %>%
+    select(unique,timeZeroMass,timeZeroDensity)->time_zero
+  
+  mass.data %>%
+    left_join(time_zero,by="unique") %>%
+    mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
+    mutate(SpeciesCode=tolower(species)) -> plotting_df
+  
+  return(plotting_df)
 }
 
 
-# calc_matotu_summStats<-function(mat.otu, meta){
-#   
-#   #total number of OTUs
-#   totalOTUs<-dim(mat.otu)[2]
-#   
-#   #mean sample richness
-#   richness<-apply(mat.otu,MARGIN = 1,function(x) sum(x>0))
-#   meanRichness<-mean(richness)
-#   seRichness<-sd(richness)/sqrt(length(richness))
-#   
-#   #mean sample evenness
-#   H <- diversity(mat.otu) 
-#   S <- specnumber(mat.otu) ## rowSums(BCI > 0) does the same...
-#   J <- H/log(S) #Pielou's evenness (J)
-#   meanJ<-mean(J)
-#   seJ<-sd(J)/sqrt(length(J))
-#   
-#   #mean number of reads per sample
-#   meanReads<-mean(rowSums(mat.otu))
-#   seReads<-sd(rowSums(mat.otu))/sqrt(length(rowSums(mat.otu)))
-#   seReads
-#   
-#   summaryStats<-data.frame(label=c("totalOTUs","meanRichness","seRichness","meanEvenness","seEvenness"),
-#                            value=c(totalOTUs, meanRichness, seRichness, meanJ, seJ))
-#   round(summaryStats$value, digits=4)
-#   write.csv(summaryStats, file="output/matotu_summary.csv")
-# }
-
-plot_sampleEffortCurves<-function(mat.otu){
-  
-  pdf(file="output/sampleEffortCurve.pdf", width=5, height=5)
-  
-  rarecurve(mat.otu, step=100,
-            xlab="Number of reads per sample", 
-            ylab="Cumulative number of OTUs", label=FALSE)
-  dev.off()
-  
-}
 
 
-load_boralResidCors<-function(taxAndFunguild){
-  
-  #load
-  residCor <- read.csv('data/sig_residCorTable.csv', stringsAsFactors=F, row.names=1)
-  
-  #annotate with OTU info
-  taxAndFunguild %>% select(OTUId, kingdom, taxonomy, phylum, species, Trophic.Mode) -> taxIndx
-  
-  residCor %>%
-    left_join(taxIndx, by=c("otu1"="OTUId")) %>%
-    rename("kingdom1"="kingdom",
-           "taxonomy1"="taxonomy",
-           "phylum1"="phylum",
-           "species1"="species",
-           "Trophic.Mode1"="Trophic.Mode") %>%
-    left_join(taxIndx, by=c("otu2"="OTUId")) %>%
-    rename("kingdom2"="kingdom",
-           "taxonomy2"="taxonomy",
-           "phylum2"="phylum",
-           "species2"="species",
-           "Trophic.Mode2"="Trophic.Mode") -> residCor.ann
-  
-  return(residCor.ann)
-}
-
-
-
-##############
-
-#ggplot theme
-mytheme <- theme_bw(base_size = 10, base_family = "Helvetica") +
-  theme(panel.border = element_rect(colour = "black"),      #put a black box around the plotting area
-        axis.line = element_line(colour = "black"),                 #axis lines are in black
-        panel.grid.major = element_blank(),                         #turn off the gridlines
-        panel.grid.minor = element_blank(),
-        strip.text.x = element_text(face='bold.italic', hjust=0.05),         #turn off the x axis facet labels
-        strip.text.y = element_text(face='bold.italic', hjust=0.05),
-        strip.background = element_rect(fill = 'white', colour='black'),    #make y axis facet labels be italic and top justified
-        legend.key = element_blank(),                               #turn off box around legend
-        plot.title=element_text(hjust=0, vjust=0.5, face='bold'), #style and position of the panel label
-        plot.margin = unit(c(0.05,0.05,0.05,0.05),"in")
-  )
-        
-        

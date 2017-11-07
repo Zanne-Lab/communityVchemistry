@@ -1,0 +1,50 @@
+---
+title: "Does the initial frequency of significantly positively/negatively correlated boral-identified OTU pairs explain decay? Nope."
+date: "11/7/2017"
+output: github_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+
+
+spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
+seqSamples<-read_csv("../derived_data/seqSamples.csv")
+
+```
+
+Hyp: A higher frequency of postively-correlated OTUs (after controlling for wood trait environmental influences) in a sample community will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha).  This could be because these OTUs facilitate each other thereby making it more difficult for later-colonizing OTUs that specialize in decay to establish. [Alternatively, a high frequency of positively-correlated taxa may indicate that these samples are dominated by co-occurring taxa that are in combat with one another...]
+**No pattern apparent**
+
+Hyp: A higher frequency of negatively-correlated OTUs (after controlling for wood trait environmental influences) in a sample community will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha). This could be because the occurance of negatively-correlated OTUs in the same sample indicates that there are negative biotic interactions among members of the initial community, thereby making it easier for later-colonizing OTUs that specialize in decay to establish.
+**No pattern apparent**
+
+```{r}
+
+#identify the negative and positive residually-correlated OTU pairs in a given community
+#this takes forever.... just read in the derived-data file unless input data changes
+#IDcorrelatedOTUsinEachSampl(taxaAndFunguild, comm.otu)
+pairsPresent.df<-read.csv(file="derived_data/pairsPresent.csv", row.names=1)
+
+
+#merge the pairsPresent dataframes with the decay params data and plot
+posList<-Plot_signifCor(sign='pos', 
+                        valueCol_vec=c("ne.r2", "k", "alpha"), 
+                        pairsPresent.df, spdf, seqSamples)
+negList<-Plot_signifCor(sign='neg', 
+                        valueCol_vec=c("ne.r2", "k", "alpha"), 
+                        pairsPresent.df, spdf, seqSamples)
+
+grid.arrange(posList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             posList[['k']] + guides(color=FALSE, shape=FALSE), 
+             posList[['alpha']] + guides(color=FALSE, shape=FALSE),
+             
+             negList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             negList[['k']] + guides(color=FALSE, shape=FALSE), 
+             negList[['alpha']] + guides(color=FALSE, shape=FALSE),
+             
+             ncol=3)
+
+```
+

@@ -1,0 +1,64 @@
+---
+title: "Does the initial microbial composition dissimilarity within a sample species+size class explain variation in decay model's R2? Nope."
+date: "11/7/2017"
+output: github_document
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+
+
+seqSamples<-read_csv("../derived_data/seqSamples.csv")
+comm.otu<-read.csv("../derived_data/comm_otu.csv", row.names=1)
+spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
+
+```
+
+Hyp: Expect that samples with similar initial microbial communities will have better-fitting decay models.
+**No pattern apparent**
+
+```{r}
+
+#calculate pairwise community distances WITHIN code
+comm.dist<-Calc_commDists(seqSamples, comm.otu, distType="bray") #2. calc the distances
+filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
+  select(sampID1, sampID2, code1, size, dist) %>%
+  rename("code"="code1") %>% #rename the cols
+  group_by(code) %>%
+  summarize(mean=mean(dist), #calculate the mean community dist within code classes
+            se=sd(dist)/sqrt(length(dist)),
+            upper=mean+se,
+            lower=mean-se) -> comm.dist.wth
+
+#combine with decay trajectory params
+comm.dist.wth<-left_join(comm.dist.wth, spdf)
+
+p.ne.r2<-ggplot(comm.dist.wth, aes(x=mean, y=ne.r2, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Microbial community distance within Code") + 
+  ylab("Negative exponential R2") 
+
+p.w.r2<-ggplot(comm.dist.wth, aes(x=mean, y=w.r2, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Microbial community distance within Code") + 
+  ylab("Weibull model R2") 
+
+p.k<-ggplot(comm.dist.wth, aes(x=mean, y=k, color=species, shape=size)) + 
+  geom_point() +
+  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+  xlab("Microbial community distance within Code") + 
+  ylab("k") 
+p.k
+
+#pdf('output/commDist_decayparam_withinCode.pdf', width=8, height=6)
+grid.arrange(p.ne.r2 + guides(color=FALSE, shape=FALSE), 
+             p.w.r2 + guides(color=FALSE, shape=FALSE))
+#dev.off()
+
+```
+
+
+

@@ -1,6 +1,5 @@
 ---
 title: "Initial community and wood distances versus decay parameter distances"
-author: "Marissa Lee"
 date: "10/26/2017"
 output: github_document
 ---
@@ -9,20 +8,15 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 #libraries
-devtools::install_github("cornwell-lab-unsw/litterfitter")
 library(dplyr)
 library(ggplot2)
 library(readr)
 library(vegan)
 library(knitr)
-library(litterfitter)
-library(magrittr)
 library(tidyr)
 library(gridExtra)
 
 #fxns
-source("load_fxns.R")
-source("curve_fitting_fxns.R")
 source("distance_fxns.R")
 
 #load sample info
@@ -35,12 +29,8 @@ seqSamples<-read.csv("../derived_data/seqSamples.csv", row.names=1, stringsAsFac
 #load wood trait data
 traits.mean<-read.csv("../derived_data/traits_mean.csv", row.names=1, stringsAsFactors = FALSE)
 
-#fit decay trajectories
-#spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
-#write_csv(spdf,"derived_data/mass_loss_parameters.csv")
+#load decay trajectories
 spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
-indx<-select(stemSamples, code, species, size)
-spdf<-left_join(spdf, indx) #add code
 
 ```
 
