@@ -20,6 +20,7 @@ library(litterfitter)
 library(magrittr)
 library(tidyr)
 library(gridExtra)
+library(rioja)
 
 #fxns
 source("code/load_fxns.R")
@@ -95,6 +96,7 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 ```
 
 
+
 1. Wood traits as a preditor
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
 ```{r}
@@ -121,8 +123,15 @@ mod.full.alpha<-lm(alpha ~ size + waterperc + density + barkthick + P + K + Ca +
 mod.select.r<-step(mod.full.r, direction="backward")
 mod.select.k<-step(mod.full.k, direction="backward")
 mod.select.alpha<-step(mod.full.alpha, direction="backward")
+
+#save the residuals
+trait.residuals<-data.frame(code=spdf.traits$code,
+           r2.resid=mod.select.r$residuals,
+           k.resid=mod.select.k$residuals,
+           alpha.resid=mod.select.alpha$residuals)
+
 ```
-*Results:*
+*Result:*
 - r2
 ```{r}
 summary(mod.select.r) # density
@@ -143,87 +152,102 @@ ggplot(spdf.traits, aes(x=Zn, y=alpha, color=species, shape=size)) + geom_point(
 ```
 
 
-# LEFT OFF HERE
 
 2. Community as a predictor
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).  
-```{r}
+```{r, include=FALSE}
 
-library(rioja)
-
-data(IK)
-spec <- IK$spec
-SumSST <- IK$env$SumSST
-core <- IK$core
-
-dim(spec)
-length(SumSST)
-
-fit <- WAPLS(spec, SumSST)
-fit
-# cross-validate model
-fit.cv <- crossval(fit, cv.method="loo")
-fit.cv
-
-# How many components to use?
-rand.t.test(fit.cv)
-screeplot(fit.cv)
-
-#predict the core
-pred <- predict(fit, core, npls=2)
-
-#plot predictions - depths are in rownames
-depth <- as.numeric(rownames(core))
-plot(depth, pred$fit[, 2], type="b", ylab="Predicted SumSST", las=1)
-
-# predictions with sample specific errors
-## Not run: 
-pred <- predict(fit, core, npls=2, sse=TRUE, nboot=1000)
-pred
-
-########
-
-#1. identify how many times that a community was sampled for each 'code'
-seqSamples %>%
-  group_by(code) %>%
-  summarize(num=length(seq_sampName)) -> numSitesSampled
-
-#2. randomly sample a community from each 'code'
+#average OTU abundances by code
 CODE<-unique(seqSamples$code)
-uniqCODEseqs.list<-list()
+meanOTUabund.list<-list()
+sdOTUabund.list<-list()
 for(i in 1:length(CODE)){
-  allSeqs<-seqSamples[seqSamples$code==CODE[i],"seq_sampName"]
-  selectNum<-sample(1:length(allSeqs),1,replace=T)
-  uniqCODEseqs.list[[i]]<-allSeqs[selectNum]
+  #identify the seq_sampNames to aggregate
+  curr.seqSamps<-seqSamples[seqSamples$code==CODE[i],]$seq_sampName 
+  #filter 
+  curr.comm.otu<-comm.otu[row.names(comm.otu) %in% curr.seqSamps,]
+  #summarize
+  meanOTUabund.list[[i]]<-apply(curr.comm.otu, 2, mean, na.rm=TRUE)
+  sdOTUabund.list[[i]]<-apply(curr.comm.otu, 2, sd, na.rm=TRUE)
 }
-uniqCODEseqs.vec<-unlist(uniqCODEseqs.list)
+names(meanOTUabund.list)<-CODE
+names(sdOTUabund.list)<-CODE
+meanOTUabund.list %>% combine() %>% as.data.frame %>% t() -> 
+  meanOTUabund
+sdOTUabund.list %>% combine() %>% as.data.frame %>% t() -> 
+  sdOTUabund
 
-#3. filter to the selected sequences in that randomly-chosen set of communities
-curr.comm.otu<-comm.otu[row.names(comm.otu) %in% uniqCODEseqs.vec,]
-tmp<-data.frame(row.names(curr.comm.otu))
-new.row.names<-separate(tmp, row.names.curr.comm.otu., into=c("code","drop"), 4)[1]
-row.names(curr.comm.otu)<-new.row.names$code
+#get rid of empty OTU cols
+#sum(colSums(meanOTUabund)!=0)
+meanOTUabund.trim<-meanOTUabund[,colSums(meanOTUabund)!=0]
 
-#4. get rid of empty OTU cols
-curr.comm.otu.trim<-curr.comm.otu[,colSums(curr.comm.otu)!=0]
-curr.spdf<-spdf[spdf$code %in% row.names(curr.comm.otu.trim),]
+#get rid of spdf rows for which there is missing community data... this is eusc
+#spdf[!spdf$code %in% row.names(meanOTUabund.trim),]$code
+spdf.trim<-spdf[spdf$code %in% row.names(meanOTUabund.trim),]
 
-#5. fit model
-fit <- WAPLS(curr.comm.otu.trim, curr.spdf$k)
-fit
+#fit models
+fit.r2 <- WAPLS(meanOTUabund.trim, spdf.trim$ne.r2)
+fit.k <- WAPLS(meanOTUabund.trim, spdf.trim$k)
+fit.alpha <- WAPLS(meanOTUabund.trim, spdf.trim$alpha)
 
-# cross-validate model
-fit.cv <- crossval(fit, cv.method="loo")
-fit.cv
+#cross-validate models using the leave-one-out method
+fit.r2.cv <- crossval(fit.r2, cv.method="loo")
+fit.k.cv <- crossval(fit.k, cv.method="loo")
+fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 
-# How many components to use?
-rand.t.test(fit.cv)
-screeplot(fit.cv)
+#rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
+#screeplot(fit.r2.cv)
 
+```
+*Result:*
+-r2
+```{r}
+rand.t.test(fit.r2.cv)
+```
+-k
+```{r}
+rand.t.test(fit.k.cv)
+```
+-alpha
+```{r}
+rand.t.test(fit.alpha.cv)
 ```
 
 
 3. Community+traits as a predictor
+```{r}
+
+#run rioja::WAPLS on wood trait residuals
+
+#make sure that the residuals and community dataframes are aligned
+trait.residuals$code<-as.character(trait.residuals$code)
+trait.residuals[!trait.residuals$code %in% row.names(meanOTUabund.trim),"code"] #missing eusc from meanOTUabund.trim
+row.names(meanOTUabund.trim)[!row.names(meanOTUabund.trim) %in% trait.residuals$code] #missing EUSC and olst from trait.residuals
+
+trait.residuals.trim<-trait.residuals[trait.residuals$code %in% row.names(meanOTUabund.trim),] #trim
+meanOTUabund.trim2<-meanOTUabund.trim[row.names(meanOTUabund.trim) %in% trait.residuals.trim$code,] #trim
+
+ord<-match(row.names(meanOTUabund.trim2), trait.residuals.trim$code)
+trait.residuals.trim.o<-trait.residuals.trim[ord,]
+
+sum(trait.residuals.trim.o$code != row.names(meanOTUabund.trim2)) #this needs to by 0
+
+#fit models
+
+fit.tr.r2 <- WAPLS(meanOTUabund.trim, trait.residuals$ne.r2)
+fit.tr.k <- WAPLS(meanOTUabund.trim, spdf.trim$k)
+fit.tr.alpha <- WAPLS(meanOTUabund.trim, spdf.trim$alpha)
+
+#cross-validate models using the leave-one-out method
+fit.r2.cv <- crossval(fit.r2, cv.method="loo")
+fit.k.cv <- crossval(fit.k, cv.method="loo")
+fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
+
+#rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
+#screeplot(fit.r2.cv)
+
+
+```
 
 4. Diversity (and diversity of specific clades) as a predictor
 
