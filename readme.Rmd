@@ -27,10 +27,13 @@ source("code/load_fxns.R")
 source("code/curve_fitting_fxns.R")
 source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
+```
 
+## LOAD DATA 
 
-### LOAD MICROBIAL COMMUNITY DATA
+### MICROBIAL COMMUNITY DATA
 
+```{r}
 #stem sample meta data
 #stemSamples<-load_stemSamples() #uncomment if the data changes
 #write_csv(stemSamples, "derived_data/stemSamples.csv")
@@ -53,9 +56,11 @@ seqSamples<-read_csv("derived_data/seqSamples.csv")
 taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 
 #plot_sampleEffortCurves(comm.otu)
-
+```
 
 ### LOAD WOOD TRAIT DATA
+
+```{r}
 #traits.mean<-mergeTraitData() #uncomment if the data changes
 #write_csv(traits.mean, "derived_data/traits_mean.csv") 
 traits.mean<-read_csv("derived_data/traits_mean.csv")
@@ -97,7 +102,7 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 
 
-1. Wood traits as a preditor
+## Wood traits as a preditor
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
 ```{r, include=FALSE}
 
@@ -129,17 +134,26 @@ trait.residuals<-data.frame(code=spdf.traits$code,
 
 ```
 
-*Result:*
+### Result:
 - r2... greater water content and less C leads to better-fitting decay models
 ```{r}
 summary(mod.select.r) # waterperc, C
 #ggplot(spdf.traits, aes(x=waterperc, y=ne.r2, color=species, shape=size)) + geom_point()
 ```
 - k... small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
+
+NOTE from Will: Density explains the same part of the variation in decay rates that initial water content does, only less well.  (In other words, although, density gets dropped from the best model by the model selection procedure, if we remove initial water from consideration entirely, density is included in the model as the best predictor.)  
+
+So my current interpretation is that wood water rentention--related to fiber saturation point and partially captured by the density measurement--has a strong effect on long-term decomposition rates, possibly by maintaining fungal activity further into dry periods.  There is also a very likely interaction between this water retention capacity with the fungal community (see results in Setting the Stage paper, Lee et al. in review).
+
 ```{r}
 summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
-ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size) +
-  xlab("Water content (%DM)")
+ggplot(spdf.traits, aes(x=waterperc, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
+  labs(y="k year^-1",x="Water content (%DM)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
+
+
+ggplot(spdf.traits, aes(x=density, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
+  labs(y="k year^-1",x="Initial density (g/cm^3)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
 #ggplot(spdf.traits, aes(x=waterperc, y=density, color=species, size=k)) + geom_point() + facet_grid(~size)
 ```
 - t70... large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
@@ -155,9 +169,9 @@ summary(mod.select.alpha) # density, Zn, C
 
 
 
-2. Community as a predictor
+## Community as a predictor
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).  
-```{r, include=FALSE}
+```{r, include=FALSE, results=FALSE,message=FALSE}
 
 #average OTU abundances by code
 CODE<-unique(seqSamples$code)
@@ -203,7 +217,7 @@ fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 #screeplot(fit.r2.cv)
 
 ```
-*Result:*
+### Result:
 -r2... none of the community components are significant predictors
 ```{r}
 rand.t.test(fit.r2.cv)
@@ -222,7 +236,7 @@ rand.t.test(fit.alpha.cv)
 ```
 
 
-3. Community+traits as a predictor
+## Community+traits as a predictor
 ```{r}
 #run rioja::WAPLS on wood trait residuals
 
@@ -256,7 +270,7 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 #screeplot(fit.r2.cv)
 
 ```
-*Result:*
+### Result: 
 -r2... Comp05 is marginally significant
 ```{r}
 rand.t.test(fit.tr.r2.cv)
@@ -296,7 +310,7 @@ By phylum
 ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-4. Diversity (and diversity of specific clades) as a predictor
+## Diversity (and diversity of specific clades) as a predictor
 Plot richness of key players vs decay param distances BETWEEN species+size
 ```{r}
 
