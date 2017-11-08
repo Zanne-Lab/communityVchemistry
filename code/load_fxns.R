@@ -232,22 +232,20 @@ load_boralResidCors<-function(taxAndFunguild){
 #############
 # Initial wood trait data
 
-load_waterPercent<-function(){
+load_waterPercent.perGdrymass<-function(){
   require(dplyr)
   
   # read in initial covariate data
   covar.big <-read.csv('data/covariates_bigStems.csv', stringsAsFactor = F)
   covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
   
-  # calculate water content for each species, size class
-  water.percent <- c(with(covar.big, (Fresh.mass..g. - Dry.mass..g.) / Dry.mass..g.),
-                     with(covar.small, (Fresh.mass..g. - Dry.mass.total..g.) / Dry.mass.total..g.))
+  # (1) calculate water content for each species, size class
+  # g water per g dry mass
+  water.percent <- c(with(covar.big, ((Fresh.mass..g. - Dry.mass..g.) / Dry.mass..g.) * 100),
+                     with(covar.small, ((Fresh.mass..g. - Dry.mass.total..g.) / Dry.mass.total..g.) * 100))
   water.percent <- data.frame(code=c(covar.big$Species, covar.small$Species),
                               StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
                               water.percent, stringsAsFactors=F)
-  
-  #why is this so sparse? other stems were deployed into field
-  #View(water.percent)
   
   ## aggregate by code
   group_by(water.percent, code) %>%
@@ -259,6 +257,35 @@ load_waterPercent<-function(){
   colnames(waterPercent)<-c("code","waterperc")
   length(unique(waterPercent$code)) #34
               
+  return(waterPercent)
+  
+}
+
+load_waterPercent.perGwetmass<-function(){
+  require(dplyr)
+  
+  # read in initial covariate data
+  covar.big <-read.csv('data/covariates_bigStems.csv', stringsAsFactor = F)
+  covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
+  
+  # (1) calculate water content for each species, size class
+  # g water per g dry mass
+  water.percent <- c(with(covar.big, ((Fresh.mass..g. - Dry.mass..g.) / Fresh.mass..g.) * 100),
+                     with(covar.small, ((Fresh.mass..g. - Dry.mass.total..g.) / Fresh.mass..g.)*100))
+  water.percent <- data.frame(code=c(covar.big$Species, covar.small$Species),
+                              StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
+                              water.percent, stringsAsFactors=F)
+  
+  ## aggregate by code
+  group_by(water.percent, code) %>%
+    summarize(meanWaterPerc = mean(water.percent, na.rm=TRUE),
+              sdWaterPerc = sd(water.percent, na.rm=TRUE)) -> waterPercent
+  
+  #remove sd cols
+  waterPercent<-waterPercent[,c("code","meanWaterPerc")]
+  colnames(waterPercent)<-c("code","waterperc")
+  length(unique(waterPercent$code)) #34
+  
   return(waterPercent)
   
 }
@@ -392,7 +419,7 @@ load_CN<-function(){
 mergeTraitData<-function(){
   
   #load code-aggregated trait data
-  waterPercent<-load_waterPercent()
+  waterPercent<-load_waterPercent.perGdrymass() ##### this is in units of g water per g of dry mass x 100
   densityNbarkthick<-load_densityNbarkthick()
   xrf<-load_XRF()
   cn<-load_CN()

@@ -5,7 +5,7 @@ Calc_richOTUtype<-function(colNam, grepTerm, taxAndFunguild, comm.otu){
   sub.otus<-taxAndFunguild[grepl(grepTerm,taxAndFunguild[,colNam]),"OTUId"]
   
   # subset the OTU table by the select otus
-  sub.otu<-comm.otu[,colnames(comm.otu) %in% sub.otus]
+  sub.otu<-comm.otu[,colnames(comm.otu) %in% sub.otus$OTUId]
   
   # turn the OTU table into presence/absence
   sub.otu.pa<-sub.otu

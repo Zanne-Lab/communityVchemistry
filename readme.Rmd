@@ -99,7 +99,7 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 1. Wood traits as a preditor
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
-```{r}
+```{r, include=FALSE}
 
 #merge into 1 df
 spdf %>%
@@ -130,23 +130,24 @@ trait.residuals<-data.frame(code=spdf.traits$code,
 ```
 
 *Result:*
-- r2
+- r2... greater water content and less C leads to better-fitting decay models
 ```{r}
 summary(mod.select.r) # waterperc, C
 #ggplot(spdf.traits, aes(x=waterperc, y=ne.r2, color=species, shape=size)) + geom_point()
 ```
-- k
+- k... small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
 ```{r}
 summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
-ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size)
+ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size) +
+  xlab("Water content (%DM)")
 #ggplot(spdf.traits, aes(x=waterperc, y=density, color=species, size=k)) + geom_point() + facet_grid(~size)
 ```
-- t70
+- t70... large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
 ```{r}
 summary(mod.select.t70) # size, waterperc, barkthick, Ca, Zn
-ggplot(spdf.traits, aes(x=waterperc, y=t70, color=species, size=density)) + geom_point() + facet_grid(~size)
+#ggplot(spdf.traits, aes(x=waterperc, y=t70, color=species, size=density)) + geom_point() + facet_grid(~size)
 ```
-- alpha
+- alpha--- note: don't interpret yet
 ```{r}
 summary(mod.select.alpha) # density, Zn, C
 ```
@@ -203,19 +204,19 @@ fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 
 ```
 *Result:*
--r2
+-r2... none of the community components are significant predictors
 ```{r}
 rand.t.test(fit.r2.cv)
 ```
--k
+-k... none of the community components are significant predictors
 ```{r}
 rand.t.test(fit.k.cv)
 ```
--t70
+-t70... none of the community components are significant predictors
 ```{r}
 rand.t.test(fit.t70.cv)
 ```
--alpha
+-alpha --- note: don't interpret yet
 ```{r}
 rand.t.test(fit.alpha.cv)
 ```
@@ -223,26 +224,21 @@ rand.t.test(fit.alpha.cv)
 
 3. Community+traits as a predictor
 ```{r}
-
 #run rioja::WAPLS on wood trait residuals
 
 #make sure that the residuals and community dataframes are aligned
 trait.residuals$code<-as.character(trait.residuals$code)
-trait.residuals[!trait.residuals$code %in% row.names(meanOTUabund.trim),"code"] #missing eusc from meanOTUabund.trim
-row.names(meanOTUabund.trim)[!row.names(meanOTUabund.trim) %in% trait.residuals$code] #missing EUSC and olst from trait.residuals
-
+trait.residuals[!trait.residuals$code %in% row.names(meanOTUabund.trim),"code"] # no missing from meanOTUabund.trim
+row.names(meanOTUabund.trim)[!row.names(meanOTUabund.trim) %in% trait.residuals$code] #missing olst from trait.residuals
 trait.residuals.trim<-trait.residuals[trait.residuals$code %in% row.names(meanOTUabund.trim),] #trim
 meanOTUabund.trim2<-meanOTUabund.trim[row.names(meanOTUabund.trim) %in% trait.residuals.trim$code,] #trim
-
 ord<-match(row.names(meanOTUabund.trim2), trait.residuals.trim$code)
 trait.residuals.trim.o<-trait.residuals.trim[ord,]
-
 sum(trait.residuals.trim.o$code != row.names(meanOTUabund.trim2)) #this needs to by 0
 
 #get rid of empty OTU cols
 sum(colSums(meanOTUabund.trim2)!=0)
 meanOTUabund.trim2<-meanOTUabund.trim2[,colSums(meanOTUabund.trim2)!=0]
-
 
 #fit models
 fit.tr.r2 <- WAPLS(meanOTUabund.trim2, trait.residuals.trim.o$r2.resid)
@@ -259,16 +255,48 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 #rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
 #screeplot(fit.r2.cv)
 
+```
+*Result:*
+-r2... Comp05 is marginally significant
+```{r}
 rand.t.test(fit.tr.r2.cv)
+```
+-k... none of the community components are significant predictors
+```{r}
 rand.t.test(fit.tr.k.cv)
+```
+-t70... Comp05 is a significant predictor
+```{r}
 rand.t.test(fit.tr.t70.cv) 
+```
+-alpha --- note: don't interpret yet
+```{r}
 rand.t.test(fit.tr.alpha.cv)
+```
 
+Investigate the biology underlying t70-associated coefs for Comp05
+```{r}
+coef.comp5<-fit.tr.t70.cv$coefficients[,'Comp05']
+coef.comp5.df<-data.frame(OTUId=names(coef.comp5), coefComp5=coef.comp5)
 
+#create df of OTU taxon and guild info matched with coef value
+coef.comp5.df %>%
+  left_join(taxAndFunguild) -> coef.comp5.ann
+```
+By trophic mode (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+```{r}
+ggplot(coef.comp5.ann, aes(x=Trophic.Mode, y=coefComp5)) + geom_violin() + coord_flip()
+```
+By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+```{r}
+ggplot(coef.comp5.ann, aes(x=Guild, y=coefComp5)) + geom_violin() + coord_flip()
+```
+By phylum
+```{r}
+ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
 4. Diversity (and diversity of specific clades) as a predictor
-
 Plot richness of key players vs decay param distances BETWEEN species+size
 ```{r}
 
@@ -321,6 +349,7 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fittin
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
 **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
 
+### Left off here
 
 5. Diversity plus traits as a predictor
 
