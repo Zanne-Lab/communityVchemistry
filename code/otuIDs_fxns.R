@@ -21,7 +21,7 @@ Calc_richOTUtype<-function(colNam, grepTerm, taxAndFunguild, comm.otu){
   return(sub.rich.df)
 }
 
-Plot_richOTUtype<-function(otutype.df, valueCol_vec, otutypeNam, spdf){
+Create_rich_spdf_DF<-function(otutype.df, spdf){
   
   # summarize by Code
   otutype.df %>%
@@ -32,7 +32,13 @@ Plot_richOTUtype<-function(otutype.df, valueCol_vec, otutypeNam, spdf){
               lower=mean-se) -> summ.otutype.df
   
   # join with decay trajectory data
-  tmp<-left_join(spdf, summ.otutype.df)
+  rich.spdf<-left_join(spdf, summ.otutype.df)
+  
+  return(rich.spdf)
+  
+}
+
+Plot_richOTUtype<-function(rich.spdf, valueCol_vec, otutypeNam){
   
   # create xlab
   xlab<-paste(otutypeNam,"richness", sep=" ")
@@ -40,7 +46,7 @@ Plot_richOTUtype<-function(otutype.df, valueCol_vec, otutypeNam, spdf){
   # create plot
   pList<-list()
   for(i in 1:length(valueCol_vec)){
-    curr.tmp<-tmp
+    curr.tmp<-rich.spdf
     colnames(curr.tmp)[colnames(curr.tmp) == valueCol_vec[i]]<-"yCol"
     pList[[i]]<-
       ggplot(curr.tmp, aes(x=mean, y=yCol, color=species, shape=size)) + 

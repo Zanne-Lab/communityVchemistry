@@ -130,19 +130,20 @@ trait.residuals<-data.frame(code=spdf.traits$code,
 ```
 
 *Result:*
-- r2... greater water content and less C leads to better-fitting decay models
+- r2... greater water content and greater Zn and N leads to better-fitting decay models. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model that greater water content and less C leads to better-fitting decay models
 ```{r}
-summary(mod.select.r) # waterperc, C
+summary(mod.select.r) # waterperc, Zn, N
 #ggplot(spdf.traits, aes(x=waterperc, y=ne.r2, color=species, shape=size)) + geom_point()
 ```
 - k... small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
 ```{r}
 summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
 ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size) +
-  xlab("Water content (%DM)")
+  xlab("Water content (% wet weight)")
 #ggplot(spdf.traits, aes(x=waterperc, y=density, color=species, size=k)) + geom_point() + facet_grid(~size)
 ```
-- t70... large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
+- t70... small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood "70%"-lives.
+Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model indicated that large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
 ```{r}
 summary(mod.select.t70) # size, waterperc, barkthick, Ca, Zn
 #ggplot(spdf.traits, aes(x=waterperc, y=t70, color=species, size=density)) + geom_point() + facet_grid(~size)
@@ -257,7 +258,7 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 
 ```
 *Result:*
--r2... Comp05 is marginally significant
+-r2...none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
 ```{r}
 rand.t.test(fit.tr.r2.cv)
 ```
@@ -265,7 +266,7 @@ rand.t.test(fit.tr.r2.cv)
 ```{r}
 rand.t.test(fit.tr.k.cv)
 ```
--t70... Comp05 is a significant predictor
+-t70... none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 ```{r}
 rand.t.test(fit.tr.t70.cv) 
 ```
@@ -274,6 +275,7 @@ rand.t.test(fit.tr.t70.cv)
 rand.t.test(fit.tr.alpha.cv)
 ```
 
+*Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...*
 Investigate the biology underlying t70-associated coefs for Comp05
 ```{r}
 coef.comp5<-fit.tr.t70.cv$coefficients[,'Comp05']
@@ -297,29 +299,55 @@ ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip(
 ```
 
 4. Diversity (and diversity of specific clades) as a predictor
-Plot richness of key players vs decay param distances BETWEEN species+size
+
+*Hyp:* Greater microbial diversity (richness, Shannon diversity, phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
+Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
+```{r}
+
+
+```
+
+
+*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
+**No significant relationships**
 ```{r}
 
 # summarize the presence of ... in each sample
 sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu)  
-sapList<-Plot_richOTUtype(otutype.df=sapro.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Saprotroph", spdf)
-
 basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu)
-basidList<-Plot_richOTUtype(otutype.df=basidio.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Basidio", spdf)
 
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
-pathList<-Plot_richOTUtype(otutype.df=path.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Pathogen", spdf)
+# create a merged df wtih spdf
+saprorich.spdf<-Create_rich_spdf_DF(otutype.df=sapro.df, spdf)
+basidrich.spdf<-Create_rich_spdf_DF(otutype.df=basidio.df, spdf)
 
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
-ooList<-Plot_richOTUtype(otutype.df=oomy.df, 
+# fit models
+mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
+mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
+mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
+mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
+mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
+mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
+mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
+mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
+
+# evaluate models
+summary(mod.sapro.r2)
+summary(mod.sapro.k)
+summary(mod.sapro.t70)
+summary(mod.sapro.alpha)
+summary(mod.basid.r2)
+summary(mod.basid.k)
+summary(mod.basid.t70)
+summary(mod.basid.alpha)
+
+# create plots
+sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf, 
                         valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Oomycete", spdf)
+                        otutypeNam="Saprotroph")
+basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Basidio")
 
 #plot
 grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
@@ -330,7 +358,53 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              basidList[['k']] + guides(color=FALSE, shape=FALSE), 
              basidList[['alpha']] + guides(color=FALSE, shape=FALSE),
              
-             pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             ncol=3)
+
+```
+
+
+*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+**Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
+```{r}
+
+# summarize the presence of ... in each sample
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
+
+# create a merged df wtih spdf
+pathrich.spdf<-Create_rich_spdf_DF(otutype.df=path.df, spdf)
+oomyrich.spdf<-Create_rich_spdf_DF(otutype.df=oomy.df, spdf)
+
+# # fit models
+# mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
+# mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
+# mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
+# mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
+# mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
+# mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
+# mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
+# mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
+# 
+# # evaluate models
+# summary(mod.sapro.r2)
+# summary(mod.sapro.k)
+# summary(mod.sapro.t70)
+# summary(mod.sapro.alpha)
+# summary(mod.basid.r2)
+# summary(mod.basid.k)
+# summary(mod.basid.t70)
+# summary(mod.basid.alpha)
+
+# create plots
+pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Pathogen")
+ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Oomycete")
+
+# plot
+grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
              pathList[['k']] + guides(color=FALSE, shape=FALSE), 
              pathList[['alpha']] + guides(color=FALSE, shape=FALSE),
              
@@ -341,15 +415,6 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              ncol=3)
 
 ```
-
-*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
-**No apparent pattern**
-
-*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
-**Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
-
-### Left off here
 
 5. Diversity plus traits as a predictor
 

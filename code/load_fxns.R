@@ -419,7 +419,7 @@ load_CN<-function(){
 mergeTraitData<-function(){
   
   #load code-aggregated trait data
-  waterPercent<-load_waterPercent.perGdrymass() ##### this is in units of g water per g of dry mass x 100
+  waterPercent<-load_waterPercent.perGwetmass() ##### this is in units of g water per g of wet mass x 100
   densityNbarkthick<-load_densityNbarkthick()
   xrf<-load_XRF()
   cn<-load_CN()

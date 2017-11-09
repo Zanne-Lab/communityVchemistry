@@ -104,35 +104,36 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 1.  Wood traits as a preditor *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
 
-*Result:* - r2... greater water content and less C leads to better-fitting decay models
+*Result:* - r2... greater water content and greater Zn and N leads to better-fitting decay models. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model that greater water content and less C leads to better-fitting decay models
 
 ``` r
-summary(mod.select.r) # waterperc, C
+summary(mod.select.r) # waterperc, Zn, N
 ```
 
     ## 
     ## Call:
-    ## lm(formula = ne.r2 ~ waterperc + density + Ca + Zn + N + C, data = spdf.traits)
+    ## lm(formula = ne.r2 ~ waterperc + barkthick + Ca + Zn + N + C, 
+    ##     data = spdf.traits)
     ## 
     ## Residuals:
-    ##       Min        1Q    Median        3Q       Max 
-    ## -0.114210 -0.028023  0.002322  0.020871  0.130728 
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.11753 -0.02941  0.00184  0.02233  0.12797 
     ## 
     ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)   
-    ## (Intercept)  2.281e+00  6.639e-01   3.435  0.00208 **
-    ## waterperc    1.259e-03  5.255e-04   2.396  0.02436 * 
-    ## density     -3.890e-01  2.168e-01  -1.795  0.08482 . 
-    ## Ca          -1.076e-05  6.639e-06  -1.620  0.11778   
-    ## Zn           1.018e-03  5.644e-04   1.804  0.08322 . 
-    ## N            1.075e-01  6.944e-02   1.548  0.13429   
-    ## C           -2.826e-02  1.194e-02  -2.367  0.02597 * 
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  1.278e+00  6.457e-01   1.979   0.0590 .  
+    ## waterperc    7.405e-03  1.509e-03   4.906 4.75e-05 ***
+    ## barkthick   -3.098e-02  1.587e-02  -1.953   0.0622 .  
+    ## Ca          -1.189e-05  6.783e-06  -1.753   0.0919 .  
+    ## Zn           1.504e-03  5.664e-04   2.654   0.0136 *  
+    ## N            2.092e-01  8.436e-02   2.480   0.0202 *  
+    ## C           -1.698e-02  1.291e-02  -1.315   0.2006    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 0.06322 on 25 degrees of freedom
-    ## Multiple R-squared:  0.5567, Adjusted R-squared:  0.4503 
-    ## F-statistic: 5.233 on 6 and 25 DF,  p-value: 0.001308
+    ## Residual standard error: 0.06306 on 25 degrees of freedom
+    ## Multiple R-squared:  0.559,  Adjusted R-squared:  0.4532 
+    ## F-statistic: 5.282 on 6 and 25 DF,  p-value: 0.001234
 
 ``` r
 #ggplot(spdf.traits, aes(x=waterperc, y=ne.r2, color=species, shape=size)) + geom_point()
@@ -146,32 +147,33 @@ summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
 
     ## 
     ## Call:
-    ## lm(formula = k ~ size + waterperc + barkthick + Ca + Zn + N, 
-    ##     data = spdf.traits)
+    ## lm(formula = k ~ size + waterperc + barkthick + Ca + Zn + N + 
+    ##     C, data = spdf.traits)
     ## 
     ## Residuals:
     ##       Min        1Q    Median        3Q       Max 
-    ## -0.096623 -0.031284  0.000335  0.026856  0.095457 
+    ## -0.092617 -0.034671  0.007271  0.029023  0.123640 
     ## 
     ## Coefficients:
     ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  2.820e-02  5.248e-02   0.537 0.595799    
-    ## sizesmall    1.063e-01  2.397e-02   4.434 0.000162 ***
-    ## waterperc    2.473e-03  3.735e-04   6.621 6.16e-07 ***
-    ## barkthick   -3.267e-02  1.293e-02  -2.528 0.018169 *  
-    ## Ca          -1.522e-05  5.661e-06  -2.688 0.012609 *  
-    ## Zn           1.776e-03  4.799e-04   3.702 0.001060 ** 
-    ## N            1.780e-01  7.479e-02   2.380 0.025245 *  
+    ## (Intercept)  6.021e-01  5.754e-01   1.046 0.305851    
+    ## sizesmall    9.050e-02  2.405e-02   3.763 0.000958 ***
+    ## waterperc    8.990e-03  1.378e-03   6.524 9.53e-07 ***
+    ## barkthick   -3.862e-02  1.406e-02  -2.748 0.011198 *  
+    ## Ca          -1.869e-05  5.920e-06  -3.157 0.004263 ** 
+    ## Zn           1.811e-03  4.922e-04   3.680 0.001177 ** 
+    ## N            2.334e-01  7.674e-02   3.041 0.005628 ** 
+    ## C           -1.475e-02  1.135e-02  -1.300 0.206001    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 0.05403 on 25 degrees of freedom
-    ## Multiple R-squared:  0.7422, Adjusted R-squared:  0.6804 
-    ## F-statistic:    12 on 6 and 25 DF,  p-value: 2.478e-06
+    ## Residual standard error: 0.05446 on 24 degrees of freedom
+    ## Multiple R-squared:  0.7486, Adjusted R-squared:  0.6752 
+    ## F-statistic: 10.21 on 7 and 24 DF,  p-value: 6.942e-06
 
 ``` r
 ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size) +
-  xlab("Water content (%DM)")
+  xlab("Water content (% wet weight)")
 ```
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-4-1.png)
@@ -180,7 +182,7 @@ ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_p
 #ggplot(spdf.traits, aes(x=waterperc, y=density, color=species, size=k)) + geom_point() + facet_grid(~size)
 ```
 
--   t70... large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
+-   t70... small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood "70%"-lives. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model indicated that large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
 
 ``` r
 summary(mod.select.t70) # size, waterperc, barkthick, Ca, Zn
@@ -188,29 +190,28 @@ summary(mod.select.t70) # size, waterperc, barkthick, Ca, Zn
 
     ## 
     ## Call:
-    ## lm(formula = t70 ~ size + waterperc + density + Ca + Zn + N + 
-    ##     C, data = spdf.traits)
+    ## lm(formula = t70 ~ size + waterperc + barkthick + Ca + Zn + N, 
+    ##     data = spdf.traits)
     ## 
     ## Residuals:
     ##      Min       1Q   Median       3Q      Max 
-    ## -0.57355 -0.15506  0.00525  0.10205  0.62523 
+    ## -0.55548 -0.15857 -0.00642  0.07054  0.58357 
     ## 
     ## Coefficients:
     ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept) -2.829e+00  3.470e+00  -0.815 0.422926    
-    ## sizesmall   -6.515e-01  1.355e-01  -4.810 6.74e-05 ***
-    ## waterperc   -1.095e-02  2.801e-03  -3.911 0.000660 ***
-    ## density      1.535e+00  1.064e+00   1.442 0.162176    
-    ## Ca           1.203e-04  3.159e-05   3.809 0.000853 ***
-    ## Zn          -6.681e-03  2.654e-03  -2.517 0.018911 *  
-    ## N           -4.845e-01  3.370e-01  -1.438 0.163472    
-    ## C            9.076e-02  6.046e-02   1.501 0.146382    
+    ## (Intercept)  3.799e+00  4.125e-01   9.209 1.65e-09 ***
+    ## sizesmall   -6.284e-01  1.314e-01  -4.783 6.54e-05 ***
+    ## waterperc   -4.956e-02  7.653e-03  -6.476 8.79e-07 ***
+    ## barkthick    1.752e-01  7.308e-02   2.397 0.024301 *  
+    ## Ca           1.234e-04  3.203e-05   3.851 0.000725 ***
+    ## Zn          -9.272e-03  2.698e-03  -3.436 0.002070 ** 
+    ## N           -9.985e-01  4.258e-01  -2.345 0.027272 *  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 0.2973 on 24 degrees of freedom
-    ## Multiple R-squared:  0.7544, Adjusted R-squared:  0.6828 
-    ## F-statistic: 10.53 on 7 and 24 DF,  p-value: 5.323e-06
+    ## Residual standard error: 0.3026 on 25 degrees of freedom
+    ## Multiple R-squared:  0.735,  Adjusted R-squared:  0.6714 
+    ## F-statistic: 11.56 on 6 and 25 DF,  p-value: 3.442e-06
 
 ``` r
 #ggplot(spdf.traits, aes(x=waterperc, y=t70, color=species, size=density)) + geom_point() + facet_grid(~size)
@@ -265,11 +266,11 @@ rand.t.test(fit.r2.cv)
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.899
+    ## Comp01 0.902
     ## Comp02 0.999
-    ## Comp03 0.708
-    ## Comp04 0.798
-    ## Comp05 0.691
+    ## Comp03 0.713
+    ## Comp04 0.793
+    ## Comp05 0.701
 
 -k... none of the community components are significant predictors
 
@@ -284,11 +285,11 @@ rand.t.test(fit.k.cv)
     ## Comp04 0.10059285 0.01921425 0.003727121 0.2728401 -15.8296569 -0.06732756
     ## Comp05 0.10067798 0.01871320 0.003714864 0.2731036 -16.0257809  0.08462470
     ##            p
-    ## Comp01 0.522
-    ## Comp02 0.998
-    ## Comp03 0.867
-    ## Comp04 0.431
-    ## Comp05 0.707
+    ## Comp01 0.507
+    ## Comp02 0.994
+    ## Comp03 0.880
+    ## Comp04 0.424
+    ## Comp05 0.719
 
 -t70... none of the community components are significant predictors
 
@@ -303,11 +304,11 @@ rand.t.test(fit.t70.cv)
     ## Comp04 0.5636628 0.02712522 -0.005167941 1.382455 -18.967696 0.02619417
     ## Comp05 0.5637798 0.02665069 -0.004978126 1.383710 -19.017097 0.02076028
     ##            p
-    ## Comp01 0.517
+    ## Comp01 0.500
     ## Comp02 1.000
-    ## Comp03 0.851
-    ## Comp04 0.529
-    ## Comp05 0.536
+    ## Comp03 0.886
+    ## Comp04 0.524
+    ## Comp05 0.539
 
 -alpha --- note: don't interpret yet
 
@@ -322,11 +323,11 @@ rand.t.test(fit.alpha.cv)
     ## Comp04 0.2866664 0.01260590  0.005775351 0.7015749 -22.40512 0.72629298
     ## Comp05 0.2869146 0.01259244  0.006101055 0.7009235 -22.61720 0.08659388
     ##            p
-    ## Comp01 0.713
-    ## Comp02 0.827
-    ## Comp03 0.942
-    ## Comp04 0.904
-    ## Comp05 0.583
+    ## Comp01 0.712
+    ## Comp02 0.850
+    ## Comp03 0.928
+    ## Comp04 0.907
+    ## Comp05 0.618
 
 1.  Community+traits as a predictor
 
@@ -669,24 +670,24 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 #screeplot(fit.r2.cv)
 ```
 
-*Result:* -r2... Comp05 is marginally significant
+*Result:* -r2...none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
 
 ``` r
 rand.t.test(fit.tr.r2.cv)
 ```
 
-    ##              RMSE         R2     Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.06952334 0.04633832 -0.005169470 0.1580775 -54.77500 24.4085990
-    ## Comp02 0.07597962 0.10030564 -0.005194202 0.1720167 -84.85607  9.2864852
-    ## Comp03 0.07717158 0.13269801 -0.005592800 0.1730916 -90.70155  1.5687835
-    ## Comp04 0.07694803 0.12796669 -0.005192814 0.1716292 -89.59834 -0.2896689
-    ## Comp05 0.07673100 0.12846683 -0.005084413 0.1710718 -88.53032 -0.2820507
+    ##              RMSE        R2     Avg.Bias  Max.Bias      Skill delta.RMSE
+    ## Comp01 0.07316014 0.1429569 -0.005347692 0.1618938  -72.28957 31.2591204
+    ## Comp02 0.07945880 0.1883225 -0.004975824 0.1735680 -103.23289  8.6094227
+    ## Comp03 0.07976155 0.2104281 -0.005255877 0.1731221 -104.78449  0.3810032
+    ## Comp04 0.07959619 0.2088527 -0.004842101 0.1713720 -103.93626 -0.2073162
+    ## Comp05 0.07947046 0.2110715 -0.004777034 0.1709423 -103.29250 -0.1579594
     ##            p
-    ## Comp01 0.991
+    ## Comp01 0.999
     ## Comp02 0.997
-    ## Comp03 0.919
-    ## Comp04 0.289
-    ## Comp05 0.039
+    ## Comp03 0.629
+    ## Comp04 0.334
+    ## Comp05 0.199
 
 -k... none of the community components are significant predictors
 
@@ -694,37 +695,37 @@ rand.t.test(fit.tr.r2.cv)
 rand.t.test(fit.tr.k.cv)
 ```
 
-    ##              RMSE           R2      Avg.Bias   Max.Bias     Skill
-    ## Comp01 0.05514237 0.0055276764  2.318954e-04 0.09780228 -33.31336
-    ## Comp02 0.05398518 0.0014710249  4.879796e-05 0.09659541 -27.77680
-    ## Comp03 0.05433608 0.0001857182 -1.118391e-04 0.09656452 -29.44326
-    ## Comp04 0.05424379 0.0001516607 -1.291504e-04 0.09673385 -29.00391
-    ## Comp05 0.05419195 0.0001758077 -9.152507e-05 0.09664655 -28.75748
-    ##         delta.RMSE     p
-    ## Comp01 15.46140470 0.991
-    ## Comp02 -2.09854138 0.265
-    ## Comp03  0.64998516 0.846
-    ## Comp04 -0.16985185 0.245
-    ## Comp05 -0.09555685 0.236
+    ##              RMSE          R2    Avg.Bias  Max.Bias     Skill  delta.RMSE
+    ## Comp01 0.05191325 0.001028608 0.003303599 0.1355113 -21.13298 10.06043001
+    ## Comp02 0.05067798 0.013536731 0.002851440 0.1225496 -15.43686 -2.37949637
+    ## Comp03 0.05092933 0.011624399 0.002815508 0.1227497 -16.58479  0.49598106
+    ## Comp04 0.05088217 0.011202260 0.002606935 0.1222940 -16.36896 -0.09260487
+    ## Comp05 0.05080847 0.011411770 0.002600391 0.1220352 -16.03213 -0.14482990
+    ##            p
+    ## Comp01 0.913
+    ## Comp02 0.241
+    ## Comp03 0.777
+    ## Comp04 0.317
+    ## Comp05 0.149
 
--t70... Comp05 is a significant predictor
+-t70... none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 
 ``` r
 rand.t.test(fit.tr.t70.cv) 
 ```
 
-    ##             RMSE         R2   Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.2814481 0.01103431 0.00979211 0.6844031 -19.45536  9.2956355
-    ## Comp02 0.2823397 0.02016488 0.02064949 0.7181450 -20.21339  0.3167839
-    ## Comp03 0.2835892 0.01783057 0.02080697 0.7217659 -21.27976  0.4425549
-    ## Comp04 0.2831097 0.01858274 0.02099462 0.7177034 -20.87005 -0.1690574
-    ## Comp05 0.2825731 0.01927497 0.02080095 0.7183378 -20.41223 -0.1895623
+    ##             RMSE         R2    Avg.Bias  Max.Bias     Skill  delta.RMSE
+    ## Comp01 0.2752412 0.03752747 0.007269499 0.6434662 -5.866109  2.89125760
+    ## Comp02 0.2749304 0.05477065 0.016445707 0.6775652 -5.627133 -0.11293078
+    ## Comp03 0.2766449 0.05067283 0.018458392 0.6756985 -6.948652  0.62361403
+    ## Comp04 0.2761444 0.05152058 0.018574458 0.6725779 -6.562016 -0.18092128
+    ## Comp05 0.2759834 0.05155263 0.018441009 0.6738231 -6.437833 -0.05828514
     ##            p
-    ## Comp01 0.851
-    ## Comp02 0.534
-    ## Comp03 0.769
-    ## Comp04 0.252
-    ## Comp05 0.032
+    ## Comp01 0.672
+    ## Comp02 0.497
+    ## Comp03 0.797
+    ## Comp04 0.225
+    ## Comp05 0.271
 
 -alpha --- note: don't interpret yet
 
@@ -739,13 +740,13 @@ rand.t.test(fit.tr.alpha.cv)
     ## Comp04 0.2067854 0.020289417 -0.01554990 0.4267151 -57.19334  0.3134854
     ## Comp05 0.2063872 0.020076149 -0.01537752 0.4273147 -56.58859 -0.1925460
     ##            p
-    ## Comp01 0.923
-    ## Comp02 0.971
-    ## Comp03 0.903
-    ## Comp04 0.841
-    ## Comp05 0.118
+    ## Comp01 0.921
+    ## Comp02 0.976
+    ## Comp03 0.901
+    ## Comp04 0.860
+    ## Comp05 0.143
 
-Investigate the biology underlying t70-associated coefs for Comp05
+*Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...* Investigate the biology underlying t70-associated coefs for Comp05
 
 ``` r
 coef.comp5<-fit.tr.t70.cv$coefficients[,'Comp05']
@@ -776,29 +777,241 @@ ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip(
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-20-1.png)
 
-1.  Diversity (and diversity of specific clades) as a predictor Plot richness of key players vs decay param distances BETWEEN species+size
+1.  Diversity (and diversity of specific clades) as a predictor
+
+*Hyp:* Greater microbial diversity (richness, Shannon diversity, phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
+Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
+
+*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another. **No significant relationships**
 
 ``` r
 # summarize the presence of ... in each sample
 sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu)  
-sapList<-Plot_richOTUtype(otutype.df=sapro.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Saprotroph", spdf)
-
 basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu)
-basidList<-Plot_richOTUtype(otutype.df=basidio.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Basidio", spdf)
 
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
-pathList<-Plot_richOTUtype(otutype.df=path.df, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Pathogen", spdf)
+# create a merged df wtih spdf
+saprorich.spdf<-Create_rich_spdf_DF(otutype.df=sapro.df, spdf)
+basidrich.spdf<-Create_rich_spdf_DF(otutype.df=basidio.df, spdf)
 
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
-ooList<-Plot_richOTUtype(otutype.df=oomy.df, 
+# fit models
+mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
+mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
+mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
+mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
+mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
+mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
+mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
+mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
+
+# evaluate models
+summary(mod.sapro.r2)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = ne.r2 ~ size + mean, data = saprorich.spdf)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.20146 -0.07071 -0.00394  0.07046  0.13458 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  7.553e-01  6.277e-02  12.032 5.22e-13 ***
+    ## sizesmall   -3.727e-03  3.263e-02  -0.114    0.910    
+    ## mean        -6.339e-05  3.629e-04  -0.175    0.863    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.08963 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.001612,   Adjusted R-squared:  -0.06495 
+    ## F-statistic: 0.02422 on 2 and 30 DF,  p-value: 0.9761
+
+``` r
+summary(mod.sapro.k)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = k ~ size + mean, data = saprorich.spdf)
+    ## 
+    ## Residuals:
+    ##       Min        1Q    Median        3Q       Max 
+    ## -0.144459 -0.066842 -0.002603  0.054204  0.194414 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  0.2450387  0.0635404   3.856 0.000566 ***
+    ## sizesmall    0.0739558  0.0330253   2.239 0.032698 *  
+    ## mean        -0.0000517  0.0003674  -0.141 0.889036    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.09072 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.1435, Adjusted R-squared:  0.08637 
+    ## F-statistic: 2.513 on 2 and 30 DF,  p-value: 0.09797
+
+``` r
+summary(mod.sapro.t70)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = t70 ~ size + mean, data = saprorich.spdf)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -0.8442 -0.3241 -0.1319  0.2610  1.2428 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  1.5978639  0.3461056   4.617 6.86e-05 ***
+    ## sizesmall   -0.4437990  0.1798894  -2.467   0.0196 *  
+    ## mean         0.0006085  0.0020012   0.304   0.7632    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.4942 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.1687, Adjusted R-squared:  0.1133 
+    ## F-statistic: 3.044 on 2 and 30 DF,  p-value: 0.06258
+
+``` r
+summary(mod.sapro.alpha)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = alpha ~ size + mean, data = saprorich.spdf)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.40959 -0.17508 -0.07703  0.23693  0.59348 
+    ## 
+    ## Coefficients:
+    ##              Estimate Std. Error t value Pr(>|t|)   
+    ## (Intercept)  0.612096   0.183280   3.340  0.00225 **
+    ## sizesmall   -0.002206   0.095260  -0.023  0.98167   
+    ## mean         0.001618   0.001060   1.527  0.13732   
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.2617 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.07268,    Adjusted R-squared:  0.01086 
+    ## F-statistic: 1.176 on 2 and 30 DF,  p-value: 0.3224
+
+``` r
+summary(mod.basid.r2)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = ne.r2 ~ size + mean, data = basidrich.spdf)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.20146 -0.07071 -0.00394  0.07046  0.13458 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  7.553e-01  6.277e-02  12.032 5.22e-13 ***
+    ## sizesmall   -3.727e-03  3.263e-02  -0.114    0.910    
+    ## mean        -6.339e-05  3.629e-04  -0.175    0.863    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.08963 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.001612,   Adjusted R-squared:  -0.06495 
+    ## F-statistic: 0.02422 on 2 and 30 DF,  p-value: 0.9761
+
+``` r
+summary(mod.basid.k)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = k ~ size + mean, data = basidrich.spdf)
+    ## 
+    ## Residuals:
+    ##       Min        1Q    Median        3Q       Max 
+    ## -0.144459 -0.066842 -0.002603  0.054204  0.194414 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  0.2450387  0.0635404   3.856 0.000566 ***
+    ## sizesmall    0.0739558  0.0330253   2.239 0.032698 *  
+    ## mean        -0.0000517  0.0003674  -0.141 0.889036    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.09072 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.1435, Adjusted R-squared:  0.08637 
+    ## F-statistic: 2.513 on 2 and 30 DF,  p-value: 0.09797
+
+``` r
+summary(mod.basid.t70)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = t70 ~ size + mean, data = basidrich.spdf)
+    ## 
+    ## Residuals:
+    ##     Min      1Q  Median      3Q     Max 
+    ## -0.8442 -0.3241 -0.1319  0.2610  1.2428 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  1.5978639  0.3461056   4.617 6.86e-05 ***
+    ## sizesmall   -0.4437990  0.1798894  -2.467   0.0196 *  
+    ## mean         0.0006085  0.0020012   0.304   0.7632    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.4942 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.1687, Adjusted R-squared:  0.1133 
+    ## F-statistic: 3.044 on 2 and 30 DF,  p-value: 0.06258
+
+``` r
+summary(mod.basid.alpha)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = alpha ~ size + mean, data = basidrich.spdf)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.40959 -0.17508 -0.07703  0.23693  0.59348 
+    ## 
+    ## Coefficients:
+    ##              Estimate Std. Error t value Pr(>|t|)   
+    ## (Intercept)  0.612096   0.183280   3.340  0.00225 **
+    ## sizesmall   -0.002206   0.095260  -0.023  0.98167   
+    ## mean         0.001618   0.001060   1.527  0.13732   
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.2617 on 30 degrees of freedom
+    ##   (1 observation deleted due to missingness)
+    ## Multiple R-squared:  0.07268,    Adjusted R-squared:  0.01086 
+    ## F-statistic: 1.176 on 2 and 30 DF,  p-value: 0.3224
+
+``` r
+# create plots
+sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf, 
                         valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Oomycete", spdf)
+                        otutypeNam="Saprotroph")
+basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Basidio")
 
 #plot
 grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
@@ -809,7 +1022,52 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              basidList[['k']] + guides(color=FALSE, shape=FALSE), 
              basidList[['alpha']] + guides(color=FALSE, shape=FALSE),
              
-             pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
+             ncol=3)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-22-1.png)
+
+*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
+
+``` r
+# summarize the presence of ... in each sample
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
+
+# create a merged df wtih spdf
+pathrich.spdf<-Create_rich_spdf_DF(otutype.df=path.df, spdf)
+oomyrich.spdf<-Create_rich_spdf_DF(otutype.df=oomy.df, spdf)
+
+# # fit models
+# mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
+# mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
+# mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
+# mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
+# mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
+# mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
+# mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
+# mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
+# 
+# # evaluate models
+# summary(mod.sapro.r2)
+# summary(mod.sapro.k)
+# summary(mod.sapro.t70)
+# summary(mod.sapro.alpha)
+# summary(mod.basid.r2)
+# summary(mod.basid.k)
+# summary(mod.basid.t70)
+# summary(mod.basid.alpha)
+
+# create plots
+pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Pathogen")
+ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Oomycete")
+
+# plot
+grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
              pathList[['k']] + guides(color=FALSE, shape=FALSE), 
              pathList[['alpha']] + guides(color=FALSE, shape=FALSE),
              
@@ -820,14 +1078,7 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-21-1.png)
-
-*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another. **No apparent pattern**
-
-*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
-
-### Left off here
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-1.png)
 
 1.  Diversity plus traits as a predictor
 
