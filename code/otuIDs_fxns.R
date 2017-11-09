@@ -42,10 +42,40 @@ AverageOTUabund_byCode<-function(comm.otu, seqSamples){
   
 }
 
+Calc_richOTU<-function(taxAndFunguild, comm.otu){
+  
+  # turn the OTU table into presence/absence
+  comm.otu.pa<-comm.otu
+  comm.otu.pa[comm.otu.pa > 0] <- 1 # convert to presence/absence
+  
+  # calculate the richness of OTUs per sample and save it in a df
+  comm.rich<-rowSums(comm.otu.pa)
+  comm.rich.df<-data.frame(seq_sampName=names(comm.rich), sub_rich=comm.rich)
+  
+  # use the seqSample to add code, size, species
+  comm.rich.df<-left_join(comm.rich.df, seqSamples)
+  
+  return(comm.rich.df)
+}
+
+Calc_H.OTU<-function(taxAndFunguild, comm.otu){
+  
+  #calculate the shannon diversity
+  require(vegan)
+  comm.H<-diversity(comm.otu, index="shannon")
+  comm.H.df<-data.frame(seq_sampName=names(comm.H), sub_rich=comm.H)
+  
+  # use the seqSample to add code, size, species
+  comm.H.df<-left_join(comm.H.df, seqSamples)
+  
+  return(comm.H.df)
+}
+
 Calc_richOTUtype<-function(colNam, grepTerm, taxAndFunguild, comm.otu){
   
   # identify OTUs that match that type
-  sub.otus<-taxAndFunguild[grepl(grepTerm,taxAndFunguild[,colNam]),"OTUId"]
+  tf.col<-as.matrix(taxAndFunguild[,colNam])[,1]
+  sub.otus<-taxAndFunguild[grepl(grepTerm,tf.col),"OTUId"]
   
   # subset the OTU table by the select otus
   sub.otu<-comm.otu[,colnames(comm.otu) %in% sub.otus$OTUId]
@@ -100,6 +130,44 @@ Plot_richOTUtype<-function(rich.spdf, valueCol_vec, otutypeNam){
   names(pList)<-valueCol_vec
   
   return(pList)
+}
+
+FitResid_diversity<-function(rich.spdf, trait.residuals){
+  
+  #merge the trait residuals and diversity dataframes
+  rich.spdf %>%
+    left_join(trait.residuals) %>%
+    filter(!is.na(mean)) -> rich.spdf.tr
+  
+  #fit models
+  mod.r2<-lm(ne.r2~size+mean, data=rich.spdf.tr)
+  mod.k<-lm(k~size+mean, data=rich.spdf.tr)
+  mod.t70<-lm(t70~size+mean, data=rich.spdf.tr)
+  mod.alpha<-lm(alpha~size+mean, data=rich.spdf.tr)
+  
+  mod.list<-list(r2=mod.r2, k=mod.k, t70=mod.t70, alpha=mod.alpha)
+  
+  return(mod.list)
+  
+}
+
+PlotResid_diversity<-function(rich.spdf, trait.residuals, xlab){
+  
+  #merge the trait residuals and diversity dataframes
+  rich.spdf %>%
+    left_join(trait.residuals) %>%
+    filter(!is.na(mean)) -> rich.spdf.tr
+  
+  #fit models
+  p.r2<-ggplot(rich.spdf.tr, aes(x=mean, y=ne.r2, color=species, shape=size)) + geom_point() + xlab(xlab)
+  p.k<-ggplot(rich.spdf.tr, aes(x=mean, y=k, color=species, shape=size)) + geom_point() + xlab(xlab)
+  p.t70<-ggplot(rich.spdf.tr, aes(x=mean, y=t70, color=species, shape=size)) + geom_point() + xlab(xlab)
+  p.alpha<-ggplot(rich.spdf.tr, aes(x=mean, y=alpha, color=species, shape=size)) + geom_point() + xlab(xlab)
+  
+  p.list<-list(r2=p.r2, k=p.k, t70=p.t70, alpha=p.alpha)
+  
+  return(p.list)
+  
 }
 
 CalcNumPairsPresent<-function(presentOTUs, corPairs.df){

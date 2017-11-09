@@ -29,9 +29,7 @@ source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
 ```
 
-## Load data 
-
-### Microbial community data
+### Load microbial community data
 ```{r, echo=FALSE}
 #stem sample meta data
 #stemSamples<-load_stemSamples() #uncomment if the data changes
@@ -57,7 +55,7 @@ taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 #plot_sampleEffortCurves(comm.otu)
 ```
 
-### Wood trait data
+### Load wood trait data
 ```{r, echo=FALSE}
 #traits.mean<-mergeTraitData() #uncomment if the data changes
 #write_csv(traits.mean, "derived_data/traits_mean.csv") 
@@ -360,24 +358,70 @@ By phylum
 
 ##########################################
 
-4. Diversity (and diversity of specific clades) as a predictor
+## Diversity (and diversity of specific clades) as a predictor  
 
-*Hyp:* Greater microbial diversity (richness, Shannon diversity, phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
+**Note that these community matrices have NOT been filtered to include just the OTUs that are present in at least 20% of samples**
+
+*Hyp:* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
 Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
 ```{r}
 
+# summarize the diversity in each sample
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu)
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+
+# create a merged df wtih spdf
+rich.spdf<-Create_rich_spdf_DF(otutype.df=rich.df, spdf)
+H.spdf<-Create_rich_spdf_DF(otutype.df=H.df, spdf)
+
+# fit models
+mod.rich.r2<-lm(ne.r2~size+mean, data=rich.spdf)
+mod.rich.k<-lm(k~size+mean, data=rich.spdf)
+mod.rich.t70<-lm(t70~size+mean, data=rich.spdf)
+mod.rich.alpha<-lm(alpha~size+mean, data=rich.spdf)
+
+mod.H.r2<-lm(ne.r2~size+mean, data=H.spdf)
+mod.H.k<-lm(k~size+mean, data=H.spdf)
+mod.H.t70<-lm(t70~size+mean, data=H.spdf)
+mod.H.alpha<-lm(alpha~size+mean, data=H.spdf)
+
+# create plots
+richList<-Plot_richOTUtype(rich.spdf=rich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Total")
+H.List<-Plot_richOTUtype(rich.spdf=H.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Shannon's H")
 
 ```
 
+### Richness
+
+**No pattern**
+```{r}
+# anova(mod.rich.r2)
+# anova(mod.rich.k)
+# anova(mod.rich.t70)
+# anova(mod.rich.alpha)
+```
+
+### Shannon's H
+
+**No pattern**
+```{r}
+# anova(mod.H.r2)
+# anova(mod.H.k)
+# anova(mod.H.t70)
+# anova(mod.H.alpha)
+```
 
 *Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
-**No significant relationships**
 ```{r}
 
 # summarize the presence of ... in each sample
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu)  
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu)
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
 
 # create a merged df wtih spdf
 saprorich.spdf<-Create_rich_spdf_DF(otutype.df=sapro.df, spdf)
@@ -393,16 +437,6 @@ mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
 mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
 mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
 
-# evaluate models
-summary(mod.sapro.r2)
-summary(mod.sapro.k)
-summary(mod.sapro.t70)
-summary(mod.sapro.alpha)
-summary(mod.basid.r2)
-summary(mod.basid.k)
-summary(mod.basid.t70)
-summary(mod.basid.alpha)
-
 # create plots
 sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf, 
                         valueCol_vec=c("ne.r2", "k","alpha"), 
@@ -411,51 +445,52 @@ basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf,
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Basidio")
 
-#plot
-grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             sapList[['k']] + guides(color=FALSE, shape=FALSE), 
-             sapList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             basidList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             basidList[['k']] + guides(color=FALSE, shape=FALSE), 
-             basidList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ncol=3)
+```
 
+### Saprotroph richness
+
+**No pattern**
+
+```{r}
+#anova(mod.sapro.r2)
+#anova(mod.sapro.k)
+#anova(mod.sapro.t70)
+#anova(mod.sapro.alpha) #marginally-signif
+#sapList[['alpha']]
+```
+
+### Basidio richness
+
+**No pattern**
+
+```{r}
+#anova(mod.basid.r2)
+#anova(mod.basid.k)
+#anova(mod.basid.t70)
+#anova(mod.basid.alpha)
 ```
 
 
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
-**Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
 ```{r}
 
 # summarize the presence of ... in each sample
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu) # have to do this with the full community matrix because there are so few of these guys
 
 # create a merged df wtih spdf
 pathrich.spdf<-Create_rich_spdf_DF(otutype.df=path.df, spdf)
 oomyrich.spdf<-Create_rich_spdf_DF(otutype.df=oomy.df, spdf)
 
-# # fit models
-# mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
-# mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
-# mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
-# mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
-# mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
-# mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
-# mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
-# mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
-# 
-# # evaluate models
-# summary(mod.sapro.r2)
-# summary(mod.sapro.k)
-# summary(mod.sapro.t70)
-# summary(mod.sapro.alpha)
-# summary(mod.basid.r2)
-# summary(mod.basid.k)
-# summary(mod.basid.t70)
-# summary(mod.basid.alpha)
+# fit models
+mod.path.r2<-lm(ne.r2~size+mean, data=pathrich.spdf)
+mod.path.k<-lm(k~size+mean, data=pathrich.spdf)
+mod.path.t70<-lm(t70~size+mean, data=pathrich.spdf)
+mod.path.alpha<-lm(alpha~size+mean, data=pathrich.spdf)
+mod.oomy.r2<-lm(ne.r2~size+mean, data=oomyrich.spdf)
+mod.oomy.k<-lm(k~size+mean, data=oomyrich.spdf)
+mod.oomy.t70<-lm(t70~size+mean, data=oomyrich.spdf)
+mod.oomy.alpha<-lm(alpha~size+mean, data=oomyrich.spdf)
 
 # create plots
 pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf, 
@@ -465,20 +500,112 @@ ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf,
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Oomycete")
 
-# plot
-grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             pathList[['k']] + guides(color=FALSE, shape=FALSE), 
-             pathList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ooList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             ooList[['k']] + guides(color=FALSE, shape=FALSE), 
-             ooList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ncol=3)
+```
+
+### Pathogen richness
+
+**No pattern**
+
+```{r}
+#anova(mod.path.r2)
+#anova(mod.path.k)
+#anova(mod.path.t70)
+#anova(mod.path.alpha) #marginally signif
+#pathList[['alpha']]
+```
+
+### Oomycete richness
+
+**No pattern**
+
+```{r}
+#anova(mod.oomy.r2)
+#anova(mod.oomy.k)
+#anova(mod.oomy.t70)
+#anova(mod.oomy.alpha)
+```
+
+
+
+
+##############################################
+
+## Diversity plus traits as a predictor
+
+*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+
+```{r, include=FALSE, results=FALSE, message=FALSE}
+
+#run lm mods on wood trait residuals
+mod.rich<-FitResid_diversity(rich.spdf=rich.spdf, trait.residuals)
+mod.H<-FitResid_diversity(rich.spdf=H.spdf, trait.residuals)
+mod.sapro<-FitResid_diversity(rich.spdf=saprorich.spdf, trait.residuals)
+mod.basid<-FitResid_diversity(rich.spdf=basidrich.spdf, trait.residuals)
+mod.path<-FitResid_diversity(rich.spdf=pathrich.spdf, trait.residuals)
+mod.oomy<-FitResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals)
+
+#make plots
+p.rich<-PlotResid_diversity(rich.spdf=rich.spdf, trait.residuals, xlab="Richness")
+p.H<-PlotResid_diversity(rich.spdf=H.spdf, trait.residuals, xlab="Shannon's H")
+p.sapro<-PlotResid_diversity(rich.spdf=saprorich.spdf, trait.residuals, xlab="Saprotroph richness")
+p.basid<-PlotResid_diversity(rich.spdf=basidrich.spdf, trait.residuals, xlab="Basidio richness")
+p.path<-PlotResid_diversity(rich.spdf=pathrich.spdf, trait.residuals, xlab="Pathogen richness")
+p.oomy<-PlotResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals, xlab="Oomycete richness")
 
 ```
 
-5. Diversity plus traits as a predictor
+### Richness
+
+**No pattern**
+
+```{r, echo=FALSE}
+#lapply(mod.rich, anova)
+```
+
+### Shannon's H
+
+**No pattern**
+
+```{r, echo=FALSE}
+#lapply(mod.H, anova)
+```
+
+### Saprotroph richness
+
+**No pattern**
+
+```{r, echo=FALSE}
+#lapply(mod.sapro, anova) #marginally signif alpha
+#summary(mod.sapro[['alpha']])
+#p.sapro[['alpha']]
+```
+
+### Basidio richness
+
+**No pattern**
+
+```{r, echo=FALSE}
+#lapply(mod.basid, anova)
+```
+
+### Pathogen richness
+
+**No pattern**
+
+```{r, echo=FALSE}
+lapply(mod.path, anova) #marginally signif for alpha
+#summary(mod.path[['alpha']])
+#p.path[['alpha']]
+```
+
+### Oomycete richness
+
+**No pattern**
+
+```{r, echo=FALSE}
+#lapply(mod.oomy, anova)
+```
+
 
 
 

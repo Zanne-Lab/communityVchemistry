@@ -27,12 +27,9 @@ source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
 ```
 
-Load data
----------
+### Load microbial community data
 
-### Microbial community data
-
-### Wood trait data
+### Load wood trait data
 
 ########################################## 
 
@@ -191,10 +188,10 @@ Community as a predictor
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.890
-    ## Comp02 1.000
-    ## Comp03 0.715
-    ## Comp04 0.789
+    ## Comp01 0.902
+    ## Comp02 0.998
+    ## Comp03 0.712
+    ## Comp04 0.805
     ## Comp05 0.720
 
 ### k
@@ -208,11 +205,11 @@ Community as a predictor
     ## Comp04 0.1087908 0.02741427 0.013442320 0.2667951 -35.47840  2.6972785
     ## Comp05 0.1125616 0.01442363 0.011293413 0.2704606 -45.03280  3.4661026
     ##            p
-    ## Comp01 0.902
-    ## Comp02 0.519
-    ## Comp03 0.631
-    ## Comp04 0.856
-    ## Comp05 0.965
+    ## Comp01 0.893
+    ## Comp02 0.541
+    ## Comp03 0.639
+    ## Comp04 0.876
+    ## Comp05 0.959
 
 ### t70
 
@@ -225,11 +222,11 @@ Community as a predictor
     ## Comp04 0.5583885 0.08221500 -0.0056512738 1.349964 -16.751702  4.02377323
     ## Comp05 0.5693485 0.06691379  0.0058129906 1.431625 -21.379860  1.96278895
     ##            p
-    ## Comp01 0.873
-    ## Comp02 0.227
-    ## Comp03 0.501
-    ## Comp04 0.838
-    ## Comp05 0.831
+    ## Comp01 0.870
+    ## Comp02 0.223
+    ## Comp03 0.468
+    ## Comp04 0.820
+    ## Comp05 0.834
 
 ### alpha --- don't interpret yet
 
@@ -240,11 +237,11 @@ Community as a predictor
     ## Comp04 0.3519272 1.367993e-02 0.03667556 0.8064912 -84.48099   6.079436
     ## Comp05 0.3451306 9.703285e-03 0.03466600 0.8074728 -77.42424  -1.931244
     ##            p
-    ## Comp01 0.963
-    ## Comp02 0.282
-    ## Comp03 0.927
-    ## Comp04 0.994
-    ## Comp05 0.175
+    ## Comp01 0.967
+    ## Comp02 0.308
+    ## Comp03 0.931
+    ## Comp04 0.993
+    ## Comp05 0.199
 
 ########################################## 
 
@@ -270,11 +267,11 @@ rand.t.test(fit.tr.r2.cv)
     ## Comp04 0.09706111 0.0019152166  0.003816465 0.1568796 -203.24973
     ## Comp05 0.09665378 0.0024386184  0.004673572 0.1604111 -200.70985
     ##        delta.RMSE     p
-    ## Comp01  27.088047 0.994
-    ## Comp02  29.677682 1.000
-    ## Comp03   4.219463 0.911
-    ## Comp04   1.386804 0.801
-    ## Comp05  -0.419656 0.276
+    ## Comp01  27.088047 0.993
+    ## Comp02  29.677682 0.998
+    ## Comp03   4.219463 0.917
+    ## Comp04   1.386804 0.802
+    ## Comp05  -0.419656 0.326
 
 ### k
 
@@ -291,11 +288,11 @@ rand.t.test(fit.tr.k.cv)
     ## Comp04 0.05147371 0.04410936 0.005052921 0.1270141 -19.09043   3.073904
     ## Comp05 0.05142763 0.04472957 0.005796166 0.1291158 -18.87733  -0.089509
     ##            p
-    ## Comp01 0.916
-    ## Comp02 0.193
-    ## Comp03 0.222
-    ## Comp04 0.941
-    ## Comp05 0.480
+    ## Comp01 0.853
+    ## Comp02 0.173
+    ## Comp03 0.216
+    ## Comp04 0.918
+    ## Comp05 0.486
 
 ### t70
 
@@ -308,11 +305,11 @@ rand.t.test(fit.tr.t70.cv)
 ```
 
     ##             RMSE        R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p
-    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.281
-    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.549
-    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.888
-    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.719
-    ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.644
+    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.262
+    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.552
+    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.895
+    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.707
+    ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.650
 
 ### alpha --- don't interpret yet
 
@@ -327,11 +324,11 @@ rand.t.test(fit.tr.alpha.cv)
     ## Comp04 0.2658597 1.990507e-04  0.0062806609 0.4345492 -159.83617
     ## Comp05 0.2667991 4.823803e-04 -0.0002445828 0.4396092 -161.67561
     ##        delta.RMSE     p
-    ## Comp01 12.0446595 0.942
-    ## Comp02 33.1474500 0.999
-    ## Comp03  6.1616065 0.862
-    ## Comp04  1.7790289 0.644
-    ## Comp05  0.3533382 0.581
+    ## Comp01 12.0446595 0.944
+    ## Comp02 33.1474500 0.994
+    ## Comp03  6.1616065 0.855
+    ## Comp04  1.7790289 0.626
+    ## Comp05  0.3533382 0.611
 
 **Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...**
 
@@ -345,18 +342,72 @@ By phylum
 
 ########################################## 
 
-1.  Diversity (and diversity of specific clades) as a predictor
+Diversity (and diversity of specific clades) as a predictor
+-----------------------------------------------------------
 
-*Hyp:* Greater microbial diversity (richness, Shannon diversity, phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
+**Note that these community matrices have NOT been filtered to include just the OTUs that are present in at least 20% of samples**
+
+*Hyp:* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
 Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
 
+``` r
+# summarize the diversity in each sample
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu)
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+
+# create a merged df wtih spdf
+rich.spdf<-Create_rich_spdf_DF(otutype.df=rich.df, spdf)
+H.spdf<-Create_rich_spdf_DF(otutype.df=H.df, spdf)
+
+# fit models
+mod.rich.r2<-lm(ne.r2~size+mean, data=rich.spdf)
+mod.rich.k<-lm(k~size+mean, data=rich.spdf)
+mod.rich.t70<-lm(t70~size+mean, data=rich.spdf)
+mod.rich.alpha<-lm(alpha~size+mean, data=rich.spdf)
+
+mod.H.r2<-lm(ne.r2~size+mean, data=H.spdf)
+mod.H.k<-lm(k~size+mean, data=H.spdf)
+mod.H.t70<-lm(t70~size+mean, data=H.spdf)
+mod.H.alpha<-lm(alpha~size+mean, data=H.spdf)
+
+# create plots
+richList<-Plot_richOTUtype(rich.spdf=rich.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Total")
+H.List<-Plot_richOTUtype(rich.spdf=H.spdf, 
+                        valueCol_vec=c("ne.r2", "k","alpha"), 
+                        otutypeNam="Shannon's H")
+```
+
+### Richness
+
+**No pattern**
+
+``` r
+# anova(mod.rich.r2)
+# anova(mod.rich.k)
+# anova(mod.rich.t70)
+# anova(mod.rich.alpha)
+```
+
+### Shannon's H
+
+**No pattern**
+
+``` r
+# anova(mod.H.r2)
+# anova(mod.H.k)
+# anova(mod.H.t70)
+# anova(mod.H.alpha)
+```
+
 *Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another. **No significant relationships**
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
 
 ``` r
 # summarize the presence of ... in each sample
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu)  
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu)
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
 
 # create a merged df wtih spdf
 saprorich.spdf<-Create_rich_spdf_DF(otutype.df=sapro.df, spdf)
@@ -372,207 +423,6 @@ mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
 mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
 mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
 
-# evaluate models
-summary(mod.sapro.r2)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = ne.r2 ~ size + mean, data = saprorich.spdf)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.20146 -0.07071 -0.00394  0.07046  0.13458 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  7.553e-01  6.277e-02  12.032 5.22e-13 ***
-    ## sizesmall   -3.727e-03  3.263e-02  -0.114    0.910    
-    ## mean        -6.339e-05  3.629e-04  -0.175    0.863    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.08963 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.001612,   Adjusted R-squared:  -0.06495 
-    ## F-statistic: 0.02422 on 2 and 30 DF,  p-value: 0.9761
-
-``` r
-summary(mod.sapro.k)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = k ~ size + mean, data = saprorich.spdf)
-    ## 
-    ## Residuals:
-    ##       Min        1Q    Median        3Q       Max 
-    ## -0.144459 -0.066842 -0.002603  0.054204  0.194414 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  0.2450387  0.0635404   3.856 0.000566 ***
-    ## sizesmall    0.0739558  0.0330253   2.239 0.032698 *  
-    ## mean        -0.0000517  0.0003674  -0.141 0.889036    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.09072 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.1435, Adjusted R-squared:  0.08637 
-    ## F-statistic: 2.513 on 2 and 30 DF,  p-value: 0.09797
-
-``` r
-summary(mod.sapro.t70)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = t70 ~ size + mean, data = saprorich.spdf)
-    ## 
-    ## Residuals:
-    ##     Min      1Q  Median      3Q     Max 
-    ## -0.8442 -0.3241 -0.1319  0.2610  1.2428 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  1.5978639  0.3461056   4.617 6.86e-05 ***
-    ## sizesmall   -0.4437990  0.1798894  -2.467   0.0196 *  
-    ## mean         0.0006085  0.0020012   0.304   0.7632    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.4942 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.1687, Adjusted R-squared:  0.1133 
-    ## F-statistic: 3.044 on 2 and 30 DF,  p-value: 0.06258
-
-``` r
-summary(mod.sapro.alpha)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = alpha ~ size + mean, data = saprorich.spdf)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.40959 -0.17508 -0.07703  0.23693  0.59348 
-    ## 
-    ## Coefficients:
-    ##              Estimate Std. Error t value Pr(>|t|)   
-    ## (Intercept)  0.612096   0.183280   3.340  0.00225 **
-    ## sizesmall   -0.002206   0.095260  -0.023  0.98167   
-    ## mean         0.001618   0.001060   1.527  0.13732   
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.2617 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.07268,    Adjusted R-squared:  0.01086 
-    ## F-statistic: 1.176 on 2 and 30 DF,  p-value: 0.3224
-
-``` r
-summary(mod.basid.r2)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = ne.r2 ~ size + mean, data = basidrich.spdf)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.20146 -0.07071 -0.00394  0.07046  0.13458 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  7.553e-01  6.277e-02  12.032 5.22e-13 ***
-    ## sizesmall   -3.727e-03  3.263e-02  -0.114    0.910    
-    ## mean        -6.339e-05  3.629e-04  -0.175    0.863    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.08963 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.001612,   Adjusted R-squared:  -0.06495 
-    ## F-statistic: 0.02422 on 2 and 30 DF,  p-value: 0.9761
-
-``` r
-summary(mod.basid.k)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = k ~ size + mean, data = basidrich.spdf)
-    ## 
-    ## Residuals:
-    ##       Min        1Q    Median        3Q       Max 
-    ## -0.144459 -0.066842 -0.002603  0.054204  0.194414 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  0.2450387  0.0635404   3.856 0.000566 ***
-    ## sizesmall    0.0739558  0.0330253   2.239 0.032698 *  
-    ## mean        -0.0000517  0.0003674  -0.141 0.889036    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.09072 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.1435, Adjusted R-squared:  0.08637 
-    ## F-statistic: 2.513 on 2 and 30 DF,  p-value: 0.09797
-
-``` r
-summary(mod.basid.t70)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = t70 ~ size + mean, data = basidrich.spdf)
-    ## 
-    ## Residuals:
-    ##     Min      1Q  Median      3Q     Max 
-    ## -0.8442 -0.3241 -0.1319  0.2610  1.2428 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  1.5978639  0.3461056   4.617 6.86e-05 ***
-    ## sizesmall   -0.4437990  0.1798894  -2.467   0.0196 *  
-    ## mean         0.0006085  0.0020012   0.304   0.7632    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.4942 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.1687, Adjusted R-squared:  0.1133 
-    ## F-statistic: 3.044 on 2 and 30 DF,  p-value: 0.06258
-
-``` r
-summary(mod.basid.alpha)
-```
-
-    ## 
-    ## Call:
-    ## lm(formula = alpha ~ size + mean, data = basidrich.spdf)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.40959 -0.17508 -0.07703  0.23693  0.59348 
-    ## 
-    ## Coefficients:
-    ##              Estimate Std. Error t value Pr(>|t|)   
-    ## (Intercept)  0.612096   0.183280   3.340  0.00225 **
-    ## sizesmall   -0.002206   0.095260  -0.023  0.98167   
-    ## mean         0.001618   0.001060   1.527  0.13732   
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.2617 on 30 degrees of freedom
-    ##   (1 observation deleted due to missingness)
-    ## Multiple R-squared:  0.07268,    Adjusted R-squared:  0.01086 
-    ## F-statistic: 1.176 on 2 and 30 DF,  p-value: 0.3224
-
-``` r
 # create plots
 sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf, 
                         valueCol_vec=c("ne.r2", "k","alpha"), 
@@ -580,51 +430,51 @@ sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf,
 basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf, 
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Basidio")
-
-#plot
-grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             sapList[['k']] + guides(color=FALSE, shape=FALSE), 
-             sapList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             basidList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             basidList[['k']] + guides(color=FALSE, shape=FALSE), 
-             basidList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png)
+### Saprotroph richness
 
-*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
+**No pattern**
+
+``` r
+#anova(mod.sapro.r2)
+#anova(mod.sapro.k)
+#anova(mod.sapro.t70)
+#anova(mod.sapro.alpha) #marginally-signif
+#sapList[['alpha']]
+```
+
+### Basidio richness
+
+**No pattern**
+
+``` r
+#anova(mod.basid.r2)
+#anova(mod.basid.k)
+#anova(mod.basid.t70)
+#anova(mod.basid.alpha)
+```
+
+*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
 
 ``` r
 # summarize the presence of ... in each sample
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu)
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu)
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu) # have to do this with the full community matrix because there are so few of these guys
 
 # create a merged df wtih spdf
 pathrich.spdf<-Create_rich_spdf_DF(otutype.df=path.df, spdf)
 oomyrich.spdf<-Create_rich_spdf_DF(otutype.df=oomy.df, spdf)
 
-# # fit models
-# mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
-# mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
-# mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
-# mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
-# mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
-# mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
-# mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
-# mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
-# 
-# # evaluate models
-# summary(mod.sapro.r2)
-# summary(mod.sapro.k)
-# summary(mod.sapro.t70)
-# summary(mod.sapro.alpha)
-# summary(mod.basid.r2)
-# summary(mod.basid.k)
-# summary(mod.basid.t70)
-# summary(mod.basid.alpha)
+# fit models
+mod.path.r2<-lm(ne.r2~size+mean, data=pathrich.spdf)
+mod.path.k<-lm(k~size+mean, data=pathrich.spdf)
+mod.path.t70<-lm(t70~size+mean, data=pathrich.spdf)
+mod.path.alpha<-lm(alpha~size+mean, data=pathrich.spdf)
+mod.oomy.r2<-lm(ne.r2~size+mean, data=oomyrich.spdf)
+mod.oomy.k<-lm(k~size+mean, data=oomyrich.spdf)
+mod.oomy.t70<-lm(t70~size+mean, data=oomyrich.spdf)
+mod.oomy.alpha<-lm(alpha~size+mean, data=oomyrich.spdf)
 
 # create plots
 pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf, 
@@ -633,22 +483,103 @@ pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf,
 ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf, 
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Oomycete")
-
-# plot
-grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             pathList[['k']] + guides(color=FALSE, shape=FALSE), 
-             pathList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ooList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             ooList[['k']] + guides(color=FALSE, shape=FALSE), 
-             ooList[['alpha']] + guides(color=FALSE, shape=FALSE),
-             
-             ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-26-1.png)
+### Pathogen richness
 
-1.  Diversity plus traits as a predictor
+**No pattern**
+
+``` r
+#anova(mod.path.r2)
+#anova(mod.path.k)
+#anova(mod.path.t70)
+#anova(mod.path.alpha) #marginally signif
+#pathList[['alpha']]
+```
+
+### Oomycete richness
+
+**No pattern**
+
+``` r
+#anova(mod.oomy.r2)
+#anova(mod.oomy.k)
+#anova(mod.oomy.t70)
+#anova(mod.oomy.alpha)
+```
+
+############################################## 
+
+Diversity plus traits as a predictor
+------------------------------------
+
+*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+
+### Richness
+
+**No pattern**
+
+### Shannon's H
+
+**No pattern**
+
+### Saprotroph richness
+
+**No pattern**
+
+### Basidio richness
+
+**No pattern**
+
+### Pathogen richness
+
+**No pattern**
+
+    ## $r2
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0181 0.8940
+    ## mean       1 0.001760 0.0017599  0.2205 0.6421
+    ## Residuals 30 0.239469 0.0079823               
+    ## 
+    ## $k
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.0603 0.03197 *
+    ## mean       1 0.002835 0.002835  0.3482 0.55956  
+    ## Residuals 30 0.244255 0.008142                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $t70
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  6.2855 0.01782 *
+    ## mean       1 0.3608 0.36079  1.5489 0.22294  
+    ## Residuals 30 6.9881 0.23294                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $alpha
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.00140 0.001404  0.0215 0.88430  
+    ## mean       1 0.25844 0.258439  3.9645 0.05564 .
+    ## Residuals 30 1.95564 0.065188                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+### Oomycete richness
+
+**No pattern**
 
 ############################################## 
 
