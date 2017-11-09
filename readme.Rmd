@@ -171,6 +171,35 @@ summary(mod.select.alpha) # density, Zn, C
 
 
 ## Community as a predictor
+
+But first check the OTU table for unexpected taxa....
+- Arbuscular mycorrhizal fungi
+```{r}
+GlomOTUs<-taxAndFunguild[taxAndFunguild$phylum=="Glomeromycota","OTUId"]
+HowManyOfThese(otuIDs=GlomOTUs, taxAndFunguild, comm.otu)
+#am.otus<-taxAndFunguild[taxAndFunguild$Guild=="Arbuscular Mycorrhizal","OTUId"] #same as above
+#HowManyOfThese(otuIDs=am.otus, taxAndFunguild, comm.otu)
+```
+- Ericoid mycorrhizal fungi
+```{r}
+ericoid.otus<-taxAndFunguild[taxAndFunguild$Guild=="Ericoid Mycorrhizal","OTUId"]
+HowManyOfThese(otuIDs=ericoid.otus, taxAndFunguild, comm.otu)
+
+#.. orchidmyc.otus<-taxAndFunguild[taxAndFunguild$Guild=="Orchid Mycorrhizal","OTUId"]
+#HowManyOfThese(otuIDs=orchidmyc.otus, taxAndFunguild, comm.otu) #none
+```
+- Lichenized fungi
+```{r}
+lichenized.otus<-taxAndFunguild[grepl('Lichen', taxAndFunguild$Guild),"OTUId"]
+HowManyOfThese(otuIDs=lichenized.otus, taxAndFunguild, comm.otu)
+```
+- Animal-associated fungi
+```{r}
+animal.otus<-taxAndFunguild[grepl('Animal', taxAndFunguild$Guild),"OTUId"]
+HowManyOfThese(otuIDs=animal.otus, taxAndFunguild, comm.otu)
+```
+
+
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).  
 ```{r, include=FALSE, results=FALSE,message=FALSE}
 

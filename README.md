@@ -264,6 +264,3638 @@ summary(mod.select.alpha) # density, Zn, C
 Community as a predictor
 ------------------------
 
+But first check the OTU table for unexpected taxa.... - Arbuscular mycorrhizal fungi
+
+``` r
+GlomOTUs<-taxAndFunguild[taxAndFunguild$phylum=="Glomeromycota","OTUId"]
+HowManyOfThese(otuIDs=GlomOTUs, taxAndFunguild, comm.otu)
+```
+
+    ## $otu
+    ##       ITSall_OTUa_148 ITSall_OTUa_3684 ITSall_OTUb_476
+    ## MEDE3              19                0               0
+    ## pepu3               0                0             143
+    ## penu                0               19               0
+    ## 
+    ## $tax
+    ## # A tibble: 3 x 4
+    ##              OTUId        phylum           genus      species
+    ##              <chr>         <chr>           <chr>        <chr>
+    ## 1  ITSall_OTUa_148 Glomeromycota    unclassified unclassified
+    ## 2 ITSall_OTUa_3684 Glomeromycota    unclassified unclassified
+    ## 3  ITSall_OTUb_476 Glomeromycota Claroideoglomus unclassified
+
+``` r
+#am.otus<-taxAndFunguild[taxAndFunguild$Guild=="Arbuscular Mycorrhizal","OTUId"] #same as above
+#HowManyOfThese(otuIDs=am.otus, taxAndFunguild, comm.otu)
+```
+
+-   Ericoid mycorrhizal fungi
+
+``` r
+ericoid.otus<-taxAndFunguild[taxAndFunguild$Guild=="Ericoid Mycorrhizal","OTUId"]
+HowManyOfThese(otuIDs=ericoid.otus, taxAndFunguild, comm.otu)
+```
+
+    ## $otu
+    ##       ITSall_OTUb_8077 ITSall_OTUc_1349 ITSall_OTUd_6564
+    ## EUTE1                0               17                0
+    ## LEPA1                0               17                0
+    ## ANBA3                0                0               64
+    ## PELI2                0               19                0
+    ## PELI3                0              208                0
+    ## BAAE1                0               32                0
+    ## BAAE2                0               78                0
+    ## PEPU1                0              222                0
+    ## MEDE1               10                0                0
+    ## MEDE3               74                0                0
+    ## 
+    ## $tax
+    ## # A tibble: 3 x 4
+    ##              OTUId     phylum        genus                    species
+    ##              <chr>      <chr>        <chr>                      <chr>
+    ## 1 ITSall_OTUb_8077 Ascomycota Oidiodendron Oidiodendron_periconioides
+    ## 2 ITSall_OTUc_1349 Ascomycota Oidiodendron       Oidiodendron_griseum
+    ## 3 ITSall_OTUd_6564 Ascomycota Oidiodendron               unclassified
+
+``` r
+#.. orchidmyc.otus<-taxAndFunguild[taxAndFunguild$Guild=="Orchid Mycorrhizal","OTUId"]
+#HowManyOfThese(otuIDs=orchidmyc.otus, taxAndFunguild, comm.otu) #none
+```
+
+-   Lichenized fungi
+
+``` r
+lichenized.otus<-taxAndFunguild[grepl('Lichen', taxAndFunguild$Guild),"OTUId"]
+HowManyOfThese(otuIDs=lichenized.otus, taxAndFunguild, comm.otu)
+```
+
+    ## $otu
+    ##       ITSall_OTUa_401 ITSall_OTUa_6598 ITSall_OTUa_4710 ITSall_OTUb_2612
+    ## EUTE2               0                0               13                0
+    ## EUTE3               0                0                0              203
+    ## LEPA2               0                0                0               31
+    ## LEPA4              15                0                0                0
+    ## EUSC1              14                0                0              498
+    ## EUSC2               0                0                0               84
+    ## ANBA2               0                0                0               52
+    ## ANBA3               0                0                0               39
+    ## PELI1               0                0                0                0
+    ## PELI2               0                0                0                0
+    ## PELI3               0                0                0                0
+    ## JASC2               0                0                0                0
+    ## BAAE1               0                0                0              121
+    ## BAAE3              86                0                0               39
+    ## PEPU1              24                0                0                0
+    ## PEPU2               0                0                0               28
+    ## PEPU3              35                0                0               27
+    ## ACPA1               0                0                0              123
+    ## ACPA3               0                0                0              191
+    ## ACPA4              40                0                0               12
+    ## ALLI1               0                0                0               24
+    ## ALLI2               0                0                0               53
+    ## ALLI3               0                0                0               10
+    ## EXCU1               0                0               18               91
+    ## EXCU2              10                0              210               44
+    ## EXCU3             284                0              145               36
+    ## MEDE3               0                0                0               17
+    ## acpa4               0                0               56               65
+    ## alli2               0                0                0             1838
+    ## alli3               0                0                0              137
+    ## anba2               0                0                0                0
+    ## anba3              17                0                0              802
+    ## baae1               0                0                0               53
+    ## excu2              14                0             1622              228
+    ## jasc3               0                0               32             1081
+    ## mede1               0                0                0                0
+    ## mede2              21                0               64               13
+    ## peli2               0                0                0              106
+    ## pepu1              22                0                0              298
+    ## baspA              33                0              169               82
+    ## olstB              22                0             1101               61
+    ## isanB              15                0                0                0
+    ## leerA               9                0               42              311
+    ## cotaB               9                0                0              149
+    ## olstA              32                0              904              349
+    ## leerB              43                0               25              630
+    ## leerC              35                0              129              322
+    ## cotaA               0                0                0                0
+    ## baspB               0                0                0               63
+    ## haseA               0                0                0               74
+    ## ripiB             106                0                9              196
+    ## baspC              26                0                0               55
+    ## isanA              50                0               16               38
+    ## ripiA              21                0                0               33
+    ## penuA               0                0                0              510
+    ## leerD              37                0               14               42
+    ## haseB               0                0               32               39
+    ## acelB               0                0                0              666
+    ## penuB               0                0                0              311
+    ## leerE              12                0               70              458
+    ## caliB               0                0                0               20
+    ## acelA               9               17                0              685
+    ## eute2               0                0                0               16
+    ## alli1               0                0                0               68
+    ## excu3               0                0              157                0
+    ## lepa4              54                0                0               52
+    ## acpa1               0                0                0             2206
+    ## pepu2               9                0                0               79
+    ## eute1             152                0               20                0
+    ## baae3              35                0                0              388
+    ## hase               11                0                0                0
+    ## olst                0                0             1282              594
+    ## leer                0                0              159              184
+    ## pepu3               0                0                0                0
+    ## isan                0                0               77                0
+    ## cali               21                0                0               32
+    ## ripi              113                0                0               13
+    ## cota              117                0               34              114
+    ## penu               27                0                0              899
+    ## mede3              15               14              130                0
+    ## excu1               0                0                0              663
+    ## acel                0                0                0              127
+    ## acpa2               0                0             1861               22
+    ## jasc2              42                0                0              472
+    ## peli3               0                0                0               26
+    ## lepa2              95                0                0                0
+    ## basp               47                0                0              216
+    ## jasc1               0                0                0              201
+    ##       ITSall_OTUc_24 ITSall_OTUd_7054 ITSall_OTUd_5372 ITSall_OTUd_5115
+    ## EUTE2              0                0                0                0
+    ## EUTE3              0                0                0                0
+    ## LEPA2              0                0                0                0
+    ## LEPA4              0                0                0                0
+    ## EUSC1              0                0                0                0
+    ## EUSC2              0                0                0                0
+    ## ANBA2              0                0                0                0
+    ## ANBA3              0                0                0                0
+    ## PELI1              0                0                0                0
+    ## PELI2              0                0                0                0
+    ## PELI3              0                0                0                0
+    ## JASC2              0                0               16                0
+    ## BAAE1              0                0                0                0
+    ## BAAE3              0                0                0                0
+    ## PEPU1              0                0                0                0
+    ## PEPU2              0                0                0                0
+    ## PEPU3              0                0                0                0
+    ## ACPA1              0                0                0                0
+    ## ACPA3              0               55                0                0
+    ## ACPA4              0                0                0                0
+    ## ALLI1              0                0                0                0
+    ## ALLI2              0                0                0                0
+    ## ALLI3              0                0                0               11
+    ## EXCU1              0                0                0                0
+    ## EXCU2              0                0                0                0
+    ## EXCU3              0                0                0                0
+    ## MEDE3              0                0                0                0
+    ## acpa4              0                0                0                0
+    ## alli2              0                0                0                0
+    ## alli3              0                0                0                0
+    ## anba2              0                0                0                0
+    ## anba3              0                0                0                0
+    ## baae1              0                0                0                0
+    ## excu2              0                0                0                0
+    ## jasc3              0                0                0                0
+    ## mede1              0                0                0                0
+    ## mede2              0                0                0                0
+    ## peli2              0                0                0                0
+    ## pepu1              0                0                0                0
+    ## baspA              0               56                0                0
+    ## olstB              0                0                0                0
+    ## isanB              0                0                0                0
+    ## leerA              0                0                0                0
+    ## cotaB              0                0                0                0
+    ## olstA              0                0                0                0
+    ## leerB              0                0                0                0
+    ## leerC              0                0                0                0
+    ## cotaA              0                0                0                0
+    ## baspB              0                0                0                0
+    ## haseA              0               13                0                0
+    ## ripiB              0                0                0                0
+    ## baspC              0                0                0                0
+    ## isanA              0                0                0                0
+    ## ripiA              0                0                0                0
+    ## penuA              0                0                0                0
+    ## leerD              0                0                0                0
+    ## haseB              0                0                0                0
+    ## acelB              0                0                0                0
+    ## penuB              0                0                0                0
+    ## leerE              0                0                0                0
+    ## caliB             31                0                0                0
+    ## acelA              0                0                0                0
+    ## eute2              0                0                0                0
+    ## alli1              0                0                0                0
+    ## excu3              0                0                0                0
+    ## lepa4              0                0                0                0
+    ## acpa1              0                0                0                0
+    ## pepu2              0                0                0                0
+    ## eute1              0                0                0                0
+    ## baae3              0                0                0                0
+    ## hase               0                0                0                0
+    ## olst               0                0                0                0
+    ## leer               0                0                0                0
+    ## pepu3              0                0                0                0
+    ## isan               0                0                0                0
+    ## cali               0                0                0                0
+    ## ripi               0                0                0                0
+    ## cota               0                0                0                0
+    ## penu               0                0                0                0
+    ## mede3              0                0                0                0
+    ## excu1              0                0                0                0
+    ## acel               0                0                0                0
+    ## acpa2              0                0                0                0
+    ## jasc2              0                0                0                0
+    ## peli3              0                0                0                0
+    ## lepa2              0                0                0                0
+    ## basp              43               37                0                0
+    ## jasc1              0                0                0                0
+    ##       ITSall_OTUd_5072 ITSall_OTUd_5304 ITSall_OTUd_6076 ITSall_OTUd_5997
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## LEPA4                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## ANBA3                0                0                0                0
+    ## PELI1                0                0               16                0
+    ## PELI2                0                0                0                0
+    ## PELI3                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## PEPU3                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0               20                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## acpa4                0               16                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                9
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## isanB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## baspB                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## penuB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## acelA                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                10                0                0                0
+    ## leer                 0                0                0                0
+    ## pepu3                0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_5677 ITSall_OTUd_5683 ITSall_OTUd_8138 ITSall_OTUd_1781
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## LEPA4                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## ANBA3                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## PELI3                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE3                0                0               19                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## PEPU3                0                0               13                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## acpa4                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0               67                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0               34                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## isanB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## baspB                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB               15                0                0                0
+    ## acelB                0                0                0                0
+    ## penuB                0                0                0                0
+    ## leerE                0                0               33                0
+    ## caliB                0                0                0                0
+    ## acelA                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2              118                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0               15                0                0
+    ## pepu3                0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0              125
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_1656 ITSall_OTUd_1567 ITSall_OTUd_2604 ITSall_OTUd_2523
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## LEPA4                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## ANBA3                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## PELI3                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE3                0                0                0               58
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## PEPU3                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0               37                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3               10                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## acpa4                0                0                0                0
+    ## alli2                0                0               38                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2              141                0                0                0
+    ## jasc3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## isanB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0             1272                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## baspB                0                0                0                0
+    ## haseA               28                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## penuB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## acelA                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## pepu3                0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1               27                0                0                0
+    ##       ITSall_OTUd_2128 ITSall_OTUd_2282 ITSall_OTUd_610 ITSall_OTUd_305
+    ## EUTE2                0                0               0               0
+    ## EUTE3                0                0               0               0
+    ## LEPA2                0                0               0               0
+    ## LEPA4                0                0               0               0
+    ## EUSC1                0                0               0               0
+    ## EUSC2                0                0               0               0
+    ## ANBA2                0                0               0               0
+    ## ANBA3                0                0               0               0
+    ## PELI1                0                0               0               0
+    ## PELI2                0                0               0               0
+    ## PELI3                0                0               0               0
+    ## JASC2                0                0               0               0
+    ## BAAE1                0                0               0               0
+    ## BAAE3                0                0             105               0
+    ## PEPU1                0                0               0               0
+    ## PEPU2                0                0              52               0
+    ## PEPU3                0                0             527               0
+    ## ACPA1                0                0               0               0
+    ## ACPA3                0                0               0               0
+    ## ACPA4                0               57               9               0
+    ## ALLI1                0                0               0               0
+    ## ALLI2                0                0               0               0
+    ## ALLI3                0                0              52               0
+    ## EXCU1                0                0               0               0
+    ## EXCU2                0                0               0               0
+    ## EXCU3                0                0               0               0
+    ## MEDE3                0                0               0               0
+    ## acpa4                0                0               0               0
+    ## alli2                0                0               0               0
+    ## alli3                0                0               0               0
+    ## anba2                0                0               0               0
+    ## anba3                0                0               0               0
+    ## baae1                0                0               0               0
+    ## excu2                0                0              36               0
+    ## jasc3                0                0               0               0
+    ## mede1                0                0               0               0
+    ## mede2                0                0               0               0
+    ## peli2                0                0               0               0
+    ## pepu1                0                0             188               0
+    ## baspA                0               27               0               0
+    ## olstB                0                0              19               0
+    ## isanB                0                0               0               0
+    ## leerA                0                0              14               0
+    ## cotaB                0                0               0               0
+    ## olstA                0                0             230               0
+    ## leerB                0                0             106               0
+    ## leerC                0                0              68               0
+    ## cotaA                0                0               0               0
+    ## baspB                0                0             126               0
+    ## haseA                0                0               0               0
+    ## ripiB               69                0              57               0
+    ## baspC                0                0               0               0
+    ## isanA                0                0               0               0
+    ## ripiA               26                0              11               0
+    ## penuA                0                0               0               0
+    ## leerD                0                0               0               0
+    ## haseB                0                0               0               0
+    ## acelB                0                0             444               0
+    ## penuB                0                0               0               0
+    ## leerE                0                0              27               0
+    ## caliB                0                0               0               0
+    ## acelA                0                0             127               0
+    ## eute2                0                0               0               0
+    ## alli1                0                0               0               0
+    ## excu3                0                0               0               0
+    ## lepa4                0                0               0               0
+    ## acpa1                0                0               0               0
+    ## pepu2                0                0               0               0
+    ## eute1                0                0               0               0
+    ## baae3                0                0              25               0
+    ## hase                 0                0               0               0
+    ## olst                 0                0             241               0
+    ## leer                 0                0               0               0
+    ## pepu3                0                0              23               0
+    ## isan                 0                0               0               0
+    ## cali                 0                0               0              15
+    ## ripi                 0                0              32               0
+    ## cota                 0                0               0               0
+    ## penu                 0                0               0               0
+    ## mede3                0                0               0               0
+    ## excu1                0                0               0               0
+    ## acel                 0                0               0               0
+    ## acpa2                0                0              19               0
+    ## jasc2                0                0               0               0
+    ## peli3                0                0               0               0
+    ## lepa2                0                0               0               0
+    ## basp                 0                0               0               0
+    ## jasc1                0                0               0               0
+    ##       ITSall_OTUd_278 ITSall_OTUd_188 ITSall_OTUd_1043 ITSall_OTUd_1023
+    ## EUTE2               0               0                0                0
+    ## EUTE3               0               0                0                0
+    ## LEPA2               0              18                0                0
+    ## LEPA4               0               0                0                0
+    ## EUSC1               0              14                0                0
+    ## EUSC2               0               0                0                0
+    ## ANBA2               0               0                0                0
+    ## ANBA3             105               0                0                0
+    ## PELI1               0               0               17                0
+    ## PELI2               0               0               17                0
+    ## PELI3               0               0              272                0
+    ## JASC2               0               0                0                0
+    ## BAAE1               0              43                0                0
+    ## BAAE3               0               0                0                9
+    ## PEPU1               0               0                0                0
+    ## PEPU2               0              31                0               89
+    ## PEPU3               0              11                0                0
+    ## ACPA1               0             210                0                0
+    ## ACPA3               0               0                0                0
+    ## ACPA4               0               0                0                0
+    ## ALLI1               0               0               13                0
+    ## ALLI2               0               0               53                0
+    ## ALLI3               0               0                0                0
+    ## EXCU1               0              55                0                0
+    ## EXCU2               0             118               90                0
+    ## EXCU3               0              52                0                0
+    ## MEDE3               0               0                0                0
+    ## acpa4               0              14                0                0
+    ## alli2               0               0                0                0
+    ## alli3               0               0                0                0
+    ## anba2               0               0                0                0
+    ## anba3               0               0                0                0
+    ## baae1               0             119                0                0
+    ## excu2               0             342                0               15
+    ## jasc3               0              82                0                0
+    ## mede1               0              49                0                0
+    ## mede2               0               0                0                0
+    ## peli2               0               0                0                0
+    ## pepu1               0             161                0              104
+    ## baspA               0               0                0                0
+    ## olstB               0             104                0                0
+    ## isanB               0               0                0                0
+    ## leerA               0             191                0                0
+    ## cotaB               0              39                0                0
+    ## olstA               0             104                0                0
+    ## leerB               0             412                0                0
+    ## leerC               0             132                0                0
+    ## cotaA               0              54                0                0
+    ## baspB               0               0                0                0
+    ## haseA               0               0                0                0
+    ## ripiB              41             134                0                0
+    ## baspC               0               0                0                0
+    ## isanA               0              47                0                0
+    ## ripiA            1860              27                0                0
+    ## penuA               0              26                0                0
+    ## leerD               0              81                0                0
+    ## haseB               0              18                0                0
+    ## acelB               0               0                0              102
+    ## penuB               0               0                0                0
+    ## leerE               0             483                0                0
+    ## caliB               0               0                0                0
+    ## acelA               0               0                0               78
+    ## eute2               0               0                0                0
+    ## alli1               0               0                0                0
+    ## excu3               0             163                0                0
+    ## lepa4               0              48                0                0
+    ## acpa1               0               0                0                0
+    ## pepu2               0              18                0                0
+    ## eute1               0               0                0                0
+    ## baae3              53              48                0                0
+    ## hase                0               0                0                0
+    ## olst                0             113                0                0
+    ## leer                0             291                0               10
+    ## pepu3               0               0                0                0
+    ## isan                0               0                0                0
+    ## cali                0               0                0                0
+    ## ripi               10              16                0                0
+    ## cota                0             122                0                0
+    ## penu                0               0                0                0
+    ## mede3               0               0                0                0
+    ## excu1               0             150                0                0
+    ## acel                0               0                0                0
+    ## acpa2               0               0                0                0
+    ## jasc2               0             116                0                0
+    ## peli3               0               0                0                0
+    ## lepa2               0               0                0                0
+    ## basp                0               0                0                0
+    ## jasc1               0              44               10                0
+    ##       ITSall_OTUd_1076 ITSall_OTUd_1065 ITSall_OTUd_1273 ITSall_OTUd_1258
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## LEPA4                0                0                0                0
+    ## EUSC1                0                0              163                0
+    ## EUSC2                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## ANBA3                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## PELI3                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE3                0                0                0              205
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## PEPU3               15               31                0                9
+    ## ACPA1                0               31                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0               10                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0               16                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## acpa4                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0               17                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1              153              308                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## isanB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB               15                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0               34                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## baspB                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## penuB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## acelA                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4               14                0               36                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3               79                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## pepu3              122                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                19                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                25                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0               20
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_1231 ITSall_OTUd_703 ITSall_OTUd_742 ITSall_OTUd_936
+    ## EUTE2                0               0               0               0
+    ## EUTE3                0               0               0               0
+    ## LEPA2                0               0               0               0
+    ## LEPA4                0               0               0               0
+    ## EUSC1                0               0               0              17
+    ## EUSC2                0               0               0               0
+    ## ANBA2                0               0               0               0
+    ## ANBA3                0               0               0               0
+    ## PELI1                0               0               0               0
+    ## PELI2                0               0               0               0
+    ## PELI3                0               0               0               0
+    ## JASC2                0               0               0               0
+    ## BAAE1                0               0               0               0
+    ## BAAE3                0               0               0              71
+    ## PEPU1                0               0               0               0
+    ## PEPU2                0               0               0              12
+    ## PEPU3                0               0               0               0
+    ## ACPA1                0               0               0               0
+    ## ACPA3                0               0               0               0
+    ## ACPA4                0               0               0               0
+    ## ALLI1                0               0               0               0
+    ## ALLI2                0               0              16               0
+    ## ALLI3                0               0               0               0
+    ## EXCU1                0               0               0               0
+    ## EXCU2                0               0               0               0
+    ## EXCU3                0               0               0               0
+    ## MEDE3                0               0               0               0
+    ## acpa4                0               0               0               0
+    ## alli2                0               0               0               0
+    ## alli3                0               0               0               0
+    ## anba2                0               0               0               0
+    ## anba3                0               0               0               0
+    ## baae1                0               0               0               0
+    ## excu2                0              11               0               0
+    ## jasc3                0               0               0               0
+    ## mede1                0               0               0               0
+    ## mede2                0               0               0               0
+    ## peli2                0               0               0               0
+    ## pepu1              242               0               0               0
+    ## baspA                0               0               0               0
+    ## olstB                0              34               0               0
+    ## isanB                0               0               0               0
+    ## leerA                0               0               0             224
+    ## cotaB                0               0               0               0
+    ## olstA                0               0               0               0
+    ## leerB                0               0               0               0
+    ## leerC                0               0               0               0
+    ## cotaA                0               0               0               0
+    ## baspB                0               0               0               0
+    ## haseA                0               0               0               0
+    ## ripiB                0               0               0              21
+    ## baspC                0               0               0               0
+    ## isanA                0               0               0               0
+    ## ripiA                0               0               0              22
+    ## penuA                0               0               0               0
+    ## leerD                0               0               0               0
+    ## haseB                0               0               0               0
+    ## acelB                0               0               0              10
+    ## penuB                0               0               0               0
+    ## leerE                0               0               0               0
+    ## caliB                0               0               0               0
+    ## acelA                0               0               0             111
+    ## eute2                0               0               0               0
+    ## alli1                0               0               0               0
+    ## excu3                0               0               0               0
+    ## lepa4                0               0               0               0
+    ## acpa1               90               0               0               0
+    ## pepu2                0               0               0               0
+    ## eute1                0               0               0               0
+    ## baae3                0               0               0               0
+    ## hase                 0               0               0               0
+    ## olst                 0             431               0               0
+    ## leer                 0               0               0               0
+    ## pepu3                0               0             496               0
+    ## isan                 0               0               0               0
+    ## cali                 0               0               0               0
+    ## ripi                 0               0               0               0
+    ## cota                 0               0               0               0
+    ## penu                 0               0               0               0
+    ## mede3                0               0               0               0
+    ## excu1                0               0               0               0
+    ## acel                 0               0               0               0
+    ## acpa2                0               0               0               0
+    ## jasc2                0               0               0               0
+    ## peli3                0               0               0               0
+    ## lepa2                0               0               0               0
+    ## basp                 0               0               0               0
+    ## jasc1                0               0               0               0
+    ##       ITSall_OTUd_992 ITSall_OTUd_3864 ITSall_OTUd_3852 ITSall_OTUd_3959
+    ## EUTE2               0                0                0                0
+    ## EUTE3               0                0                0                0
+    ## LEPA2               0                0                0                0
+    ## LEPA4               0                0                0                0
+    ## EUSC1              26                0                0                0
+    ## EUSC2               0                0                0                0
+    ## ANBA2               0                0                0                0
+    ## ANBA3               0                0                0                0
+    ## PELI1               0                0                0                0
+    ## PELI2               0                0                0                0
+    ## PELI3               0                0                0                0
+    ## JASC2               0                0                0                0
+    ## BAAE1              31                0               11                0
+    ## BAAE3               0               37                0               50
+    ## PEPU1               0                0                0                0
+    ## PEPU2               0                0                0                0
+    ## PEPU3               0                0                0                0
+    ## ACPA1               0                0                0                0
+    ## ACPA3               0                0                0                0
+    ## ACPA4               0                0                0                0
+    ## ALLI1               0                0                0                0
+    ## ALLI2               0                0                0                0
+    ## ALLI3               0                0                0                0
+    ## EXCU1               0                0                0                0
+    ## EXCU2               0                0                0                0
+    ## EXCU3               0                0                0                0
+    ## MEDE3               0                0                0                0
+    ## acpa4               0                0                0                0
+    ## alli2               0                0                0                0
+    ## alli3               0                0                0                0
+    ## anba2               0                0               17                0
+    ## anba3              41                0                0                0
+    ## baae1               0                0                0                0
+    ## excu2               0                0                0                0
+    ## jasc3              39                0                0                0
+    ## mede1               0                0                0                0
+    ## mede2               0                0                0                0
+    ## peli2               0                0                0                0
+    ## pepu1               0                0                0                0
+    ## baspA               0                0                0                0
+    ## olstB               0                0                0                0
+    ## isanB               0                0                0                0
+    ## leerA              36                0                0                0
+    ## cotaB               0                0                0                0
+    ## olstA               0                0                0                0
+    ## leerB               0                0                0                0
+    ## leerC               0                0                0                0
+    ## cotaA               0                0                0                0
+    ## baspB               0                0                0                0
+    ## haseA               0                0                0                0
+    ## ripiB              23                0                0                0
+    ## baspC               0                0                0                0
+    ## isanA               0                0                0                0
+    ## ripiA              40                0                0                0
+    ## penuA              11                0                0                0
+    ## leerD               0                0                0               51
+    ## haseB               0                0                0                0
+    ## acelB              86                0                0                0
+    ## penuB              24                0                0                0
+    ## leerE               0                0                0                0
+    ## caliB               0                0                0                0
+    ## acelA              64                0                0                0
+    ## eute2               0                0                0                0
+    ## alli1               0                0                0                0
+    ## excu3               0                0                0                0
+    ## lepa4               0                0                0                0
+    ## acpa1              84                0                0                0
+    ## pepu2               0                0                0                0
+    ## eute1               0                0                0                0
+    ## baae3               0                0                0                0
+    ## hase                0                0                0                0
+    ## olst                0                0                0                0
+    ## leer              114                0                0                0
+    ## pepu3               0                0                0                0
+    ## isan                0                0                0                0
+    ## cali                0                0                0                0
+    ## ripi                0                0                0                0
+    ## cota                0                0                0                0
+    ## penu               91                0                0                0
+    ## mede3               0                0                0                0
+    ## excu1               0                0                0                0
+    ## acel               10                0                0                0
+    ## acpa2               0                0                0                0
+    ## jasc2               0                0                0                0
+    ## peli3               0                0                0                0
+    ## lepa2               0                0                0                0
+    ## basp                0                0                0                0
+    ## jasc1               0                0                0                0
+    ##       ITSall_OTUd_4845 ITSall_OTUd_4614 ITSall_OTUd_3077 ITSall_OTUd_2824
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## LEPA4                0                0                0                0
+    ## EUSC1                0                0                0               30
+    ## EUSC2                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## ANBA3                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## PELI3                9                0                0                0
+    ## JASC2                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## PEPU3                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## acpa4                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0               32                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## isanB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## baspB                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## penuB                0                0                0                0
+    ## leerE                0               15                0                0
+    ## caliB                0                0                0                0
+    ## acelA                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## pepu3                0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_3520 ITSall_OTUd_3499 ITSall_OTUd_3751 ITSall_OTUd_3349
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## LEPA4                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## ANBA3                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## PELI3                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE3                0               12                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## PEPU3               48                0                0                0
+    ## ACPA1                0                0               42                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0               63
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## acpa4                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## isanB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0               10                0                0
+    ## cotaA                0                0                0                0
+    ## baspB                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## penuB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## acelA                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## pepu3                0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_3314 ITSall_OTUd_3429
+    ## EUTE2                0                0
+    ## EUTE3                0                0
+    ## LEPA2                0                0
+    ## LEPA4                0                0
+    ## EUSC1                0                0
+    ## EUSC2                0                0
+    ## ANBA2                0                0
+    ## ANBA3                0                0
+    ## PELI1                0                0
+    ## PELI2                0                0
+    ## PELI3                0                0
+    ## JASC2                0                0
+    ## BAAE1                0                0
+    ## BAAE3                0                0
+    ## PEPU1                0                0
+    ## PEPU2                0                0
+    ## PEPU3                0                0
+    ## ACPA1               37                0
+    ## ACPA3                0               31
+    ## ACPA4                0                0
+    ## ALLI1                0                0
+    ## ALLI2               12                0
+    ## ALLI3                0                0
+    ## EXCU1                0                0
+    ## EXCU2                0                0
+    ## EXCU3                0                0
+    ## MEDE3                0                0
+    ## acpa4                0                0
+    ## alli2               41                0
+    ## alli3               11                0
+    ## anba2                0                0
+    ## anba3                0                0
+    ## baae1                0                0
+    ## excu2                0                0
+    ## jasc3                0                0
+    ## mede1                0                0
+    ## mede2                0                0
+    ## peli2                0                0
+    ## pepu1               64                0
+    ## baspA                0                0
+    ## olstB                0                0
+    ## isanB                0                0
+    ## leerA                0                0
+    ## cotaB                0                0
+    ## olstA                0                0
+    ## leerB                0                0
+    ## leerC                9                0
+    ## cotaA                0                0
+    ## baspB                0                0
+    ## haseA               44                0
+    ## ripiB                0                0
+    ## baspC                0                0
+    ## isanA                0                0
+    ## ripiA                0                0
+    ## penuA                0                0
+    ## leerD                0                0
+    ## haseB                0                0
+    ## acelB                0                0
+    ## penuB                0                0
+    ## leerE                0                0
+    ## caliB                0                0
+    ## acelA                0                0
+    ## eute2                0                0
+    ## alli1                0                0
+    ## excu3                0                0
+    ## lepa4                0                0
+    ## acpa1              135                0
+    ## pepu2                0                0
+    ## eute1                0                0
+    ## baae3                0                0
+    ## hase                 0                0
+    ## olst                 0                0
+    ## leer                 0                0
+    ## pepu3                0                0
+    ## isan                 0                0
+    ## cali                 0                0
+    ## ripi                 0                0
+    ## cota                 0                0
+    ## penu                 0                0
+    ## mede3                0                0
+    ## excu1                0                0
+    ## acel                 0                0
+    ## acpa2                0                0
+    ## jasc2                0                0
+    ## peli3                0                0
+    ## lepa2                0                0
+    ## basp                 0                0
+    ## jasc1                0                0
+    ## 
+    ## $tax
+    ## # A tibble: 50 x 4
+    ##               OTUId     phylum            genus                    species
+    ##               <chr>      <chr>            <chr>                      <chr>
+    ##  1  ITSall_OTUa_401 Ascomycota Leptosphaerulina Leptosphaerulina_australis
+    ##  2 ITSall_OTUa_6598 Ascomycota         Cladonia               unclassified
+    ##  3 ITSall_OTUa_4710 Ascomycota   Trimmatostroma      Trimmatostroma_cordae
+    ##  4 ITSall_OTUb_2612 Ascomycota          Micarea               unclassified
+    ##  5   ITSall_OTUc_24 Ascomycota        Dirinaria               unclassified
+    ##  6 ITSall_OTUd_7054 Ascomycota          Micarea               unclassified
+    ##  7 ITSall_OTUd_5372 Ascomycota         Lecanora               unclassified
+    ##  8 ITSall_OTUd_5115 Ascomycota          Micarea               unclassified
+    ##  9 ITSall_OTUd_5072 Ascomycota       Parmotrema     Parmotrema_reticulatum
+    ## 10 ITSall_OTUd_5304 Ascomycota          Micarea               unclassified
+    ## # ... with 40 more rows
+
+-   Animal-associated fungi
+
+``` r
+animal.otus<-taxAndFunguild[grepl('Animal', taxAndFunguild$Guild),"OTUId"]
+HowManyOfThese(otuIDs=animal.otus, taxAndFunguild, comm.otu)
+```
+
+    ## $otu
+    ##       ITSall_OTUa_6818 ITSall_OTUa_7031 ITSall_OTUa_6805 ITSall_OTUa_6977
+    ## EUTE1               77                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0               10
+    ## PEPU2                0                0                0               48
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0               14
+    ## ALLI2                0                0                0               40
+    ## ALLI3                0                0                0                0
+    ## EXCU1               23                0                0               49
+    ## EXCU2             1076                0                0                0
+    ## EXCU3              491                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0              123                0               34
+    ## leerA                0                0                0               81
+    ## cotaB                0                0                0                0
+    ## olstA                0               31                0                0
+    ## leerB                0                0                0               18
+    ## leerC                0                0                0               14
+    ## cotaA                0                0                0               30
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0               79
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE               87                0                0              122
+    ## caliB                0                0                0               49
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3               20                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0               46
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0               67                0               20
+    ## leer                 0                0                0               55
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi               669                0                9               24
+    ## cota                 0                0                0               26
+    ## penu                 0                0                0                0
+    ## mede3               31                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUa_7555 ITSall_OTUa_7658 ITSall_OTUa_7179 ITSall_OTUa_7442
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0               44                0                0
+    ## EUTE3                0               61                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0              104                0                0
+    ## EUSC2                0               92                0                0
+    ## EUSC3                0             1138                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0               11                0                0
+    ## EXCU3                0                0                0              143
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0              340                0                0
+    ## anba3                0               28                0                0
+    ## baae1                0              127                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0               49                0                0
+    ## olstB               30                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                9                0
+    ## haseA                0               84                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0              110                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0               39                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0               22                0                0
+    ## alli1                0               82                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0               51                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0               37                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0               41                0                0
+    ## peli3                0               51                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0               25                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUa_9675 ITSall_OTUa_10161 ITSall_OTUa_10307
+    ## EUTE1                0                 0                 0
+    ## EUTE2                0                 0                 0
+    ## EUTE3                0                 0                 0
+    ## LEPA1                0                 0                 0
+    ## LEPA2                0                 0                 0
+    ## EUSC1                0                 0                 0
+    ## EUSC2                0                 0                 0
+    ## EUSC3                0                 0                 0
+    ## ANBA1                0                 0                 0
+    ## ANBA2                0                 0                 0
+    ## PELI1                0                 0                 0
+    ## PELI2                0                 0                 0
+    ## JASC1                0                 0                 0
+    ## JASC2                0                 0                 0
+    ## JASC3                0                 0                 0
+    ## BAAE1                0                 0                 0
+    ## BAAE2                0                 0                 0
+    ## BAAE3                0                 0                 0
+    ## PEPU1                0                 0                 0
+    ## PEPU2                0                 0                 0
+    ## ACPA1                0                 0                 0
+    ## ACPA3                0                 0                 0
+    ## ACPA4                0                 0                 0
+    ## ALLI1                0                 0                 0
+    ## ALLI2                0                 0                 0
+    ## ALLI3                0                 0                17
+    ## EXCU1                0                 0                49
+    ## EXCU2                0                 0                 0
+    ## EXCU3                0                 0                 0
+    ## MEDE1               25                 0                 0
+    ## MEDE2                0                 0                 0
+    ## MEDE3                0                 0                 0
+    ## alli2                0                 0                10
+    ## alli3                0                 0                 0
+    ## anba2                0                 0                40
+    ## anba3                0                 0                 0
+    ## baae1                0                 0                 0
+    ## excu2                0                 0                28
+    ## jasc3                0                 0               322
+    ## lepa3                0                 0                 0
+    ## mede1                0                 0                 0
+    ## mede2                0                 0                 9
+    ## peli2                0                 0                 0
+    ## pepu1                0                 0                 0
+    ## baspA                0                 0                 0
+    ## olstB                0                 0                 0
+    ## leerA                0                 0                 0
+    ## cotaB                0                 0                 0
+    ## olstA                0                 0                 0
+    ## leerB                0                 0                 0
+    ## leerC                0                 0                25
+    ## cotaA                0                 0                 0
+    ## haseA                0                 0                 0
+    ## ripiB                0                 0                 0
+    ## baspC                0                 0                 0
+    ## isanA                0                 0                 0
+    ## ripiA                0                 0                 0
+    ## penuA                0                 0                 0
+    ## caliA                0                 0                 0
+    ## leerD                0                 0                 0
+    ## haseB                0                 0                 0
+    ## acelB                0                 0                26
+    ## leerE                0                 0                 0
+    ## caliB                0                 0                 0
+    ## eute2                0                 0                 0
+    ## alli1                0                 0                 0
+    ## excu3                0                 0                 0
+    ## lepa4                0                 0              1132
+    ## acpa1                0                 0                 0
+    ## pepu2                0                 0                 0
+    ## eute1                0                 0                 0
+    ## baae3                0                 0                 0
+    ## hase                 0                 0                 0
+    ## olst                 0                 0                 0
+    ## leer                 0                 0                31
+    ## isan                 0                 0                 0
+    ## cali                 0                 0                 0
+    ## ripi                 0                 0                18
+    ## cota                 0                 0               139
+    ## penu                 0                 0                 0
+    ## mede3                0                 0                 0
+    ## excu1                0                 0                 0
+    ## acel                 0                 0                 0
+    ## acpa2                0                22                 0
+    ## jasc2                0                 0               243
+    ## peli3                0                 0                 0
+    ## acpa3                0                 0                 0
+    ## lepa2                0                 0                 0
+    ## basp                 0                 0                 0
+    ## jasc1                0                 0                40
+    ##       ITSall_OTUa_8267 ITSall_OTUa_8503 ITSall_OTUa_2064 ITSall_OTUa_2562
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0               15                0
+    ## PEPU1                0                0               13                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0               15              116
+    ## EXCU3                0               12                0                0
+    ## MEDE1               63                0                0                0
+    ## MEDE2               15                0                0                0
+    ## MEDE3               88                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0               35                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0               68                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUa_2457 ITSall_OTUa_776 ITSall_OTUa_241 ITSall_OTUa_961
+    ## EUTE1                0               0               0               0
+    ## EUTE2                0               0               0               0
+    ## EUTE3                0               0               0               0
+    ## LEPA1                0               0               0               0
+    ## LEPA2                0               0               0               0
+    ## EUSC1                0               0               0               0
+    ## EUSC2                0               0               0               0
+    ## EUSC3                0               0               0               0
+    ## ANBA1                0               0               0               0
+    ## ANBA2                0               0               0               0
+    ## PELI1                0               0               0               0
+    ## PELI2                0               0               0               0
+    ## JASC1                0               0               0               0
+    ## JASC2                0              40               0               0
+    ## JASC3                0               0               0               0
+    ## BAAE1               11               0               0               0
+    ## BAAE2                0               0               0              34
+    ## BAAE3                0               0               0               0
+    ## PEPU1                0               0               0               0
+    ## PEPU2                0               0               0               0
+    ## ACPA1                0               0               0               0
+    ## ACPA3                0               0               0               0
+    ## ACPA4                0               0               0               0
+    ## ALLI1                0               0               0               0
+    ## ALLI2                0               0               0               0
+    ## ALLI3                0               0               0               0
+    ## EXCU1                0               0               0               0
+    ## EXCU2                0               0               0               0
+    ## EXCU3                0               0               0               0
+    ## MEDE1                0               0               0               0
+    ## MEDE2                0               0               0               0
+    ## MEDE3                0               0               0               0
+    ## alli2                0               0               0               0
+    ## alli3                0               0               0               0
+    ## anba2                0               0               0               0
+    ## anba3                0               0               0               0
+    ## baae1                0               0               0               0
+    ## excu2                0               0               0               0
+    ## jasc3                0               0               0               0
+    ## lepa3                0               0               0              10
+    ## mede1                0               0               0               0
+    ## mede2                0               0               0               0
+    ## peli2                0               0               0               0
+    ## pepu1                0               0               0               0
+    ## baspA                0               0               0               0
+    ## olstB                0               0              90               0
+    ## leerA                0               0               0               0
+    ## cotaB                0               0               0               0
+    ## olstA                0               0               0               0
+    ## leerB                0               0               0               0
+    ## leerC                0               0               0               0
+    ## cotaA                0               0               0              15
+    ## haseA                0               0               0               0
+    ## ripiB                0               0               0               0
+    ## baspC                0               0               0               0
+    ## isanA                0               0               0               0
+    ## ripiA                0               0               0              11
+    ## penuA                0               0               0               0
+    ## caliA                0               0               0              19
+    ## leerD                0               0              41               0
+    ## haseB                0               0               0               0
+    ## acelB                0               0               0               0
+    ## leerE                0               0               0               0
+    ## caliB                0               0               0               0
+    ## eute2                0               0               0               0
+    ## alli1                0               0               0               0
+    ## excu3                0               0               0               0
+    ## lepa4                0               0               0               0
+    ## acpa1                0               0               0               0
+    ## pepu2                0               0               0               0
+    ## eute1                0               0               0               0
+    ## baae3                0               0               0              25
+    ## hase                 0               0               0              13
+    ## olst                 0               0              49               0
+    ## leer                 0               0               0               0
+    ## isan                 0               0               0              44
+    ## cali                 0               0               0               9
+    ## ripi                24               0               0              41
+    ## cota                 0               0               0             112
+    ## penu                 0               0               0              58
+    ## mede3                0               0               0               0
+    ## excu1                0               0               0               0
+    ## acel                 0               0               0               0
+    ## acpa2                0               0               0               0
+    ## jasc2                0               0               0               0
+    ## peli3                0               0               0               0
+    ## acpa3                0               0               0               0
+    ## lepa2                0               0               0               0
+    ## basp                 0               0               0               0
+    ## jasc1                0               0               0               0
+    ##       ITSall_OTUa_4247 ITSall_OTUa_4139 ITSall_OTUa_3499 ITSall_OTUa_3542
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                9                0
+    ## JASC2                0               14                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0               17                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0               12
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0              205
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA               11                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0               11
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0               20
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUa_3531 ITSall_OTUa_3668 ITSall_OTUb_5935 ITSall_OTUb_5930
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                9
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0               10                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0               26                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0               32                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0               11                0
+    ## leerA                0                0                0                0
+    ## cotaB                0               15                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0               15                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0               10                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0               20                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0               36                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                12                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0               21                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0              178                0                0
+    ## acpa3                0               13                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUb_6074 ITSall_OTUb_8056 ITSall_OTUb_2484 ITSall_OTUb_3103
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0              128                0
+    ## LEPA1                0                0                0               31
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0               45                0
+    ## EUSC2                0                0               95                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0               75
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0               54                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0               11                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0               18                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB               48                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0              368                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0               27                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUc_1751 ITSall_OTUc_2288 ITSall_OTUc_2530 ITSall_OTUc_146
+    ## EUTE1                0                0                0               0
+    ## EUTE2                0                0                0              34
+    ## EUTE3                0                0                0               0
+    ## LEPA1                0                0                0               0
+    ## LEPA2                0                0                0               0
+    ## EUSC1                0                0                0               0
+    ## EUSC2                0                0                0               0
+    ## EUSC3                0                0                0               0
+    ## ANBA1                0                0                0               0
+    ## ANBA2                0                0                0               0
+    ## PELI1                0                0                0               0
+    ## PELI2                0                0                0               0
+    ## JASC1                0                0                0               0
+    ## JASC2                0                0                0               0
+    ## JASC3                0                0                0               0
+    ## BAAE1                0                0                0               0
+    ## BAAE2                0                0                0               0
+    ## BAAE3                0                0                0               0
+    ## PEPU1                0                0                0               0
+    ## PEPU2                0                0                0               0
+    ## ACPA1                0                0                0               0
+    ## ACPA3                0                0                0               0
+    ## ACPA4                0                0                0               0
+    ## ALLI1                0               14                0               0
+    ## ALLI2                0                0               12               0
+    ## ALLI3                0                0                0               0
+    ## EXCU1                0                0                0               0
+    ## EXCU2                0                0                0               0
+    ## EXCU3                0                0                0               0
+    ## MEDE1                0                0                0               0
+    ## MEDE2                0               66                0               0
+    ## MEDE3                0                0                0               0
+    ## alli2                0                0                0               0
+    ## alli3                0                0                0               0
+    ## anba2                0                0                0               0
+    ## anba3                0                0                0               0
+    ## baae1                0                0                0               0
+    ## excu2                0               21                0               0
+    ## jasc3                0               10                0               0
+    ## lepa3                0                0                0               0
+    ## mede1                0             1344                0               0
+    ## mede2                0              180                0               0
+    ## peli2                0               52                0               0
+    ## pepu1                0                0                0               0
+    ## baspA                0               17                0               0
+    ## olstB                0                0                0               0
+    ## leerA                0                0                0               0
+    ## cotaB                0                0                0               0
+    ## olstA                0                0                0               0
+    ## leerB                0                0                0               0
+    ## leerC                0                0                0               0
+    ## cotaA                0                0                0               0
+    ## haseA                0                0                0               0
+    ## ripiB                0               10                0               0
+    ## baspC                0                0                0               0
+    ## isanA                0                0                0               0
+    ## ripiA                0                0                0               0
+    ## penuA                0                0                0               0
+    ## caliA                0                0                0               0
+    ## leerD                0                0                0               0
+    ## haseB                0                0                0               0
+    ## acelB                0                0                0               0
+    ## leerE                0                0                0               0
+    ## caliB                0                0                0               0
+    ## eute2               10                0                0               0
+    ## alli1                0                0                0               0
+    ## excu3                0                0                0               0
+    ## lepa4                0                0                0               0
+    ## acpa1                0                0                0               0
+    ## pepu2                0                0                0               0
+    ## eute1                0                0                0               0
+    ## baae3                0                0                0               0
+    ## hase                 0                0                0               0
+    ## olst                 0                0                0               0
+    ## leer                 0                0                0               0
+    ## isan                 0                0                0               0
+    ## cali                 0                0                0               0
+    ## ripi                 0                0                0               0
+    ## cota                 0                0                0               0
+    ## penu                 0                0                0               0
+    ## mede3                0               14                0               0
+    ## excu1                0                0                0               0
+    ## acel                 0                0                0               0
+    ## acpa2                0                0                0               0
+    ## jasc2                0               55                0               0
+    ## peli3                0                0                0               0
+    ## acpa3                0                0                0               0
+    ## lepa2                0                0                0               0
+    ## basp                 0                0                0               0
+    ## jasc1                0                0                0               0
+    ##       ITSall_OTUc_170 ITSall_OTUc_1037 ITSall_OTUd_1657 ITSall_OTUd_6540
+    ## EUTE1               0                0                0                0
+    ## EUTE2               0                0                0                0
+    ## EUTE3               0                0                0                0
+    ## LEPA1               0                0                0                0
+    ## LEPA2               0                0                0                0
+    ## EUSC1               0                0                0                0
+    ## EUSC2               0                0                0                0
+    ## EUSC3               0                0                0                0
+    ## ANBA1               0                0                0                0
+    ## ANBA2               0                0                0                0
+    ## PELI1               0                0                0                0
+    ## PELI2               0                0                0                0
+    ## JASC1               0                0                0                0
+    ## JASC2               0                0                0                0
+    ## JASC3               0                0                0                0
+    ## BAAE1               0                0                0                0
+    ## BAAE2               0                0                0                0
+    ## BAAE3               0                0                0                0
+    ## PEPU1               0                0                0                0
+    ## PEPU2               0                0                0                0
+    ## ACPA1               0                0                0                0
+    ## ACPA3               0                0                0                0
+    ## ACPA4               0                0                0                0
+    ## ALLI1               0               39                0                0
+    ## ALLI2               0               53                0                0
+    ## ALLI3               0                0                0                0
+    ## EXCU1               0                0                0                0
+    ## EXCU2               0                0                0                0
+    ## EXCU3               0                0                0                0
+    ## MEDE1               0                0                0                0
+    ## MEDE2               0                0               48                0
+    ## MEDE3               0                0                0                0
+    ## alli2               0                0                0                0
+    ## alli3               0                0                0                0
+    ## anba2               0                0                0                0
+    ## anba3              12                0                0                0
+    ## baae1              91                0                0                0
+    ## excu2               0                0                0                0
+    ## jasc3               0                0                0                0
+    ## lepa3               0                0                0                0
+    ## mede1               0                0                0                0
+    ## mede2               0                0                0                0
+    ## peli2               0                0                0                0
+    ## pepu1               0                0                0                0
+    ## baspA               0                0                0                0
+    ## olstB               0                0                0                0
+    ## leerA               0                0                0                0
+    ## cotaB               0                0                0                0
+    ## olstA               0                0                0                0
+    ## leerB               0                0                0                0
+    ## leerC               0                0                0                0
+    ## cotaA               0                0                0                0
+    ## haseA               0                0                0                0
+    ## ripiB               0                0                0                0
+    ## baspC               0                0               44                0
+    ## isanA               0                0                0                0
+    ## ripiA               0                0                0                0
+    ## penuA               0                0                0                0
+    ## caliA               0                0                0                0
+    ## leerD               0                0                0                0
+    ## haseB               0                0                0                0
+    ## acelB               0                0                0                0
+    ## leerE               0                0                0                0
+    ## caliB               0                0                0                0
+    ## eute2               0                0                0                0
+    ## alli1               0                0                0                0
+    ## excu3               0                0                0                0
+    ## lepa4               0                0                0                0
+    ## acpa1               0                0                0                0
+    ## pepu2               0                0                0                0
+    ## eute1               0                0               54                0
+    ## baae3               0                0                0                0
+    ## hase                0                0                0                0
+    ## olst                0                0                0                0
+    ## leer                0                0                0                0
+    ## isan                0                0                0                0
+    ## cali                0                0                0                0
+    ## ripi                0                0                0               36
+    ## cota                0                0                0                0
+    ## penu                0                0                0                0
+    ## mede3               0                0                0                0
+    ## excu1               0                0                0                0
+    ## acel                0                0                0                0
+    ## acpa2               0                0                0                0
+    ## jasc2               0                0                0                0
+    ## peli3               0                0                0                0
+    ## acpa3               0                0                0                0
+    ## lepa2               0                0                0                0
+    ## basp                0                0               32                0
+    ## jasc1               0                0                0                0
+    ##       ITSall_OTUd_5365 ITSall_OTUd_5095 ITSall_OTUd_5107 ITSall_OTUd_5339
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1               18                0                0                0
+    ## PELI2                0               13                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0               11                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0               10
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_8474 ITSall_OTUd_8495 ITSall_OTUd_8156 ITSall_OTUd_1783
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0               14
+    ## EUTE3                0                0                0               11
+    ## LEPA1                0                0                0               17
+    ## LEPA2                0                0                0               28
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0               11
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0               11
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0               12                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2               64                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0               80                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_1713 ITSall_OTUd_1938 ITSall_OTUd_1520 ITSall_OTUd_2420
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0               46                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0               28                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0               32                0                0
+    ## EXCU2                0               40                0                0
+    ## EXCU3                0               14                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3               22                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0               55
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0               20                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0               29                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD               17                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0               10                0
+    ## caliB               11                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4              128                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali               117                0                0                0
+    ## ripi                 0                0               13                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2               11                0               30                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_2455 ITSall_OTUd_2424 ITSall_OTUd_2426 ITSall_OTUd_2430
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0               24                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3               36                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0               24               40
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0               29
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0               56                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                9                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0               17                0
+    ## ripiA               15                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0               10                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_2346 ITSall_OTUd_2602 ITSall_OTUd_2462 ITSall_OTUd_2514
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0               22                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2               34                0                0                0
+    ## JASC3               12                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2               13                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0               41                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0               16
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0               45                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                9                0                0
+    ## penuA                0                0                0               17
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0               23
+    ## eute1                0                0                0                0
+    ## baae3                0                0               14                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0               18               11
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                9                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_2110 ITSall_OTUd_2006 ITSall_OTUd_2039 ITSall_OTUd_439
+    ## EUTE1                0                0                0               0
+    ## EUTE2                0                0                0               0
+    ## EUTE3                0                0                0               0
+    ## LEPA1                0               46                0               0
+    ## LEPA2                0                0                0               0
+    ## EUSC1                0                0                0               0
+    ## EUSC2              100                0                0               0
+    ## EUSC3                0                0                0               0
+    ## ANBA1                0               72                0               0
+    ## ANBA2                0                0                0               0
+    ## PELI1                0                0                0               0
+    ## PELI2                0                0                0               0
+    ## JASC1                0                0                0               0
+    ## JASC2                0                0                0               0
+    ## JASC3                0                0                0               0
+    ## BAAE1                0                0                0               0
+    ## BAAE2                0                0                0               0
+    ## BAAE3                0                0                0               0
+    ## PEPU1                0                0                0               0
+    ## PEPU2                0                0                0               0
+    ## ACPA1                0                0                0               0
+    ## ACPA3                0                0                0               0
+    ## ACPA4                0                0                0               0
+    ## ALLI1                0                0                0               0
+    ## ALLI2                0                0                0               0
+    ## ALLI3                0                0                0               0
+    ## EXCU1                0                0                0               0
+    ## EXCU2                0                0                0               0
+    ## EXCU3                0                0                0               0
+    ## MEDE1                0                0                0               0
+    ## MEDE2                0                0                0               0
+    ## MEDE3                0                0                0               0
+    ## alli2                0                0                0               0
+    ## alli3                0                0                0               0
+    ## anba2                0                0                0               0
+    ## anba3                0                0                0               0
+    ## baae1                0                0                0               0
+    ## excu2                0                0                0               0
+    ## jasc3                0                0                0               0
+    ## lepa3                0                0                0               0
+    ## mede1                0                0                0               0
+    ## mede2                0                0                0               0
+    ## peli2                0                0                0               0
+    ## pepu1                0                0                0               0
+    ## baspA                0                0                0               0
+    ## olstB                0                0                0               0
+    ## leerA                0                0                0               0
+    ## cotaB                0                0                0               0
+    ## olstA                0                0                0               0
+    ## leerB                0                0                0               0
+    ## leerC                0                0                0               0
+    ## cotaA                0                0                0               0
+    ## haseA                0                0                0               0
+    ## ripiB                0                0                0               0
+    ## baspC                0                0                0               0
+    ## isanA                0                0                0               0
+    ## ripiA                0                0                0               0
+    ## penuA                0                0                0               0
+    ## caliA                0                0                0               0
+    ## leerD                0                0                0               0
+    ## haseB                0                0                0               0
+    ## acelB                0                0                0               0
+    ## leerE                0                0                0               0
+    ## caliB                0                0                0               0
+    ## eute2                0                0                0               0
+    ## alli1                0                0                0               0
+    ## excu3                0                0                0               0
+    ## lepa4                0                0                0               0
+    ## acpa1                0                0                0               0
+    ## pepu2                0                0                0               0
+    ## eute1                0                0                0               0
+    ## baae3                0                0                0               0
+    ## hase                 0                0                0               0
+    ## olst                 0                0                0               0
+    ## leer                 0                0                0              14
+    ## isan                 0                0              121               0
+    ## cali                 0                0                0               0
+    ## ripi                 0                0                0               0
+    ## cota                 0                0                0               0
+    ## penu                 0                0                0              18
+    ## mede3                0                0                0               0
+    ## excu1                0                0                0               0
+    ## acel                 0                0                0               0
+    ## acpa2                0                0                0            1069
+    ## jasc2                0                0                0               0
+    ## peli3                0                0                0               0
+    ## acpa3                0                0                0               0
+    ## lepa2                0                0                0               0
+    ## basp                 0                0                0              22
+    ## jasc1                0                0                0               0
+    ##       ITSall_OTUd_571 ITSall_OTUd_1134 ITSall_OTUd_1101 ITSall_OTUd_1109
+    ## EUTE1               0                0                0                0
+    ## EUTE2               0                0                0                0
+    ## EUTE3               0                0                0                0
+    ## LEPA1               0                0                0                0
+    ## LEPA2              20                0                0                0
+    ## EUSC1               0                0                0                0
+    ## EUSC2               0                0                0                0
+    ## EUSC3               0                0                0                0
+    ## ANBA1              36                0                0                0
+    ## ANBA2               0                0                0                0
+    ## PELI1              12                0                0                0
+    ## PELI2              22                0                0                0
+    ## JASC1               0               20                0                0
+    ## JASC2              12                0                0                0
+    ## JASC3              17                0                0                0
+    ## BAAE1               0                0                0                0
+    ## BAAE2               0                0                0                0
+    ## BAAE3               0               21                0                0
+    ## PEPU1              40                0                0                0
+    ## PEPU2               0                0                0                0
+    ## ACPA1               0                0               80                0
+    ## ACPA3               0                0                0                0
+    ## ACPA4               0                0                0                0
+    ## ALLI1              39                0                0               73
+    ## ALLI2               0               16                0               21
+    ## ALLI3              33                0                0                0
+    ## EXCU1               0               18                0                0
+    ## EXCU2               0               73                0                0
+    ## EXCU3              14               50                0                0
+    ## MEDE1               0                0                0                0
+    ## MEDE2               0                0                0                0
+    ## MEDE3               0                0                0                0
+    ## alli2              16                0                0               72
+    ## alli3               0                0                0                0
+    ## anba2               0                0                0                0
+    ## anba3               0                0                0                0
+    ## baae1               0                0                0                0
+    ## excu2               0                0                0                0
+    ## jasc3             596                0                0                0
+    ## lepa3              13                0                0                0
+    ## mede1               0                0                0                0
+    ## mede2               0                0                0                0
+    ## peli2               0                0                0                0
+    ## pepu1               0                0                0                0
+    ## baspA               0                0                0                0
+    ## olstB               0                0                0                0
+    ## leerA              45                0                0               33
+    ## cotaB               0                0                0                0
+    ## olstA               0                0                0                0
+    ## leerB              58                0                0               27
+    ## leerC               0                0                0                0
+    ## cotaA               0                0                0                0
+    ## haseA               0                0                0                0
+    ## ripiB               0                0                0                0
+    ## baspC               0                0                0                0
+    ## isanA               0                0                0                0
+    ## ripiA              15                0                0                0
+    ## penuA               0                0                0                0
+    ## caliA              47                0                0                0
+    ## leerD              29                0                0                0
+    ## haseB               0                0                0                0
+    ## acelB               0                0                0                0
+    ## leerE               0               98                0                0
+    ## caliB              19                0                0                0
+    ## eute2               0                0                0                0
+    ## alli1               0                0                0               46
+    ## excu3               0                0                0                0
+    ## lepa4              34                0                0               26
+    ## acpa1               0                0                0                0
+    ## pepu2               0                0                0                0
+    ## eute1               0                0                0                0
+    ## baae3               0                0                0                0
+    ## hase                0                0                0                0
+    ## olst                0                0                0                0
+    ## leer               36                0                0               29
+    ## isan                0                0                0                0
+    ## cali                0                0                0                0
+    ## ripi                0               19                0                0
+    ## cota                0               43                0                0
+    ## penu                0                0                0                0
+    ## mede3               0                0                0                0
+    ## excu1               0                0                0                0
+    ## acel                0                0                0                0
+    ## acpa2               0                0              179                0
+    ## jasc2               0                0                0                0
+    ## peli3               0                0                0                0
+    ## acpa3               0                0                0                0
+    ## lepa2               0                0                0                0
+    ## basp                0                0                0                0
+    ## jasc1              41                0                0                0
+    ##       ITSall_OTUd_1135 ITSall_OTUd_1154 ITSall_OTUd_1051 ITSall_OTUd_1232
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0               44
+    ## ACPA1                0                0                0                0
+    ## ACPA3              440                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0               38
+    ## EXCU2               80               48                0               34
+    ## EXCU3               17              149                0               73
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0              260                0
+    ## baae1                0                0                0                0
+    ## excu2               63               68                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1               21                0                0               18
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0               29
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0               11
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1               15                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                9
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0               90
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1               35                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2               39                0                0               14
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_687 ITSall_OTUd_888 ITSall_OTUd_4088 ITSall_OTUd_4147
+    ## EUTE1               0               0                0                0
+    ## EUTE2               0               0                0                0
+    ## EUTE3               0               0                0                0
+    ## LEPA1               0               0                0                0
+    ## LEPA2               0               0                0                0
+    ## EUSC1               0               0                0                0
+    ## EUSC2               0               0                0                0
+    ## EUSC3               0               0                0                0
+    ## ANBA1               0               0                0                0
+    ## ANBA2               0               0                0                0
+    ## PELI1               0               0                0                0
+    ## PELI2               0               0                0                0
+    ## JASC1               0               0                0                0
+    ## JASC2               0               0                0                0
+    ## JASC3               0               0                0                0
+    ## BAAE1               0               0                0                0
+    ## BAAE2               0               0                0                0
+    ## BAAE3               0               0                0                0
+    ## PEPU1               0               0                0                0
+    ## PEPU2               0               0                0               19
+    ## ACPA1               0              46                0                0
+    ## ACPA3               0              24                0                0
+    ## ACPA4               0               0                0                0
+    ## ALLI1               0               0                0                0
+    ## ALLI2               0               0                0                0
+    ## ALLI3               0               0                0                0
+    ## EXCU1              29               0                0                0
+    ## EXCU2             468               0                0                0
+    ## EXCU3             426               0                0                0
+    ## MEDE1               0               0                0                0
+    ## MEDE2               0               0                0                0
+    ## MEDE3               0               0                0                0
+    ## alli2               0               0                0                0
+    ## alli3               0               0                0                0
+    ## anba2               0               0                0                0
+    ## anba3               0               0                0                0
+    ## baae1               0               0                0                0
+    ## excu2               0               0                0                0
+    ## jasc3               0               0               25                0
+    ## lepa3               0               0                0                0
+    ## mede1               0               0                0                0
+    ## mede2               0               0                0                0
+    ## peli2               0               0                0                0
+    ## pepu1               0               0                0                0
+    ## baspA               0               0                0                0
+    ## olstB               0               0                0                0
+    ## leerA               0               0                0                0
+    ## cotaB               0               0                0                0
+    ## olstA               0               0                0                0
+    ## leerB               0               0                0                0
+    ## leerC               0               0                0                0
+    ## cotaA               0               0                0                0
+    ## haseA               0               0                0                0
+    ## ripiB               0               0                0                0
+    ## baspC               0               0                0                0
+    ## isanA              74               0                0                0
+    ## ripiA               0               0                0                0
+    ## penuA               0               0                0                0
+    ## caliA               0               0                0                0
+    ## leerD              15               0                0                0
+    ## haseB               0               0                0                0
+    ## acelB               0               0                0                0
+    ## leerE               0               0                0                0
+    ## caliB               0               0                0                0
+    ## eute2               0               0                0                0
+    ## alli1               0               0                0                0
+    ## excu3               0               0                0                0
+    ## lepa4               0               0                0                0
+    ## acpa1               0               0                0                0
+    ## pepu2               0               0                0                0
+    ## eute1               0               0                0                0
+    ## baae3               0               0                0                0
+    ## hase                0               0                0                0
+    ## olst                0               0                0                0
+    ## leer                0              13                0                0
+    ## isan              554               0                0                0
+    ## cali                0               0                0                0
+    ## ripi                0               0                0                0
+    ## cota                0               0                0                0
+    ## penu                0               0                0                0
+    ## mede3               0               0                0                0
+    ## excu1               0               0                0                0
+    ## acel                0              10                0                0
+    ## acpa2               0             441                0                0
+    ## jasc2               0               0                0                0
+    ## peli3               0               0                0                0
+    ## acpa3               0               0                0                0
+    ## lepa2               0               0                0                0
+    ## basp                0               0                0                0
+    ## jasc1               0               0                0                0
+    ##       ITSall_OTUd_4123 ITSall_OTUd_3869 ITSall_OTUd_4007 ITSall_OTUd_3991
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0               49                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0               11                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0               12                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                9                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB               29                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0               21
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_3992 ITSall_OTUd_5018 ITSall_OTUd_4427 ITSall_OTUd_4454
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0               21
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0               13                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0               18                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0               28                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2               18                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_4446 ITSall_OTUd_3023 ITSall_OTUd_3084 ITSall_OTUd_2980
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0               29
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0               10
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3               13                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0               47                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0               16                0                0
+    ## EXCU3                0               34                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0               11                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0               34                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_3184 ITSall_OTUd_3190 ITSall_OTUd_3097 ITSall_OTUd_2716
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0               39
+    ## ANBA2                0               17                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0               13
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0               11
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0               55                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0               26
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0               14
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1               36                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_2709 ITSall_OTUd_2868 ITSall_OTUd_2911 ITSall_OTUd_3590
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0               26                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0               11                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2                0                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3                0                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0               39                0                0
+    ## alli3               89                0                0                0
+    ## anba2                0                0                0                0
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0                0                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0                0                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0               25
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_3523 ITSall_OTUd_3686 ITSall_OTUd_3613 ITSall_OTUd_3333
+    ## EUTE1                0                0                0                0
+    ## EUTE2                0                0                0                0
+    ## EUTE3                0                0                0                0
+    ## LEPA1                0                0                0                0
+    ## LEPA2                0                0                0                0
+    ## EUSC1                0                0                0                0
+    ## EUSC2                0                0                0                0
+    ## EUSC3                0                0                0                0
+    ## ANBA1                0                0                0                0
+    ## ANBA2                0                0                0                0
+    ## PELI1                0                0                0                0
+    ## PELI2                0                0                0                0
+    ## JASC1                0                0                0                0
+    ## JASC2                0                0                0                0
+    ## JASC3                0                0                0                0
+    ## BAAE1                0                0                0                0
+    ## BAAE2                0                0                0                0
+    ## BAAE3                0                0                0                0
+    ## PEPU1                0                0                0                0
+    ## PEPU2                0                0                0                0
+    ## ACPA1                0                0                0                0
+    ## ACPA3                0                0                0                0
+    ## ACPA4                0                0                0                0
+    ## ALLI1                0                0                0                0
+    ## ALLI2               10                0                0                0
+    ## ALLI3                0                0                0                0
+    ## EXCU1                0                0                0                0
+    ## EXCU2                0                0                0                0
+    ## EXCU3               20                0                0                0
+    ## MEDE1                0                0                0                0
+    ## MEDE2                0                0                0                0
+    ## MEDE3                0                0                0                0
+    ## alli2                0                0                0                0
+    ## alli3                0                0                0                0
+    ## anba2                0                0                0               34
+    ## anba3                0                0                0                0
+    ## baae1                0                0                0                0
+    ## excu2                0                0                0                0
+    ## jasc3                0                0                0                0
+    ## lepa3                0                0                0                0
+    ## mede1                0                0                0                0
+    ## mede2                0                0                0                0
+    ## peli2                0                0                0                0
+    ## pepu1                0                0                0                0
+    ## baspA                0                0                0                0
+    ## olstB                0                0                0                0
+    ## leerA                0                0                0                0
+    ## cotaB                0                0                0                0
+    ## olstA                0                0                0                0
+    ## leerB                0                0                0                0
+    ## leerC                0                0                0                0
+    ## cotaA                0                0                0                0
+    ## haseA                0               14                0                0
+    ## ripiB                0                0                0                0
+    ## baspC                0                0                0                0
+    ## isanA                0                0                0                0
+    ## ripiA                0                0                0                0
+    ## penuA                0                0                0                0
+    ## caliA                0                0                0                0
+    ## leerD                0                0                0                0
+    ## haseB                0                0                0                0
+    ## acelB                0                0                0                0
+    ## leerE                0                0                0                0
+    ## caliB                0                0                0                0
+    ## eute2                0                0                0                0
+    ## alli1                0                0                0                0
+    ## excu3                0                0                0                0
+    ## lepa4                0                0                0                0
+    ## acpa1                0                0               25                0
+    ## pepu2                0                0                0                0
+    ## eute1                0                0                0                0
+    ## baae3                0                0                0                0
+    ## hase                 0                0                0                0
+    ## olst                 0                0                0                0
+    ## leer                 0                0                0                0
+    ## isan                 0                0                0                0
+    ## cali                 0                0                0                0
+    ## ripi                 0                0                0                0
+    ## cota                 0                0                0                0
+    ## penu                 0                0                0                0
+    ## mede3                0                0                0                0
+    ## excu1                0                0                0                0
+    ## acel                 0                0                0                0
+    ## acpa2                0                0                0                0
+    ## jasc2                0                0                0                0
+    ## peli3                0                0                0                0
+    ## acpa3                0                0                0                0
+    ## lepa2                0                0                0                0
+    ## basp                 0                0                0                0
+    ## jasc1                0                0                0                0
+    ##       ITSall_OTUd_3400 ITSall_OTUd_3436
+    ## EUTE1                0                0
+    ## EUTE2                0                0
+    ## EUTE3                0                0
+    ## LEPA1                0                0
+    ## LEPA2                0                0
+    ## EUSC1                0                0
+    ## EUSC2                0                0
+    ## EUSC3                0                0
+    ## ANBA1                0                0
+    ## ANBA2                0                0
+    ## PELI1                0                0
+    ## PELI2                0                0
+    ## JASC1                0                0
+    ## JASC2                0                0
+    ## JASC3                0                0
+    ## BAAE1                0                0
+    ## BAAE2                0                0
+    ## BAAE3                0                0
+    ## PEPU1                0                0
+    ## PEPU2                0                0
+    ## ACPA1                0                0
+    ## ACPA3                0                0
+    ## ACPA4                0                0
+    ## ALLI1                0                0
+    ## ALLI2                0                0
+    ## ALLI3                0                0
+    ## EXCU1                0                0
+    ## EXCU2                0                0
+    ## EXCU3                0               32
+    ## MEDE1                0                0
+    ## MEDE2                0                0
+    ## MEDE3                0                0
+    ## alli2                0                0
+    ## alli3                0                0
+    ## anba2                0                0
+    ## anba3                0                0
+    ## baae1                0                0
+    ## excu2                0                0
+    ## jasc3                0                0
+    ## lepa3                0                0
+    ## mede1                0                0
+    ## mede2                0                0
+    ## peli2                0                0
+    ## pepu1                0                0
+    ## baspA                0                0
+    ## olstB                9                0
+    ## leerA                0                0
+    ## cotaB                0                0
+    ## olstA                0                0
+    ## leerB                0                0
+    ## leerC                0                0
+    ## cotaA                0                0
+    ## haseA                0                0
+    ## ripiB                0                0
+    ## baspC                0                0
+    ## isanA                0                0
+    ## ripiA                0                0
+    ## penuA                0                0
+    ## caliA                0                0
+    ## leerD                0                0
+    ## haseB                0                0
+    ## acelB                0                0
+    ## leerE                0                0
+    ## caliB                0                0
+    ## eute2                0                0
+    ## alli1                0                0
+    ## excu3                0                0
+    ## lepa4                0                0
+    ## acpa1                0                0
+    ## pepu2                0                0
+    ## eute1                0                0
+    ## baae3                0                0
+    ## hase                 0                0
+    ## olst                 0                0
+    ## leer                 0                0
+    ## isan                 0                0
+    ## cali                 0                0
+    ## ripi                 0                0
+    ## cota                 0                0
+    ## penu                 0                0
+    ## mede3                0                0
+    ## excu1                0                0
+    ## acel                 0                0
+    ## acpa2                0                0
+    ## jasc2                0                0
+    ## peli3                0                0
+    ## acpa3                0                0
+    ## lepa2                0                0
+    ## basp                 0                0
+    ## jasc1                0                0
+    ## 
+    ## $tax
+    ## # A tibble: 101 x 4
+    ##                OTUId        phylum         genus
+    ##                <chr>         <chr>         <chr>
+    ##  1  ITSall_OTUa_6818 Basidiomycota Septobasidium
+    ##  2  ITSall_OTUa_7031 Basidiomycota  Cryptococcus
+    ##  3  ITSall_OTUa_6805 Basidiomycota  Cryptococcus
+    ##  4  ITSall_OTUa_6977 Basidiomycota Septobasidium
+    ##  5  ITSall_OTUa_7555 Basidiomycota  Cryptococcus
+    ##  6  ITSall_OTUa_7658 Basidiomycota  Cryptococcus
+    ##  7  ITSall_OTUa_7179 Basidiomycota  Trichosporon
+    ##  8  ITSall_OTUa_7442 Basidiomycota  Cryptococcus
+    ##  9  ITSall_OTUa_9675 Basidiomycota  Cryptococcus
+    ## 10 ITSall_OTUa_10161 Basidiomycota  Cryptococcus
+    ## # ... with 91 more rows, and 1 more variables: species <chr>
+
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
 ### Result:
@@ -281,11 +3913,11 @@ rand.t.test(fit.r2.cv)
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.893
-    ## Comp02 0.999
-    ## Comp03 0.757
-    ## Comp04 0.801
-    ## Comp05 0.709
+    ## Comp01 0.920
+    ## Comp02 1.000
+    ## Comp03 0.701
+    ## Comp04 0.788
+    ## Comp05 0.703
 
 -k... none of the community components are significant predictors
 
@@ -300,11 +3932,11 @@ rand.t.test(fit.k.cv)
     ## Comp04 0.10059285 0.01921425 0.003727121 0.2728401 -15.8296569 -0.06732756
     ## Comp05 0.10067798 0.01871320 0.003714864 0.2731036 -16.0257809  0.08462470
     ##            p
-    ## Comp01 0.488
-    ## Comp02 0.998
-    ## Comp03 0.887
-    ## Comp04 0.418
-    ## Comp05 0.730
+    ## Comp01 0.512
+    ## Comp02 0.999
+    ## Comp03 0.882
+    ## Comp04 0.396
+    ## Comp05 0.721
 
 -t70... none of the community components are significant predictors
 
@@ -319,11 +3951,11 @@ rand.t.test(fit.t70.cv)
     ## Comp04 0.5636628 0.02712522 -0.005167941 1.382455 -18.967696 0.02619417
     ## Comp05 0.5637798 0.02665069 -0.004978126 1.383710 -19.017097 0.02076028
     ##            p
-    ## Comp01 0.487
+    ## Comp01 0.522
     ## Comp02 1.000
-    ## Comp03 0.867
-    ## Comp04 0.526
-    ## Comp05 0.539
+    ## Comp03 0.870
+    ## Comp04 0.545
+    ## Comp05 0.514
 
 -alpha --- note: don't interpret yet
 
@@ -338,11 +3970,11 @@ rand.t.test(fit.alpha.cv)
     ## Comp04 0.2866664 0.01260590  0.005775351 0.7015749 -22.40512 0.72629298
     ## Comp05 0.2869146 0.01259244  0.006101055 0.7009235 -22.61720 0.08659388
     ##            p
-    ## Comp01 0.694
-    ## Comp02 0.837
-    ## Comp03 0.938
-    ## Comp04 0.897
-    ## Comp05 0.634
+    ## Comp01 0.702
+    ## Comp02 0.831
+    ## Comp03 0.945
+    ## Comp04 0.906
+    ## Comp05 0.604
 
 Community+traits as a predictor
 -------------------------------
@@ -700,10 +4332,10 @@ rand.t.test(fit.tr.r2.cv)
     ## Comp05 0.07947046 0.2110715 -0.004777034 0.1709423 -103.29250 -0.1579594
     ##            p
     ## Comp01 0.999
-    ## Comp02 0.995
-    ## Comp03 0.648
-    ## Comp04 0.337
-    ## Comp05 0.200
+    ## Comp02 0.988
+    ## Comp03 0.635
+    ## Comp04 0.360
+    ## Comp05 0.194
 
 -k... none of the community components are significant predictors
 
@@ -718,11 +4350,11 @@ rand.t.test(fit.tr.k.cv)
     ## Comp04 0.05088217 0.011202260 0.002606935 0.1222940 -16.36896 -0.09260487
     ## Comp05 0.05080847 0.011411770 0.002600391 0.1220352 -16.03213 -0.14482990
     ##            p
-    ## Comp01 0.925
-    ## Comp02 0.240
-    ## Comp03 0.752
-    ## Comp04 0.289
-    ## Comp05 0.133
+    ## Comp01 0.911
+    ## Comp02 0.219
+    ## Comp03 0.792
+    ## Comp04 0.302
+    ## Comp05 0.152
 
 -t70... none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 
@@ -737,11 +4369,11 @@ rand.t.test(fit.tr.t70.cv)
     ## Comp04 0.2761444 0.05152058 0.018574458 0.6725779 -6.562016 -0.18092128
     ## Comp05 0.2759834 0.05155263 0.018441009 0.6738231 -6.437833 -0.05828514
     ##            p
-    ## Comp01 0.663
-    ## Comp02 0.478
-    ## Comp03 0.775
-    ## Comp04 0.224
-    ## Comp05 0.256
+    ## Comp01 0.618
+    ## Comp02 0.479
+    ## Comp03 0.798
+    ## Comp04 0.207
+    ## Comp05 0.241
 
 -alpha --- note: don't interpret yet
 
@@ -756,11 +4388,11 @@ rand.t.test(fit.tr.alpha.cv)
     ## Comp04 0.2067854 0.020289417 -0.01554990 0.4267151 -57.19334  0.3134854
     ## Comp05 0.2063872 0.020076149 -0.01537752 0.4273147 -56.58859 -0.1925460
     ##            p
-    ## Comp01 0.902
-    ## Comp02 0.970
-    ## Comp03 0.900
-    ## Comp04 0.838
-    ## Comp05 0.133
+    ## Comp01 0.919
+    ## Comp02 0.965
+    ## Comp03 0.904
+    ## Comp04 0.847
+    ## Comp05 0.152
 
 *Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...* Investigate the biology underlying t70-associated coefs for Comp05
 
@@ -779,19 +4411,19 @@ By trophic mode (note that apparently empty cateogies have at least 1 data point
 ggplot(coef.comp5.ann, aes(x=Trophic.Mode, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-20-1.png) By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png) By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
 
 ``` r
 ggplot(coef.comp5.ann, aes(x=Guild, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-21-1.png) By phylum
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png) By phylum
 
 ``` r
 ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-22-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-26-1.png)
 
 1.  Diversity (and diversity of specific clades) as a predictor
 
@@ -1041,7 +4673,7 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-28-1.png)
 
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
 
@@ -1094,7 +4726,7 @@ grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-29-1.png)
 
 1.  Diversity plus traits as a predictor
 

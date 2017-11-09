@@ -1,3 +1,19 @@
+HowManyOfThese<-function(otuIDs, taxAndFunguild, comm.otu){
+  
+  #subset the OTU table
+  curr.mat.otu<-comm.otu[,colnames(comm.otu) %in% otuIDs$OTUId]
+  
+  #get rid of cols and rows without reads
+  tmp<-curr.mat.otu[,colSums(curr.mat.otu)!=0] 
+  curr.mat.otu.sel<-tmp[rowSums(tmp)!=0,]
+  
+  #save the mini OTU table and taxon look up table
+  results<-list(otu=curr.mat.otu.sel,
+                tax=taxAndFunguild[taxAndFunguild$OTUId %in% colnames(curr.mat.otu.sel),c("OTUId","phylum","genus","species")])
+  
+  return(results)
+}
+
 
 Calc_richOTUtype<-function(colNam, grepTerm, taxAndFunguild, comm.otu){
   

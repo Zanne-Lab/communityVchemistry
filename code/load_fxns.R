@@ -59,6 +59,7 @@ load_matotu<-function(){
   
   # read in dataframe that contains sample information (also used to create meta and xrf)
   data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
+  
   # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
   data <- data[!data$SampleCode == 'blank', ]
   
@@ -75,12 +76,24 @@ load_matotu<-function(){
   tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
   mock <- data.frame(reads=sort(mock[mock > 0]))
   mock <- cbind(mock, tax[match(rownames(mock), tax$OTU), 'species'])
-  # mock
+  #mock
   mat.otu[mat.otu < 9] <- 0
+  
+  # otus, taxa in blank
+  blank <- data.frame(reads=sort(blank[blank > 0]))
+  blank <- cbind(blank, tax[match(rownames(blank), tax$OTU), 'species'])
+  #mat.otu[,'ITSall_OTUd_3713'] # the most abundant OTU in the blank does not show up in any of the samples
   
   # re-order rows in 'mat.otu' to match rows in 'data'
   mat.otu <- mat.otu[match(data$SampleCode, rownames(mat.otu)), ]
   all(rownames(mat.otu) == data$SampleCode)  # is TRUE
+  
+  #how many Glomeromycota are there?
+  GlomOTUs<-tax[tax$phylum=="Glomeromycota","OTU"]
+  glom.mat.otu<-mat.otu[,colnames(mat.otu) %in% GlomOTUs]
+  rowSums(glom.mat.otu)!=0
+  tmp<-glom.mat.otu[,colSums(glom.mat.otu)!=0] #get rid of cols and rows without reads
+  glom.mat.otu.sel<-tmp[rowSums(tmp)!=0,]
   
   return(mat.otu)
   
