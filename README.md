@@ -25,10 +25,14 @@ source("code/load_fxns.R")
 source("code/curve_fitting_fxns.R")
 source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
+```
 
+LOAD DATA
+---------
 
-### LOAD MICROBIAL COMMUNITY DATA
+### MICROBIAL COMMUNITY DATA
 
+``` r
 #stem sample meta data
 #stemSamples<-load_stemSamples() #uncomment if the data changes
 #write_csv(stemSamples, "derived_data/stemSamples.csv")
@@ -51,9 +55,11 @@ seqSamples<-read_csv("derived_data/seqSamples.csv")
 taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 
 #plot_sampleEffortCurves(comm.otu)
-
+```
 
 ### LOAD WOOD TRAIT DATA
+
+``` r
 #traits.mean<-mergeTraitData() #uncomment if the data changes
 #write_csv(traits.mean, "derived_data/traits_mean.csv") 
 traits.mean<-read_csv("derived_data/traits_mean.csv")
@@ -78,17 +84,7 @@ traits.mean<-read_csv("derived_data/traits_mean.csv")
 #plotting_df %>% filter(!is.na(pmr)) -> plotting_df
 #write_csv(plotting_df,"derived_data/plotting_df.csv")
 plotting_df<-read_csv("derived_data/plotting_df.csv")
-```
 
-    ## Warning in rbind(names(probs), probs_f): number of columns of result is not
-    ## a multiple of vector length (arg 1)
-
-    ## Warning: 810 parsing failures.
-    ## row # A tibble: 5 x 5 col     row   col               expected            actual expected   <int> <chr>                  <chr>             <chr> actual 1  1317   pmr no trailing characters .6870983172138487 file 2  1318   pmr no trailing characters .6407933359183388 row 3  1319   pmr no trailing characters .7706187163172571 col 4  1320   pmr no trailing characters .7300713441051903 expected 5  1321   pmr no trailing characters .6224821689919369 actual # ... with 1 more variables: file <chr>
-    ## ... ................. ... ...................................................... ........ ...................................................... ...... ...................................................... .... ...................................................... ... ...................................................... ... ...................................................... ........ ...................................................... ...... .......................................
-    ## See problems(...) for more details.
-
-``` r
 ### CALCULATE DECAY TRAJECTORY FITS
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
 #indx<-select(stemSamples, code, species, size)
@@ -102,7 +98,10 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
-1.  Wood traits as a preditor *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
+Wood traits as a preditor
+-------------------------
+
+*Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
 
 *Result:* - r2... greater water content and greater Zn and N leads to better-fitting decay models. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model that greater water content and less C leads to better-fitting decay models
 
@@ -141,6 +140,10 @@ summary(mod.select.r) # waterperc, Zn, N
 
 -   k... small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
 
+NOTE from Will: Density explains the same part of the variation in decay rates that initial water content does, only less well. (In other words, although, density gets dropped from the best model by the model selection procedure, if we remove initial water from consideration entirely, density is included in the model as the best predictor.)
+
+So my current interpretation is that wood water rentention--related to fiber saturation point and partially captured by the density measurement--has a strong effect on long-term decomposition rates, possibly by maintaining fungal activity further into dry periods. There is also a very likely interaction between this water retention capacity with the fungal community (see results in Setting the Stage paper, Lee et al. in review).
+
 ``` r
 summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
 ```
@@ -172,11 +175,18 @@ summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
     ## F-statistic: 10.21 on 7 and 24 DF,  p-value: 6.942e-06
 
 ``` r
-ggplot(spdf.traits, aes(x=waterperc, y=k, color=species, size=density)) + geom_point() + facet_grid(~size) +
-  xlab("Water content (% wet weight)")
+ggplot(spdf.traits, aes(x=waterperc, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
+  labs(y="k (year^-1)",x="Initial water content (% wet weight)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-4-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-6-1.png)
+
+``` r
+ggplot(spdf.traits, aes(x=density, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
+  labs(y="k (year^-1)",x="Initial density (g/cm^3)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-6-2.png)
 
 ``` r
 #ggplot(spdf.traits, aes(x=waterperc, y=density, color=species, size=k)) + geom_point() + facet_grid(~size)
@@ -251,9 +261,14 @@ summary(mod.select.alpha) # density, Zn, C
     ## Multiple R-squared:  0.6067, Adjusted R-squared:  0.4458 
     ## F-statistic: 3.771 on 9 and 22 DF,  p-value: 0.005306
 
-1.  Community as a predictor *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+Community as a predictor
+------------------------
 
-*Result:* -r2... none of the community components are significant predictors
+*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+
+### Result:
+
+-r2... none of the community components are significant predictors
 
 ``` r
 rand.t.test(fit.r2.cv)
@@ -266,11 +281,11 @@ rand.t.test(fit.r2.cv)
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.902
+    ## Comp01 0.893
     ## Comp02 0.999
-    ## Comp03 0.713
-    ## Comp04 0.793
-    ## Comp05 0.701
+    ## Comp03 0.757
+    ## Comp04 0.801
+    ## Comp05 0.709
 
 -k... none of the community components are significant predictors
 
@@ -285,11 +300,11 @@ rand.t.test(fit.k.cv)
     ## Comp04 0.10059285 0.01921425 0.003727121 0.2728401 -15.8296569 -0.06732756
     ## Comp05 0.10067798 0.01871320 0.003714864 0.2731036 -16.0257809  0.08462470
     ##            p
-    ## Comp01 0.507
-    ## Comp02 0.994
-    ## Comp03 0.880
-    ## Comp04 0.424
-    ## Comp05 0.719
+    ## Comp01 0.488
+    ## Comp02 0.998
+    ## Comp03 0.887
+    ## Comp04 0.418
+    ## Comp05 0.730
 
 -t70... none of the community components are significant predictors
 
@@ -304,10 +319,10 @@ rand.t.test(fit.t70.cv)
     ## Comp04 0.5636628 0.02712522 -0.005167941 1.382455 -18.967696 0.02619417
     ## Comp05 0.5637798 0.02665069 -0.004978126 1.383710 -19.017097 0.02076028
     ##            p
-    ## Comp01 0.500
+    ## Comp01 0.487
     ## Comp02 1.000
-    ## Comp03 0.886
-    ## Comp04 0.524
+    ## Comp03 0.867
+    ## Comp04 0.526
     ## Comp05 0.539
 
 -alpha --- note: don't interpret yet
@@ -323,13 +338,14 @@ rand.t.test(fit.alpha.cv)
     ## Comp04 0.2866664 0.01260590  0.005775351 0.7015749 -22.40512 0.72629298
     ## Comp05 0.2869146 0.01259244  0.006101055 0.7009235 -22.61720 0.08659388
     ##            p
-    ## Comp01 0.712
-    ## Comp02 0.850
-    ## Comp03 0.928
-    ## Comp04 0.907
-    ## Comp05 0.618
+    ## Comp01 0.694
+    ## Comp02 0.837
+    ## Comp03 0.938
+    ## Comp04 0.897
+    ## Comp05 0.634
 
-1.  Community+traits as a predictor
+Community+traits as a predictor
+-------------------------------
 
 ``` r
 #run rioja::WAPLS on wood trait residuals
@@ -684,10 +700,10 @@ rand.t.test(fit.tr.r2.cv)
     ## Comp05 0.07947046 0.2110715 -0.004777034 0.1709423 -103.29250 -0.1579594
     ##            p
     ## Comp01 0.999
-    ## Comp02 0.997
-    ## Comp03 0.629
-    ## Comp04 0.334
-    ## Comp05 0.199
+    ## Comp02 0.995
+    ## Comp03 0.648
+    ## Comp04 0.337
+    ## Comp05 0.200
 
 -k... none of the community components are significant predictors
 
@@ -702,11 +718,11 @@ rand.t.test(fit.tr.k.cv)
     ## Comp04 0.05088217 0.011202260 0.002606935 0.1222940 -16.36896 -0.09260487
     ## Comp05 0.05080847 0.011411770 0.002600391 0.1220352 -16.03213 -0.14482990
     ##            p
-    ## Comp01 0.913
-    ## Comp02 0.241
-    ## Comp03 0.777
-    ## Comp04 0.317
-    ## Comp05 0.149
+    ## Comp01 0.925
+    ## Comp02 0.240
+    ## Comp03 0.752
+    ## Comp04 0.289
+    ## Comp05 0.133
 
 -t70... none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 
@@ -721,11 +737,11 @@ rand.t.test(fit.tr.t70.cv)
     ## Comp04 0.2761444 0.05152058 0.018574458 0.6725779 -6.562016 -0.18092128
     ## Comp05 0.2759834 0.05155263 0.018441009 0.6738231 -6.437833 -0.05828514
     ##            p
-    ## Comp01 0.672
-    ## Comp02 0.497
-    ## Comp03 0.797
-    ## Comp04 0.225
-    ## Comp05 0.271
+    ## Comp01 0.663
+    ## Comp02 0.478
+    ## Comp03 0.775
+    ## Comp04 0.224
+    ## Comp05 0.256
 
 -alpha --- note: don't interpret yet
 
@@ -740,11 +756,11 @@ rand.t.test(fit.tr.alpha.cv)
     ## Comp04 0.2067854 0.020289417 -0.01554990 0.4267151 -57.19334  0.3134854
     ## Comp05 0.2063872 0.020076149 -0.01537752 0.4273147 -56.58859 -0.1925460
     ##            p
-    ## Comp01 0.921
-    ## Comp02 0.976
-    ## Comp03 0.901
-    ## Comp04 0.860
-    ## Comp05 0.143
+    ## Comp01 0.902
+    ## Comp02 0.970
+    ## Comp03 0.900
+    ## Comp04 0.838
+    ## Comp05 0.133
 
 *Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...* Investigate the biology underlying t70-associated coefs for Comp05
 
@@ -763,19 +779,19 @@ By trophic mode (note that apparently empty cateogies have at least 1 data point
 ggplot(coef.comp5.ann, aes(x=Trophic.Mode, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png) By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-20-1.png) By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
 
 ``` r
 ggplot(coef.comp5.ann, aes(x=Guild, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-19-1.png) By phylum
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-21-1.png) By phylum
 
 ``` r
 ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-20-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-22-1.png)
 
 1.  Diversity (and diversity of specific clades) as a predictor
 
@@ -1025,7 +1041,7 @@ grid.arrange(sapList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-22-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)
 
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers. **Maybe there's some indicaiton that oomycete presence increases the likelihood of slower (k) and more laggy (alpha) decay**
 
@@ -1078,7 +1094,7 @@ grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
              ncol=3)
 ```
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png)
 
 1.  Diversity plus traits as a predictor
 
