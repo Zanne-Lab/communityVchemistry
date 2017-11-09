@@ -14,6 +14,33 @@ HowManyOfThese<-function(otuIDs, taxAndFunguild, comm.otu){
   return(results)
 }
 
+AverageOTUabund_byCode<-function(comm.otu, seqSamples){
+  
+  #loop through each code and average the OTU abundances
+  CODE<-unique(seqSamples$code)
+  meanOTUabund.list<-list()
+  sdOTUabund.list<-list()
+  for(i in 1:length(CODE)){
+    #identify the seq_sampNames to aggregate
+    curr.seqSamps<-seqSamples[seqSamples$code==CODE[i],]$seq_sampName 
+    #filter 
+    curr.comm.otu<-comm.otu[row.names(comm.otu) %in% curr.seqSamps,]
+    #summarize
+    meanOTUabund.list[[i]]<-apply(curr.comm.otu, 2, mean, na.rm=TRUE)
+    sdOTUabund.list[[i]]<-apply(curr.comm.otu, 2, sd, na.rm=TRUE)
+  }
+  names(meanOTUabund.list)<-CODE
+  names(sdOTUabund.list)<-CODE
+  meanOTUabund.list %>% combine() %>% as.data.frame %>% t() -> meanOTUabund
+  sdOTUabund.list %>% combine() %>% as.data.frame %>% t() -> sdOTUabund
+  
+  #get rid of empty OTU cols
+  #sum(colSums(meanOTUabund)!=0)
+  meanOTUabund.trim<-meanOTUabund[,colSums(meanOTUabund)!=0]
+  
+  return(meanOTUabund.trim)
+  
+}
 
 Calc_richOTUtype<-function(colNam, grepTerm, taxAndFunguild, comm.otu){
   

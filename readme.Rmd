@@ -29,11 +29,10 @@ source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
 ```
 
-## LOAD DATA 
+## Load data 
 
-### MICROBIAL COMMUNITY DATA
-
-```{r}
+### Microbial community data
+```{r, echo=FALSE}
 #stem sample meta data
 #stemSamples<-load_stemSamples() #uncomment if the data changes
 #write_csv(stemSamples, "derived_data/stemSamples.csv")
@@ -58,9 +57,8 @@ taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 #plot_sampleEffortCurves(comm.otu)
 ```
 
-### LOAD WOOD TRAIT DATA
-
-```{r}
+### Wood trait data
+```{r, echo=FALSE}
 #traits.mean<-mergeTraitData() #uncomment if the data changes
 #write_csv(traits.mean, "derived_data/traits_mean.csv") 
 traits.mean<-read_csv("derived_data/traits_mean.csv")
@@ -101,6 +99,7 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 ```
 
 
+##########################################
 
 ## Wood traits as a preditor
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
@@ -134,110 +133,89 @@ trait.residuals<-data.frame(code=spdf.traits$code,
 
 ```
 
-*Result:*
-- r2... greater water content and greater Zn and N leads to better-fitting decay models. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model that greater water content and less C leads to better-fitting decay models
-```{r}
+### r2  
+
+**greater water content and greater Zn and N leads to better-fitting decay models**  
+
+Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model that greater water content and less C leads to better-fitting decay models
+```{r, echo=FALSE}
 summary(mod.select.r) # waterperc, Zn, N
 #ggplot(spdf.traits, aes(x=waterperc, y=ne.r2, color=species, shape=size)) + geom_point()
 ```
-- k... small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
+
+### k  
+
+**small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay**
 
 NOTE from Will: Density explains the same part of the variation in decay rates that initial water content does, only less well.  (In other words, although, density gets dropped from the best model by the model selection procedure, if we remove initial water from consideration entirely, density is included in the model as the best predictor.)  
 
 So my current interpretation is that wood water rentention--related to fiber saturation point and partially captured by the density measurement--has a strong effect on long-term decomposition rates, possibly by maintaining fungal activity further into dry periods.  There is also a very likely interaction between this water retention capacity with the fungal community (see results in Setting the Stage paper, Lee et al. in review).
 
-```{r}
+```{r, echo=FALSE}
 summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
+
 ggplot(spdf.traits, aes(x=waterperc, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
   labs(y="k (year^-1)",x="Initial water content (% wet weight)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
 
 
 ggplot(spdf.traits, aes(x=density, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
   labs(y="k (year^-1)",x="Initial density (g/cm^3)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
-#ggplot(spdf.traits, aes(x=waterperc, y=density, color=species, size=k)) + geom_point() + facet_grid(~size)
+
 ```
-- t70... small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood "70%"-lives.
+
+### t70  
+
+**small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood "70%"-lives**  
+
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model indicated that large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
-```{r}
+```{r, echo=FALSE}
 summary(mod.select.t70) # size, waterperc, barkthick, Ca, Zn
 #ggplot(spdf.traits, aes(x=waterperc, y=t70, color=species, size=density)) + geom_point() + facet_grid(~size)
 ```
-- alpha--- note: don't interpret yet
-```{r}
+
+### alpha--- don't interpret yet
+```{r, echo=FALSE}
 summary(mod.select.alpha) # density, Zn, C
 ```
 
 
 
 
+##########################################
+
 ## Community as a predictor
+*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
-But first check the OTU table for unexpected taxa....
-- Arbuscular mycorrhizal fungi
-```{r}
-GlomOTUs<-taxAndFunguild[taxAndFunguild$phylum=="Glomeromycota","OTUId"]
-HowManyOfThese(otuIDs=GlomOTUs, taxAndFunguild, comm.otu)
-#am.otus<-taxAndFunguild[taxAndFunguild$Guild=="Arbuscular Mycorrhizal","OTUId"] #same as above
-#HowManyOfThese(otuIDs=am.otus, taxAndFunguild, comm.otu)
-```
-- Ericoid mycorrhizal fungi
-```{r}
-ericoid.otus<-taxAndFunguild[taxAndFunguild$Guild=="Ericoid Mycorrhizal","OTUId"]
-HowManyOfThese(otuIDs=ericoid.otus, taxAndFunguild, comm.otu)
+### First, filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
+```{r, echo=FALSE}
 
-#.. orchidmyc.otus<-taxAndFunguild[taxAndFunguild$Guild=="Orchid Mycorrhizal","OTUId"]
-#HowManyOfThese(otuIDs=orchidmyc.otus, taxAndFunguild, comm.otu) #none
-```
-- Lichenized fungi
-```{r}
-lichenized.otus<-taxAndFunguild[grepl('Lichen', taxAndFunguild$Guild),"OTUId"]
-HowManyOfThese(otuIDs=lichenized.otus, taxAndFunguild, comm.otu)
-```
-- Animal-associated fungi
-```{r}
-animal.otus<-taxAndFunguild[grepl('Animal', taxAndFunguild$Guild),"OTUId"]
-HowManyOfThese(otuIDs=animal.otus, taxAndFunguild, comm.otu)
+minSamps<-floor(dim(comm.otu)[1] * .2) #how many samples is 20% of them?
+dat1 <- apply(comm.otu>0, 2, sum) #how many samples does each OTU show up in?
+comm.otu.trimmed <- comm.otu[,dat1>minSamps]
+
+paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
+
 ```
 
-
-*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).  
-```{r, include=FALSE, results=FALSE,message=FALSE}
+```{r, include=FALSE, results=FALSE, message=FALSE}
 
 #average OTU abundances by code
-CODE<-unique(seqSamples$code)
-meanOTUabund.list<-list()
-sdOTUabund.list<-list()
-for(i in 1:length(CODE)){
-  #identify the seq_sampNames to aggregate
-  curr.seqSamps<-seqSamples[seqSamples$code==CODE[i],]$seq_sampName 
-  #filter 
-  curr.comm.otu<-comm.otu[row.names(comm.otu) %in% curr.seqSamps,]
-  #summarize
-  meanOTUabund.list[[i]]<-apply(curr.comm.otu, 2, mean, na.rm=TRUE)
-  sdOTUabund.list[[i]]<-apply(curr.comm.otu, 2, sd, na.rm=TRUE)
-}
-names(meanOTUabund.list)<-CODE
-names(sdOTUabund.list)<-CODE
-meanOTUabund.list %>% combine() %>% as.data.frame %>% t() -> 
-  meanOTUabund
-sdOTUabund.list %>% combine() %>% as.data.frame %>% t() -> 
-  sdOTUabund
-
-#get rid of empty OTU cols
-#sum(colSums(meanOTUabund)!=0)
-meanOTUabund.trim<-meanOTUabund[,colSums(meanOTUabund)!=0]
+meanOTUabund.trim<-AverageOTUabund_byCode(comm.otu, seqSamples)
+meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
 
 #get rid of spdf rows for which there is missing community data... this is eusc
 #spdf[!spdf$code %in% row.names(meanOTUabund.trim),]$code
-spdf.trim<-spdf[spdf$code %in% row.names(meanOTUabund.trim),]
+spdf.trim<-spdf[spdf$code %in% row.names(meanOTUabund.trim2),]
 
 #fit models
-fit.r2 <- WAPLS(meanOTUabund.trim, spdf.trim$ne.r2)
-fit.k <- WAPLS(meanOTUabund.trim, spdf.trim$k)
-fit.t70 <- WAPLS(meanOTUabund.trim, spdf.trim$t70)
-fit.alpha <- WAPLS(meanOTUabund.trim, spdf.trim$alpha)
+fit.r2.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$ne.r2)
+fit.r2 <- WAPLS(meanOTUabund.trim2, spdf.trim$ne.r2)
+fit.k <- WAPLS(meanOTUabund.trim2, spdf.trim$k)
+fit.t70 <- WAPLS(meanOTUabund.trim2, spdf.trim$t70)
+fit.alpha <- WAPLS(meanOTUabund.trim2, spdf.trim$alpha)
 
 #cross-validate models using the leave-one-out method
+fit.r2.cv.notrim <- crossval(fit.r2.notrim, cv.method="loo")
 fit.r2.cv <- crossval(fit.r2, cv.method="loo")
 fit.k.cv <- crossval(fit.k, cv.method="loo")
 fit.t70.cv <- crossval(fit.t70, cv.method="loo")
@@ -247,48 +225,68 @@ fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 #screeplot(fit.r2.cv)
 
 ```
-### Result:
--r2... none of the community components are significant predictors
-```{r}
-rand.t.test(fit.r2.cv)
+
+### r2  
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+#rand.t.test(fit.r2.cv)
+rand.t.test(fit.r2.cv.notrim)
 ```
--k... none of the community components are significant predictors
-```{r}
+
+### k
+
+**none of the community components are significant predictors**
+```{r, echo=FALSE}
 rand.t.test(fit.k.cv)
 ```
--t70... none of the community components are significant predictors
-```{r}
+
+### t70
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
 rand.t.test(fit.t70.cv)
 ```
--alpha --- note: don't interpret yet
-```{r}
+
+### alpha --- don't interpret yet
+```{r, echo=FALSE}
 rand.t.test(fit.alpha.cv)
 ```
 
 
+
+
+##########################################
+
 ## Community+traits as a predictor
-```{r}
+*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+
+```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
+
+#average OTU abundances by code
+meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
 
 #make sure that the residuals and community dataframes are aligned
 trait.residuals$code<-as.character(trait.residuals$code)
-trait.residuals[!trait.residuals$code %in% row.names(meanOTUabund.trim),"code"] # no missing from meanOTUabund.trim
-row.names(meanOTUabund.trim)[!row.names(meanOTUabund.trim) %in% trait.residuals$code] #missing olst from trait.residuals
-trait.residuals.trim<-trait.residuals[trait.residuals$code %in% row.names(meanOTUabund.trim),] #trim
-meanOTUabund.trim2<-meanOTUabund.trim[row.names(meanOTUabund.trim) %in% trait.residuals.trim$code,] #trim
-ord<-match(row.names(meanOTUabund.trim2), trait.residuals.trim$code)
+trait.residuals[!trait.residuals$code %in% row.names(meanOTUabund.trim2),"code"] # no missing from meanOTUabund.trim
+row.names(meanOTUabund.trim2)[!row.names(meanOTUabund.trim2) %in% trait.residuals$code] #missing olst from trait.residuals
+trait.residuals.trim<-trait.residuals[trait.residuals$code %in% row.names(meanOTUabund.trim2),] #trim
+meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% trait.residuals.trim$code,] #trim
+ord<-match(row.names(meanOTUabund.trim3), trait.residuals.trim$code)
 trait.residuals.trim.o<-trait.residuals.trim[ord,]
-sum(trait.residuals.trim.o$code != row.names(meanOTUabund.trim2)) #this needs to by 0
+sum(trait.residuals.trim.o$code != row.names(meanOTUabund.trim3)) #this needs to by 0
 
-#get rid of empty OTU cols
-sum(colSums(meanOTUabund.trim2)!=0)
-meanOTUabund.trim2<-meanOTUabund.trim2[,colSums(meanOTUabund.trim2)!=0]
+#make sure there are no empty OTU cols
+sum(colSums(meanOTUabund.trim3)==0)
 
 #fit models
-fit.tr.r2 <- WAPLS(meanOTUabund.trim2, trait.residuals.trim.o$r2.resid)
-fit.tr.k <- WAPLS(meanOTUabund.trim2, trait.residuals.trim.o$k.resid)
-fit.tr.t70 <- WAPLS(meanOTUabund.trim2, trait.residuals.trim.o$t70.resid)
-fit.tr.alpha <- WAPLS(meanOTUabund.trim2, trait.residuals.trim.o$alpha.resid)
+fit.tr.r2 <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$r2.resid)
+fit.tr.k <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$k.resid)
+fit.tr.t70 <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$t70.resid)
+fit.tr.alpha <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$alpha.resid)
 
 #cross-validate models using the leave-one-out method
 fit.tr.r2.cv <- crossval(fit.tr.r2, cv.method="loo")
@@ -300,48 +298,67 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 #screeplot(fit.r2.cv)
 
 ```
-*Result:*
--r2...none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
+
+
+### r2  
+
+**none of the community components are significant predictors**  
+
+Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
 ```{r}
 rand.t.test(fit.tr.r2.cv)
 ```
--k... none of the community components are significant predictors
+
+### k  
+
+**none of the community components are significant predictors**  
+
 ```{r}
 rand.t.test(fit.tr.k.cv)
 ```
--t70... none of the community components are significant predictors. Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
+
+### t70  
+
+**none of the community components are significant predictors**  
+
+Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 ```{r}
 rand.t.test(fit.tr.t70.cv) 
 ```
--alpha --- note: don't interpret yet
+
+### alpha --- don't interpret yet
 ```{r}
 rand.t.test(fit.tr.alpha.cv)
 ```
 
-*Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...*
+**Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...**
+
 Investigate the biology underlying t70-associated coefs for Comp05
-```{r}
-coef.comp5<-fit.tr.t70.cv$coefficients[,'Comp05']
-coef.comp5.df<-data.frame(OTUId=names(coef.comp5), coefComp5=coef.comp5)
+```{r, include=FALSE}
+#coef.comp5<-fit.tr.t70.cv$coefficients[,'Comp05']
+#coef.comp5.df<-data.frame(OTUId=names(coef.comp5), coefComp5=coef.comp5)
 
 #create df of OTU taxon and guild info matched with coef value
-coef.comp5.df %>%
-  left_join(taxAndFunguild) -> coef.comp5.ann
+#coef.comp5.df %>% left_join(taxAndFunguild) -> coef.comp5.ann
 ```
 By trophic mode (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
-```{r}
-ggplot(coef.comp5.ann, aes(x=Trophic.Mode, y=coefComp5)) + geom_violin() + coord_flip()
+```{r, include=FALSE}
+#ggplot(coef.comp5.ann, aes(x=Trophic.Mode, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
-```{r}
-ggplot(coef.comp5.ann, aes(x=Guild, y=coefComp5)) + geom_violin() + coord_flip()
+```{r, include=FALSE}
+#ggplot(coef.comp5.ann, aes(x=Guild, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 By phylum
-```{r}
-ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
+```{r, include=FALSE}
+#ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
 ```
 
 
+
+
+
+##########################################
 
 4. Diversity (and diversity of specific clades) as a predictor
 
@@ -477,4 +494,10 @@ grid.arrange(pathList[['ne.r2']] + guides(color=FALSE, shape=FALSE),
 3. *code/boralOTUpairs_vs_decay.Rmd* -- No apparent relationship between frequency of boral-ID'd positively/negatively correlated OTU pairs and decay params
 
 4. *code/withinInitialDist_vs_decayR2.Rmd* -- No apparent relationship between initial microbial diversity WITHIN species+size and decay model R2
+
+5. *code/unexpectedTaxa.Rmd* -- Mycorrhizal fungi and animal-associated fungi that somehow made it into our OTU table
+
+
+
+
 

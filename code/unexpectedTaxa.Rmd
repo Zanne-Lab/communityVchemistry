@@ -1,0 +1,58 @@
+---
+title: "Check for unexpected taxa"
+date: "11/9/2017"
+output: github_document
+---
+
+```{r,message=FALSE}
+#chunk options
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+#libraries
+library(dplyr)
+library(ggplot2)
+library(knitr)
+library(magrittr)
+library(tidyr)
+
+#fxns
+source("../code/otuIDs_fxns.R")
+```
+
+## LOAD DATA 
+
+### MICROBIAL COMMUNITY DATA
+```{r, echo=FALSE}
+
+#OTU table
+comm.otu<-read.csv("../derived_data/comm_otu.csv", row.names=1)
+
+#taxon lookup info
+taxAndFunguild<-read_csv("../derived_data/taxaAndFunguild.csv")
+
+```
+
+
+Check the OTU table for unexpected taxa....  
+
+- Arbuscular mycorrhizal fungi
+```{r, echo=FALSE}
+GlomOTUs<-taxAndFunguild[taxAndFunguild$phylum=="Glomeromycota","OTUId"]
+HowManyOfThese(otuIDs=GlomOTUs, taxAndFunguild, comm.otu)
+#am.otus<-taxAndFunguild[taxAndFunguild$Guild=="Arbuscular Mycorrhizal","OTUId"] #same as above
+#HowManyOfThese(otuIDs=am.otus, taxAndFunguild, comm.otu)
+```
+- Ericoid mycorrhizal fungi
+```{r, echo=FALSE}
+ericoid.otus<-taxAndFunguild[taxAndFunguild$Guild=="Ericoid Mycorrhizal","OTUId"]
+HowManyOfThese(otuIDs=ericoid.otus, taxAndFunguild, comm.otu)
+
+#.. orchidmyc.otus<-taxAndFunguild[taxAndFunguild$Guild=="Orchid Mycorrhizal","OTUId"]
+#HowManyOfThese(otuIDs=orchidmyc.otus, taxAndFunguild, comm.otu) #none
+```
+- Animal-associated fungi
+```{r, echo=FALSE}
+animal.otus<-taxAndFunguild[grepl('Animal', taxAndFunguild$Guild),"OTUId"]
+tmp<-HowManyOfThese(otuIDs=animal.otus, taxAndFunguild, comm.otu)
+paste(dim(tmp$tax)[1], "OTUs")
+```
