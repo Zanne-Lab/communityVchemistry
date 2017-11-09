@@ -3,30 +3,6 @@ Does chemistry or community better predict mass loss?
 Marissa Lee
 10/23/2017
 
-``` r
-#chunk options
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
-
-#libraries
-devtools::install_github("cornwell-lab-unsw/litterfitter")
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(vegan)
-library(knitr)
-library(litterfitter)
-library(magrittr)
-library(tidyr)
-library(gridExtra)
-library(rioja)
-
-#fxns
-source("code/load_fxns.R")
-source("code/curve_fitting_fxns.R")
-source("code/distance_fxns.R")
-source("code/otuIDs_fxns.R")
-```
-
 ### Load microbial community data
 
 ### Load wood trait data
@@ -138,34 +114,6 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
 
 ### alpha--- don't interpret yet
 
-    ## 
-    ## Call:
-    ## lm(formula = alpha ~ density + barkthick + P + K + Ca + Fe + 
-    ##     Zn + N + C, data = spdf.traits)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.28961 -0.10507  0.01239  0.05847  0.37028 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)  
-    ## (Intercept)  6.978e+00  2.515e+00   2.774   0.0111 *
-    ## density     -1.550e+00  5.595e-01  -2.770   0.0112 *
-    ## barkthick   -8.276e-02  5.373e-02  -1.540   0.1377  
-    ## P           -7.629e-04  5.649e-04  -1.350   0.1906  
-    ## K            6.411e-05  4.567e-05   1.404   0.1743  
-    ## Ca          -4.290e-05  2.474e-05  -1.735   0.0968 .
-    ## Fe          -3.027e-05  2.051e-05  -1.475   0.1543  
-    ## Zn           4.064e-03  1.897e-03   2.143   0.0435 *
-    ## N            3.470e-01  2.794e-01   1.242   0.2274  
-    ## C           -9.831e-02  4.674e-02  -2.103   0.0471 *
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.1989 on 22 degrees of freedom
-    ## Multiple R-squared:  0.6067, Adjusted R-squared:  0.4458 
-    ## F-statistic: 3.771 on 9 and 22 DF,  p-value: 0.005306
-
 ########################################## 
 
 Community as a predictor
@@ -188,10 +136,10 @@ Community as a predictor
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.902
-    ## Comp02 0.998
-    ## Comp03 0.712
-    ## Comp04 0.805
+    ## Comp01 0.898
+    ## Comp02 0.999
+    ## Comp03 0.710
+    ## Comp04 0.802
     ## Comp05 0.720
 
 ### k
@@ -205,11 +153,11 @@ Community as a predictor
     ## Comp04 0.1087908 0.02741427 0.013442320 0.2667951 -35.47840  2.6972785
     ## Comp05 0.1125616 0.01442363 0.011293413 0.2704606 -45.03280  3.4661026
     ##            p
-    ## Comp01 0.893
-    ## Comp02 0.541
-    ## Comp03 0.639
-    ## Comp04 0.876
-    ## Comp05 0.959
+    ## Comp01 0.884
+    ## Comp02 0.568
+    ## Comp03 0.636
+    ## Comp04 0.875
+    ## Comp05 0.964
 
 ### t70
 
@@ -222,26 +170,13 @@ Community as a predictor
     ## Comp04 0.5583885 0.08221500 -0.0056512738 1.349964 -16.751702  4.02377323
     ## Comp05 0.5693485 0.06691379  0.0058129906 1.431625 -21.379860  1.96278895
     ##            p
-    ## Comp01 0.870
-    ## Comp02 0.223
-    ## Comp03 0.468
-    ## Comp04 0.820
-    ## Comp05 0.834
+    ## Comp01 0.842
+    ## Comp02 0.215
+    ## Comp03 0.505
+    ## Comp04 0.837
+    ## Comp05 0.848
 
 ### alpha --- don't interpret yet
-
-    ##             RMSE           R2   Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.3217580 5.393130e-04 0.01725191 0.7545470 -54.20726  24.180214
-    ## Comp02 0.3108008 2.744262e-03 0.02498895 0.7692934 -43.88325  -3.405429
-    ## Comp03 0.3317582 4.810973e-05 0.04473939 0.7738432 -63.94162   6.743021
-    ## Comp04 0.3519272 1.367993e-02 0.03667556 0.8064912 -84.48099   6.079436
-    ## Comp05 0.3451306 9.703285e-03 0.03466600 0.8074728 -77.42424  -1.931244
-    ##            p
-    ## Comp01 0.967
-    ## Comp02 0.308
-    ## Comp03 0.931
-    ## Comp04 0.993
-    ## Comp05 0.199
 
 ########################################## 
 
@@ -256,10 +191,6 @@ Community+traits as a predictor
 
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
 
-``` r
-rand.t.test(fit.tr.r2.cv)
-```
-
     ##              RMSE           R2     Avg.Bias  Max.Bias      Skill
     ## Comp01 0.07083530 0.0004108819 -0.006446032 0.1400555  -61.51372
     ## Comp02 0.09185757 0.0006934417  0.002667991 0.1556453 -171.60633
@@ -267,19 +198,15 @@ rand.t.test(fit.tr.r2.cv)
     ## Comp04 0.09706111 0.0019152166  0.003816465 0.1568796 -203.24973
     ## Comp05 0.09665378 0.0024386184  0.004673572 0.1604111 -200.70985
     ##        delta.RMSE     p
-    ## Comp01  27.088047 0.993
-    ## Comp02  29.677682 0.998
-    ## Comp03   4.219463 0.917
-    ## Comp04   1.386804 0.802
-    ## Comp05  -0.419656 0.326
+    ## Comp01  27.088047 0.997
+    ## Comp02  29.677682 0.999
+    ## Comp03   4.219463 0.933
+    ## Comp04   1.386804 0.804
+    ## Comp05  -0.419656 0.304
 
 ### k
 
 **none of the community components are significant predictors**
-
-``` r
-rand.t.test(fit.tr.k.cv)
-```
 
     ##              RMSE         R2    Avg.Bias  Max.Bias     Skill delta.RMSE
     ## Comp01 0.05403597 0.01169109 0.000422351 0.1254135 -31.24173  14.560784
@@ -288,11 +215,11 @@ rand.t.test(fit.tr.k.cv)
     ## Comp04 0.05147371 0.04410936 0.005052921 0.1270141 -19.09043   3.073904
     ## Comp05 0.05142763 0.04472957 0.005796166 0.1291158 -18.87733  -0.089509
     ##            p
-    ## Comp01 0.853
-    ## Comp02 0.173
-    ## Comp03 0.216
-    ## Comp04 0.918
-    ## Comp05 0.486
+    ## Comp01 0.877
+    ## Comp02 0.166
+    ## Comp03 0.239
+    ## Comp04 0.920
+    ## Comp05 0.489
 
 ### t70
 
@@ -300,35 +227,14 @@ rand.t.test(fit.tr.k.cv)
 
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 
-``` r
-rand.t.test(fit.tr.t70.cv) 
-```
-
     ##             RMSE        R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p
-    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.262
-    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.552
-    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.895
-    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.707
-    ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.650
+    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.289
+    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.576
+    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.886
+    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.743
+    ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.664
 
 ### alpha --- don't interpret yet
-
-``` r
-rand.t.test(fit.tr.alpha.cv)
-```
-
-    ##             RMSE           R2      Avg.Bias  Max.Bias      Skill
-    ## Comp01 0.1847965 2.827379e-02 -0.0201047453 0.3426950  -25.54006
-    ## Comp02 0.2460519 1.842392e-04 -0.0053048937 0.4084135 -122.56047
-    ## Comp03 0.2612126 4.069172e-06  0.0020589171 0.4224961 -150.83203
-    ## Comp04 0.2658597 1.990507e-04  0.0062806609 0.4345492 -159.83617
-    ## Comp05 0.2667991 4.823803e-04 -0.0002445828 0.4396092 -161.67561
-    ##        delta.RMSE     p
-    ## Comp01 12.0446595 0.944
-    ## Comp02 33.1474500 0.994
-    ## Comp03  6.1616065 0.855
-    ## Comp04  1.7790289 0.626
-    ## Comp05  0.3533382 0.611
 
 **Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...**
 
@@ -345,168 +251,259 @@ By phylum
 Diversity (and diversity of specific clades) as a predictor
 -----------------------------------------------------------
 
-**Note that these community matrices have NOT been filtered to include just the OTUs that are present in at least 20% of samples**
+**Note that the full community matrix was used for these analyses**
 
 *Hyp:* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
 Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
-
-``` r
-# summarize the diversity in each sample
-rich.df<-Calc_richOTU(taxAndFunguild, comm.otu)
-H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
-
-# create a merged df wtih spdf
-rich.spdf<-Create_rich_spdf_DF(otutype.df=rich.df, spdf)
-H.spdf<-Create_rich_spdf_DF(otutype.df=H.df, spdf)
-
-# fit models
-mod.rich.r2<-lm(ne.r2~size+mean, data=rich.spdf)
-mod.rich.k<-lm(k~size+mean, data=rich.spdf)
-mod.rich.t70<-lm(t70~size+mean, data=rich.spdf)
-mod.rich.alpha<-lm(alpha~size+mean, data=rich.spdf)
-
-mod.H.r2<-lm(ne.r2~size+mean, data=H.spdf)
-mod.H.k<-lm(k~size+mean, data=H.spdf)
-mod.H.t70<-lm(t70~size+mean, data=H.spdf)
-mod.H.alpha<-lm(alpha~size+mean, data=H.spdf)
-
-# create plots
-richList<-Plot_richOTUtype(rich.spdf=rich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Total")
-H.List<-Plot_richOTUtype(rich.spdf=H.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Shannon's H")
-```
 
 ### Richness
 
 **No pattern**
 
-``` r
-# anova(mod.rich.r2)
-# anova(mod.rich.k)
-# anova(mod.rich.t70)
-# anova(mod.rich.alpha)
-```
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0179 0.8943
+    ## mean       1 0.000245 0.0002451  0.0305 0.8625
+    ## Residuals 30 0.240983 0.0080328
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.0055 0.03285 *
+    ## mean       1 0.000163 0.000163  0.0198 0.88904  
+    ## Residuals 30 0.246927 0.008231                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  5.9953 0.02041 *
+    ## mean       1 0.0226 0.02258  0.0925 0.76317  
+    ## Residuals 30 7.3263 0.24421                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.00140 0.001404  0.0205 0.8871
+    ## mean       1 0.15961 0.159615  2.3308 0.1373
+    ## Residuals 30 2.05446 0.068482
 
 ### Shannon's H
 
 **No pattern**
 
-``` r
-# anova(mod.H.r2)
-# anova(mod.H.k)
-# anova(mod.H.t70)
-# anova(mod.H.alpha)
-```
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0181 0.8939
+    ## mean       1 0.002429 0.0024291  0.3052 0.5848
+    ## Residuals 30 0.238799 0.0079600
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.1360 0.03081 *
+    ## mean       1 0.006437 0.006437  0.8024 0.37750  
+    ## Residuals 30 0.240653 0.008022                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  6.2830 0.01784 *
+    ## mean       1 0.3580 0.35804  1.5365 0.22475  
+    ## Residuals 30 6.9908 0.23303                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.0014 0.001404  0.0196 0.8896
+    ## mean       1 0.0657 0.065698  0.9174 0.3458
+    ## Residuals 30 2.1484 0.071613
 
 *Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
-
-``` r
-# summarize the presence of ... in each sample
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
-
-# create a merged df wtih spdf
-saprorich.spdf<-Create_rich_spdf_DF(otutype.df=sapro.df, spdf)
-basidrich.spdf<-Create_rich_spdf_DF(otutype.df=basidio.df, spdf)
-
-# fit models
-mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
-mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
-mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
-mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
-mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
-mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
-mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
-mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
-
-# create plots
-sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Saprotroph")
-basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Basidio")
-```
 
 ### Saprotroph richness
 
 **No pattern**
 
-``` r
-#anova(mod.sapro.r2)
-#anova(mod.sapro.k)
-#anova(mod.sapro.t70)
-#anova(mod.sapro.alpha) #marginally-signif
-#sapList[['alpha']]
-```
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0179 0.8944
+    ## mean       1 0.000006 0.0000062  0.0008 0.9780
+    ## Residuals 30 0.241222 0.0080407
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df  Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.04120 0.041200  5.0515 0.03211 *
+    ## mean       1 0.00241 0.002410  0.2955 0.59075  
+    ## Residuals 30 0.24468 0.008156                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  5.9893 0.02046 *
+    ## mean       1 0.0152 0.01524  0.0624 0.80452  
+    ## Residuals 30 7.3336 0.24445                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)  
+    ## size       1 0.00140 0.001404  0.0211 0.8854  
+    ## mean       1 0.22078 0.220782  3.3229 0.0783 .
+    ## Residuals 30 1.99330 0.066443                 
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ### Basidio richness
 
 **No pattern**
 
-``` r
-#anova(mod.basid.r2)
-#anova(mod.basid.k)
-#anova(mod.basid.t70)
-#anova(mod.basid.alpha)
-```
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0179 0.8944
+    ## mean       1 0.000072 0.0000717  0.0089 0.9254
+    ## Residuals 30 0.241157 0.0080386
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.1545 0.03053 *
+    ## mean       1 0.007301 0.007301  0.9134 0.34686  
+    ## Residuals 30 0.239789 0.007993                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  6.1675 0.01883 *
+    ## mean       1 0.2271 0.22708  0.9565 0.33588  
+    ## Residuals 30 7.1218 0.23739                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.00140 0.001404  0.0200 0.8886
+    ## mean       1 0.10539 0.105391  1.4994 0.2303
+    ## Residuals 30 2.10869 0.070290
 
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
-
-``` r
-# summarize the presence of ... in each sample
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu) # have to do this with the full community matrix because there are so few of these guys
-
-# create a merged df wtih spdf
-pathrich.spdf<-Create_rich_spdf_DF(otutype.df=path.df, spdf)
-oomyrich.spdf<-Create_rich_spdf_DF(otutype.df=oomy.df, spdf)
-
-# fit models
-mod.path.r2<-lm(ne.r2~size+mean, data=pathrich.spdf)
-mod.path.k<-lm(k~size+mean, data=pathrich.spdf)
-mod.path.t70<-lm(t70~size+mean, data=pathrich.spdf)
-mod.path.alpha<-lm(alpha~size+mean, data=pathrich.spdf)
-mod.oomy.r2<-lm(ne.r2~size+mean, data=oomyrich.spdf)
-mod.oomy.k<-lm(k~size+mean, data=oomyrich.spdf)
-mod.oomy.t70<-lm(t70~size+mean, data=oomyrich.spdf)
-mod.oomy.alpha<-lm(alpha~size+mean, data=oomyrich.spdf)
-
-# create plots
-pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Pathogen")
-ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Oomycete")
-```
 
 ### Pathogen richness
 
 **No pattern**
 
-``` r
-#anova(mod.path.r2)
-#anova(mod.path.k)
-#anova(mod.path.t70)
-#anova(mod.path.alpha) #marginally signif
-#pathList[['alpha']]
-```
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0181 0.8940
+    ## mean       1 0.001760 0.0017599  0.2205 0.6421
+    ## Residuals 30 0.239469 0.0079823
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.0603 0.03197 *
+    ## mean       1 0.002835 0.002835  0.3482 0.55956  
+    ## Residuals 30 0.244255 0.008142                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  6.2855 0.01782 *
+    ## mean       1 0.3608 0.36079  1.5489 0.22294  
+    ## Residuals 30 6.9881 0.23294                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.00140 0.001404  0.0215 0.88430  
+    ## mean       1 0.25844 0.258439  3.9645 0.05564 .
+    ## Residuals 30 1.95564 0.065188                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ### Oomycete richness
 
 **No pattern**
 
-``` r
-#anova(mod.oomy.r2)
-#anova(mod.oomy.k)
-#anova(mod.oomy.t70)
-#anova(mod.oomy.alpha)
-```
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0184 0.8931
+    ## mean       1 0.005902 0.0059025  0.7525 0.3926
+    ## Residuals 30 0.235326 0.0078442
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.0038 0.03288 *
+    ## mean       1 0.000077 0.000077  0.0093 0.92374  
+    ## Residuals 30 0.247013 0.008234                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  5.9831 0.02052 *
+    ## mean       1 0.0076 0.00763  0.0312 0.86099  
+    ## Residuals 30 7.3412 0.24471                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.00140 0.001404  0.0192 0.8906
+    ## mean       1 0.02338 0.023381  0.3202 0.5757
+    ## Residuals 30 2.19070 0.073023
 
 ############################################## 
 
@@ -519,17 +516,179 @@ Diversity plus traits as a predictor
 
 **No pattern**
 
+    ## $r2
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0179 0.8943
+    ## mean       1 0.000245 0.0002451  0.0305 0.8625
+    ## Residuals 30 0.240983 0.0080328               
+    ## 
+    ## $k
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.0055 0.03285 *
+    ## mean       1 0.000163 0.000163  0.0198 0.88904  
+    ## Residuals 30 0.246927 0.008231                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $t70
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  5.9953 0.02041 *
+    ## mean       1 0.0226 0.02258  0.0925 0.76317  
+    ## Residuals 30 7.3263 0.24421                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $alpha
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.00140 0.001404  0.0205 0.8871
+    ## mean       1 0.15961 0.159615  2.3308 0.1373
+    ## Residuals 30 2.05446 0.068482
+
 ### Shannon's H
 
 **No pattern**
+
+    ## $r2
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0181 0.8939
+    ## mean       1 0.002429 0.0024291  0.3052 0.5848
+    ## Residuals 30 0.238799 0.0079600               
+    ## 
+    ## $k
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.1360 0.03081 *
+    ## mean       1 0.006437 0.006437  0.8024 0.37750  
+    ## Residuals 30 0.240653 0.008022                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $t70
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  6.2830 0.01784 *
+    ## mean       1 0.3580 0.35804  1.5365 0.22475  
+    ## Residuals 30 6.9908 0.23303                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $alpha
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.0014 0.001404  0.0196 0.8896
+    ## mean       1 0.0657 0.065698  0.9174 0.3458
+    ## Residuals 30 2.1484 0.071613
 
 ### Saprotroph richness
 
 **No pattern**
 
+    ## $r2
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0179 0.8944
+    ## mean       1 0.000006 0.0000062  0.0008 0.9780
+    ## Residuals 30 0.241222 0.0080407               
+    ## 
+    ## $k
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df  Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.04120 0.041200  5.0515 0.03211 *
+    ## mean       1 0.00241 0.002410  0.2955 0.59075  
+    ## Residuals 30 0.24468 0.008156                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $t70
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  5.9893 0.02046 *
+    ## mean       1 0.0152 0.01524  0.0624 0.80452  
+    ## Residuals 30 7.3336 0.24445                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $alpha
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)  
+    ## size       1 0.00140 0.001404  0.0211 0.8854  
+    ## mean       1 0.22078 0.220782  3.3229 0.0783 .
+    ## Residuals 30 1.99330 0.066443                 
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+
 ### Basidio richness
 
 **No pattern**
+
+    ## $r2
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0179 0.8944
+    ## mean       1 0.000072 0.0000717  0.0089 0.9254
+    ## Residuals 30 0.241157 0.0080386               
+    ## 
+    ## $k
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.1545 0.03053 *
+    ## mean       1 0.007301 0.007301  0.9134 0.34686  
+    ## Residuals 30 0.239789 0.007993                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $t70
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  6.1675 0.01883 *
+    ## mean       1 0.2271 0.22708  0.9565 0.33588  
+    ## Residuals 30 7.1218 0.23739                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $alpha
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.00140 0.001404  0.0200 0.8886
+    ## mean       1 0.10539 0.105391  1.4994 0.2303
+    ## Residuals 30 2.10869 0.070290
 
 ### Pathogen richness
 
@@ -580,6 +739,46 @@ Diversity plus traits as a predictor
 ### Oomycete richness
 
 **No pattern**
+
+    ## $r2
+    ## Analysis of Variance Table
+    ## 
+    ## Response: ne.r2
+    ##           Df   Sum Sq   Mean Sq F value Pr(>F)
+    ## size       1 0.000144 0.0001441  0.0184 0.8931
+    ## mean       1 0.005902 0.0059025  0.7525 0.3926
+    ## Residuals 30 0.235326 0.0078442               
+    ## 
+    ## $k
+    ## Analysis of Variance Table
+    ## 
+    ## Response: k
+    ##           Df   Sum Sq  Mean Sq F value  Pr(>F)  
+    ## size       1 0.041200 0.041200  5.0038 0.03288 *
+    ## mean       1 0.000077 0.000077  0.0093 0.92374  
+    ## Residuals 30 0.247013 0.008234                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $t70
+    ## Analysis of Variance Table
+    ## 
+    ## Response: t70
+    ##           Df Sum Sq Mean Sq F value  Pr(>F)  
+    ## size       1 1.4641 1.46411  5.9831 0.02052 *
+    ## mean       1 0.0076 0.00763  0.0312 0.86099  
+    ## Residuals 30 7.3412 0.24471                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## $alpha
+    ## Analysis of Variance Table
+    ## 
+    ## Response: alpha
+    ##           Df  Sum Sq  Mean Sq F value Pr(>F)
+    ## size       1 0.00140 0.001404  0.0192 0.8906
+    ## mean       1 0.02338 0.023381  0.3202 0.5757
+    ## Residuals 30 2.19070 0.073023
 
 ############################################## 
 
