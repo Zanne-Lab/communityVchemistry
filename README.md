@@ -3,6 +3,18 @@ Does chemistry or community better predict mass loss?
 Marissa Lee
 10/23/2017
 
+Blurb the captures the key questions and analyses that can be a launching point for discussion of framing the chemistryVcommunity paper....
+
+Wood decay rates can vary enormously between species with important conseqences for the nutrient and carbon balance of ecosystems.
+
+We often look to initial wood traits to explain variation in decay rates and functional form across woody species. Specifically, traits that describe the physical construction and chemical composition of the initial woody material are usually informative; i.e. wood density, lignin and nitrogen content.
+
+In addition, experimental studies have shown that biological interactions among wood-dwelling fungi can have a large impact on decay. In particular, 'priority effects', or the order in which fungal taxa arrive, can drive variation in decay. This outcome is likely a result of either/both (i) species-specific inhibitive and facilitative interactions and/or (ii) stochastic arrival of key decayers.
+
+In this study, we ask whether variation in endophytic fungal communities (composition, diversity, diversity of specific clades) *between* wood species shapes the trajectory of decay. Moreover, we want to know the extent to which this type of predictor is similar to and differenent from information gained by wood traits. ...
+
+.
+
 ### Load microbial community data
 
 ### Load wood trait data
@@ -136,11 +148,11 @@ Community as a predictor
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.898
+    ## Comp01 0.899
     ## Comp02 0.999
-    ## Comp03 0.710
-    ## Comp04 0.802
-    ## Comp05 0.720
+    ## Comp03 0.730
+    ## Comp04 0.782
+    ## Comp05 0.699
 
 ### k
 
@@ -153,11 +165,11 @@ Community as a predictor
     ## Comp04 0.1087908 0.02741427 0.013442320 0.2667951 -35.47840  2.6972785
     ## Comp05 0.1125616 0.01442363 0.011293413 0.2704606 -45.03280  3.4661026
     ##            p
-    ## Comp01 0.884
-    ## Comp02 0.568
-    ## Comp03 0.636
-    ## Comp04 0.875
-    ## Comp05 0.964
+    ## Comp01 0.896
+    ## Comp02 0.553
+    ## Comp03 0.628
+    ## Comp04 0.883
+    ## Comp05 0.965
 
 ### t70
 
@@ -170,11 +182,11 @@ Community as a predictor
     ## Comp04 0.5583885 0.08221500 -0.0056512738 1.349964 -16.751702  4.02377323
     ## Comp05 0.5693485 0.06691379  0.0058129906 1.431625 -21.379860  1.96278895
     ##            p
-    ## Comp01 0.842
+    ## Comp01 0.855
     ## Comp02 0.215
-    ## Comp03 0.505
-    ## Comp04 0.837
-    ## Comp05 0.848
+    ## Comp03 0.510
+    ## Comp04 0.843
+    ## Comp05 0.860
 
 ### alpha --- don't interpret yet
 
@@ -198,11 +210,11 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
     ## Comp04 0.09706111 0.0019152166  0.003816465 0.1568796 -203.24973
     ## Comp05 0.09665378 0.0024386184  0.004673572 0.1604111 -200.70985
     ##        delta.RMSE     p
-    ## Comp01  27.088047 0.997
-    ## Comp02  29.677682 0.999
-    ## Comp03   4.219463 0.933
-    ## Comp04   1.386804 0.804
-    ## Comp05  -0.419656 0.304
+    ## Comp01  27.088047 0.996
+    ## Comp02  29.677682 1.000
+    ## Comp03   4.219463 0.913
+    ## Comp04   1.386804 0.780
+    ## Comp05  -0.419656 0.293
 
 ### k
 
@@ -216,10 +228,10 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
     ## Comp05 0.05142763 0.04472957 0.005796166 0.1291158 -18.87733  -0.089509
     ##            p
     ## Comp01 0.877
-    ## Comp02 0.166
-    ## Comp03 0.239
-    ## Comp04 0.920
-    ## Comp05 0.489
+    ## Comp02 0.182
+    ## Comp03 0.186
+    ## Comp04 0.945
+    ## Comp05 0.483
 
 ### t70
 
@@ -228,11 +240,11 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 
     ##             RMSE        R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p
-    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.289
-    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.576
-    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.886
-    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.743
-    ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.664
+    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.256
+    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.531
+    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.898
+    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.715
+    ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.643
 
 ### alpha --- don't interpret yet
 
@@ -782,8 +794,73 @@ Diversity plus traits as a predictor
 
 ############################################## 
 
+Relationship between wood traits and community
+----------------------------------------------
+
+*Hyp:* Average initial microbial communitiy compositions will covary with initial wood traits
+
+``` r
+#average OTU abundances by code
+meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
+
+#get rid of missing data from traits.mean
+traits.mean %>%
+  filter(!is.na(waterperc)) %>% #get NaN row
+  filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
+
+#make sure dimensions of the community matrix match
+meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
+
+#make a envVars matrix for model fitting
+envVars<-as.matrix(traits.mean.trim[,-(1:3)])
+
+#fit models
+fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
+fit.cca
+```
+
+    ## Call: cca(formula = meanOTUabund.trim3 ~ envVars)
+    ## 
+    ##               Inertia Proportion Rank
+    ## Total          6.3027     1.0000     
+    ## Constrained    2.4529     0.3892   11
+    ## Unconstrained  3.8499     0.6108   20
+    ## Inertia is mean squared contingency coefficient 
+    ## 
+    ## Eigenvalues for constrained axes:
+    ##   CCA1   CCA2   CCA3   CCA4   CCA5   CCA6   CCA7   CCA8   CCA9  CCA10 
+    ## 0.4651 0.3617 0.3376 0.3269 0.2671 0.1797 0.1409 0.1104 0.1072 0.0829 
+    ##  CCA11 
+    ## 0.0733 
+    ## 
+    ## Eigenvalues for unconstrained axes:
+    ##    CA1    CA2    CA3    CA4    CA5    CA6    CA7    CA8 
+    ## 0.5121 0.4635 0.3576 0.2992 0.2897 0.2709 0.2157 0.2003 
+    ## (Showed only 8 of all 20 unconstrained eigenvalues)
+
+``` r
+plot(fit.cca)
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-40-1.png)
+
+``` r
+anova(fit.cca)
+```
+
+    ## Permutation test for cca under reduced model
+    ## Permutation: free
+    ## Number of permutations: 999
+    ## 
+    ## Model: cca(formula = meanOTUabund.trim3 ~ envVars)
+    ##          Df ChiSquare      F Pr(>F)
+    ## Model    11    2.4529 1.1584  0.135
+    ## Residual 20    3.8499
+
+############################################## 
+
 Extra pieces
-============
+------------
 
 1.  *code/testing\_time\_zero.Rmd* -- Including t=0 points to fit decay model affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation. Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity.
 
