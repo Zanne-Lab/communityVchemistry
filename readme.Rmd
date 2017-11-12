@@ -5,6 +5,21 @@ date: "10/23/2017"
 output: github_document
 ---
 
+Blurb the captures the key questions and analyses that can be a launching point for discussion of framing the chemistryVcommunity paper....
+
+Wood decay rates can vary enormously between species with important conseqences for the nutrient and carbon balance of ecosystems.  
+
+We often look to initial wood traits to explain variation in decay rates and functional form across woody species. Specifically, traits that describe the physical construction and chemical composition of the initial woody material are usually informative; i.e. wood density, lignin and nitrogen content.  
+
+In addition, experimental studies have shown that biological interactions among wood-dwelling fungi can have a large impact on decay. In particular, 'priority effects', or the order in which fungal taxa arrive, can drive variation in decay.  This outcome is likely a result of either/both (i) species-specific inhibitive and facilitative interactions and/or (ii) stochastic arrival of key decayers. 
+
+In this study, we ask whether variation in endophytic fungal communities (composition, diversity, diversity of specific clades) *between* wood species shapes the trajectory of decay. Moreover, we want to know the extent to which this type of predictor is similar to and differenent from information gained by wood traits. ...
+
+.
+
+
+
+
 ```{r, echo=FALSE, message=FALSE}
 #chunk options
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
@@ -609,10 +624,41 @@ lapply(mod.oomy, anova)
 
 
 
+##############################################
+
+## Relationship between wood traits and community
+*Hyp:* Average initial microbial communitiy compositions will covary with initial wood traits
+
+```{r}
+
+#average OTU abundances by code
+meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
+
+#get rid of missing data from traits.mean
+traits.mean %>%
+  filter(!is.na(waterperc)) %>% #get NaN row
+  filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
+
+#make sure dimensions of the community matrix match
+meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
+
+#make a envVars matrix for model fitting
+envVars<-as.matrix(traits.mean.trim[,-(1:3)])
+
+#fit models
+fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
+fit.cca
+plot(fit.cca)
+anova(fit.cca)
+
+
+```
+
+
 
 ##############################################
 
-# Extra pieces
+## Extra pieces
 
 1. *code/testing_time_zero.Rmd* -- Including t=0 points to fit decay model affects the liklihood and the model selection criteria, but the curve fits are identical with this formulation.  Excluding the t=0 fits has an effect of prefering simpler models, which is the same effect as increasing the penalty for model complexity. 
 
