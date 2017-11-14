@@ -92,8 +92,6 @@ Wood traits as a predictor
     ## Multiple R-squared:  0.4107, Adjusted R-squared:  0.3738 
     ## F-statistic: 11.15 on 3 and 48 DF,  p-value: 1.139e-05
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-7-1.png)
-
 ### time 37
 
 **larger size stems, less water content, more P leads to more mass remaining after 37 months**
@@ -123,8 +121,6 @@ Wood traits as a predictor
     ## Residual standard error: 0.1324 on 43 degrees of freedom
     ## Multiple R-squared:  0.6233, Adjusted R-squared:  0.562 
     ## F-statistic: 10.16 on 7 and 43 DF,  p-value: 1.968e-07
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-8-1.png)
 
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
 
@@ -254,11 +250,11 @@ Community as a predictor
     ## Comp04 0.1879489 0.2205367  0.003539710 0.2822099  6.062045  7.2766925
     ## Comp05 0.1967444 0.1897768  0.002389760 0.2656368 -2.935780  4.6797384
     ##            p
-    ## Comp01 0.391
-    ## Comp02 0.041
-    ## Comp03 0.484
-    ## Comp04 0.981
-    ## Comp05 0.934
+    ## Comp01 0.377
+    ## Comp02 0.042
+    ## Comp03 0.520
+    ## Comp04 0.984
+    ## Comp05 0.922
 
     ##             RMSE        R2     Avg.Bias  Max.Bias    Skill  delta.RMSE
     ## Comp01 0.1668533 0.2925742 -0.001261747 0.3122426 25.96599 -13.9569840
@@ -267,11 +263,11 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.044
-    ## Comp02 0.235
-    ## Comp03 0.940
-    ## Comp04 0.825
-    ## Comp05 0.922
+    ## Comp01 0.034
+    ## Comp02 0.206
+    ## Comp03 0.947
+    ## Comp04 0.835
+    ## Comp05 0.915
 
 Investigate the biology underlying time37-associated coefs for Comp02
 
@@ -307,10 +303,10 @@ Community+traits as a predictor
     ## Comp04 0.1861811 2.670958e-03 -0.01869200 0.3402859  -95.12131   2.672318
     ## Comp05 0.2000881 9.511791e-03 -0.01941544 0.3603079 -125.35962   7.469616
     ##            p
-    ## Comp01 0.995
-    ## Comp02 0.593
-    ## Comp03 0.985
-    ## Comp04 0.833
+    ## Comp01 0.997
+    ## Comp02 0.605
+    ## Comp03 0.990
+    ## Comp04 0.854
     ## Comp05 1.000
 
     ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
@@ -321,10 +317,10 @@ Community+traits as a predictor
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.054
-    ## Comp03 0.975
-    ## Comp04 0.845
-    ## Comp05 0.388
+    ## Comp02 0.060
+    ## Comp03 0.983
+    ## Comp04 0.841
+    ## Comp05 0.390
 
 Investigate the biology underlying time13-associated coefs for Comp02
 

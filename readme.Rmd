@@ -235,8 +235,8 @@ summary(mod.select.t13) # size, waterperc, N
 
 ```{r, echo=FALSE}
 summary(mod.select.t25) # size, waterperc, P
-ggplot(datasets[['time25']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
-  geom_point() + ylab("Mass remaining after 25 months (%)") + facet_grid(~size)
+#ggplot(datasets[['time25']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
+#  geom_point() + ylab("Mass remaining after 25 months (%)") + facet_grid(~size)
 ```
 
 ### time 37
@@ -245,8 +245,8 @@ ggplot(datasets[['time25']], aes(x=waterperc, y=curr.time*100, color=species, si
 
 ```{r, echo=FALSE}
 summary(mod.select.t37) # size, waterperc, P
-ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
-  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
+#ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
+#  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
 ```
 
 
