@@ -22,6 +22,7 @@ library(magrittr)
 library(tidyr)
 library(gridExtra)
 library(rioja)
+library(colorspace)
 
 #fxns
 source("code/load_fxns.R")
@@ -120,7 +121,7 @@ pmr.byStem.df %>%
   rename('time0'=`0`,
          'time7'=`7`,
          'time13'=`13`,
-         'time15'=`25`,
+         'time25'=`25`,
          'time37'=`37`) -> pmr.byStem.df.w
 
 ### CALCULATE DECAY TRAJECTORY FITS
@@ -142,6 +143,114 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 ##########################################
 
 ## Wood traits as a predictor
+
+*Hyp:* Stem-specific initial wood traits will predict variation in percent mass loss.
+```{r}
+
+#function to pull out samples with complete trait info
+CreateTraitPMRpair<-function(timePoint, traits.codeStem, pmr.byStem.df.w){
+  
+  #make a dataframe using the current time point's pmr and remove NAs
+  pmr.byStem.df.w %>%
+    select_("codeStem",timePoint) %>%
+    rename_("curr.time"=timePoint) %>%
+    filter(!is.na(curr.time)) -> pmr.noNAs
+  
+  #subset the trait matrix using these unique codeStems
+  traits.codeStem %>%
+    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
+  
+  #most complete trait set
+  curr.traits %>%
+    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
+  #curr.traits<-curr.traits[complete.cases(curr.traits),] #so few if you do this..
+
+  #get rid of pmr rows for which there is missing trait data
+  pmr.noNAs %>%
+    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
+    
+  #merge the dataframes
+  curr.df<-left_join(curr.pmr, curr.traits) 
+  
+  #add code and species and size
+  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
+  curr.df$species<-tolower(curr.df$code)
+  curr.df$size<-"large"
+  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
+  
+  return(curr.df)
+    
+  }
+
+timeList<-list('time7','time13','time25','time37')
+
+#very few complete cases of wood traits on stem-level
+#density and barkthick only on small stems
+datasets<-lapply(timeList, CreateTraitPMRpair, traits.codeStem, pmr.byStem.df.w)
+names(datasets)<-c('time7','time13','time25','time37')
+
+#fit full models (no barkthick or density because these weren't measured on small stems)
+mod.full.t7<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time7']])
+mod.full.t13<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
+mod.full.t25<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
+mod.full.t37<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
+
+#do stepwise model selection
+mod.select.t7<-step(mod.full.t7, direction="backward")
+mod.select.t13<-step(mod.full.t13, direction="backward")
+mod.select.t25<-step(mod.full.t25, direction="backward")
+mod.select.t37<-step(mod.full.t37, direction="backward")
+
+#save the residuals
+traitResid.t7<- data.frame(codeStem = datasets[['time7']]$codeStem, trait.resid = mod.select.t7$residuals)
+traitResid.t13<- data.frame(codeStem = datasets[['time13']]$codeStem, trait.resid = mod.select.t13$residuals)
+traitResid.t25<- data.frame(codeStem = datasets[['time25']]$codeStem, trait.resid = mod.select.t25$residuals)
+traitResid.t37<- data.frame(codeStem = datasets[['time37']]$codeStem, trait.resid = mod.select.t37$residuals)
+
+```
+
+### time7 
+
+**less water content and C leads to more mass remaining after 7 months**  
+
+```{r, echo=FALSE}
+summary(mod.select.t7) # waterperc, C (marginally)
+#ggplot(datasets[['time7']], aes(x=waterperc, y=curr.time*100, color=species)) + 
+#  geom_point() + ylab("Mass remaining after 7 months (%)")
+```
+
+### time 13
+
+**larger size stems, less water content, more P and Mn, and less N leads to more mass remaining after 13 months**  
+
+```{r, echo=FALSE}
+summary(mod.select.t13) # size, waterperc, N
+#ggplot(datasets[['time13']], aes(x=waterperc, y=curr.time*100, color=species, size=N)) + 
+#  geom_point() + ylab("Mass remaining after 13 months (%)") + facet_grid(~size)
+```
+
+### time 25
+
+**larger size stems, less water content, more P leads to more mass remaining after 25 months**  
+
+```{r, echo=FALSE}
+summary(mod.select.t25) # size, waterperc, P
+ggplot(datasets[['time25']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
+  geom_point() + ylab("Mass remaining after 25 months (%)") + facet_grid(~size)
+```
+
+### time 37
+
+**larger size stems, less water content, more P leads to more mass remaining after 37 months**  
+
+```{r, echo=FALSE}
+summary(mod.select.t37) # size, waterperc, P
+ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
+  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
+```
+
+
+
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
 ```{r, include=FALSE}
 
@@ -224,7 +333,6 @@ summary(mod.select.alpha) # density, Zn, C
 ##########################################
 
 ## Community as a predictor
-*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
 ### First, filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
 ```{r, echo=FALSE}
@@ -237,6 +345,161 @@ paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 
 ```
 
+
+*Hyp:* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+```{r}
+
+#fxns
+reformatMatrix<-function(commmat){
+  newmat<-matrix(as.numeric(as.matrix(commmat)), ncol=dim(commmat)[2], nrow=dim(commmat)[1])
+  return(newmat)
+}
+CreateCommPMRpair<-function(timePoint, comm.mat, pmr.byStem.df.w){
+    
+  #make a dataframe using the current time point's pmr and remove NAs
+  pmr.byStem.df.w %>%
+    select_("codeStem",timePoint) %>%
+    rename_("curr.time"=timePoint) %>%
+    filter(!is.na(curr.time)) -> pmr.noNAs
+  
+  #subset the community matrix using these unique codeStems
+  curr.comm<-comm.mat[row.names(comm.mat) %in% pmr.noNAs$codeStem,]
+  curr.comm<-curr.comm[,colSums(curr.comm) != 0] #get rid of any OTU columns with all 0s
+    
+  #get rid of pmr rows for which there is missing community data
+  pmr.noNAs %>%
+    filter(codeStem %in% row.names(curr.comm)) -> curr.pmr
+    
+    #make sure the row orders match
+    ord<-match(row.names(curr.comm), curr.pmr$codeStem)
+    curr.pmr<-curr.pmr[ord,]
+    
+    #reformat the community matrix
+    curr.comm.reform<-reformatMatrix(curr.comm)
+    row.names(curr.comm.reform)<-row.names(curr.comm)
+    colnames(curr.comm.reform)<-colnames(curr.comm)
+    
+    modelDat.list<-list(pmr=curr.pmr, comm=curr.comm.reform)
+    
+    return(modelDat.list)
+    
+  }
+
+timeList<-list('time7','time13','time25','time37')
+datasets<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu.trimmed, pmr.byStem.df.w)
+names(datasets)<-c('time7','time13','time25','time37')
+datasets.nt<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu, pmr.byStem.df.w)
+names(datasets.nt)<-c('time7','time13','time25','time37')
+
+#fit models
+fit.t7 <- WAPLS(datasets[['time7']][['comm']], datasets[['time7']][['pmr']]$curr.time)
+fit.t13 <- WAPLS(datasets[['time13']][['comm']], datasets[['time13']][['pmr']]$curr.time)
+fit.t25 <- WAPLS(datasets[['time25']][['comm']], datasets[['time25']][['pmr']]$curr.time)
+fit.t37 <- WAPLS(datasets[['time37']][['comm']], datasets[['time37']][['pmr']]$curr.time)
+fit.t7.notrim <- WAPLS(datasets.nt[['time7']][['comm']], datasets.nt[['time7']][['pmr']]$curr.time)
+fit.t13.notrim <- WAPLS(datasets.nt[['time13']][['comm']], datasets.nt[['time13']][['pmr']]$curr.time)
+fit.t25.notrim <- WAPLS(datasets.nt[['time25']][['comm']], datasets.nt[['time25']][['pmr']]$curr.time)
+fit.t37.notrim <- WAPLS(datasets.nt[['time37']][['comm']], datasets.nt[['time37']][['pmr']]$curr.time)
+
+#cross-validate models using the leave-one-out method
+fit.t7.cv <- crossval(fit.t7, cv.method="loo")
+fit.t13.cv <- crossval(fit.t13, cv.method="loo")
+fit.t25.cv <- crossval(fit.t25, cv.method="loo")
+fit.t37.cv <- crossval(fit.t37, cv.method="loo")
+fit.t7.nt.cv <- crossval(fit.t7.notrim, cv.method="loo")
+fit.t13.nt.cv <- crossval(fit.t13.notrim, cv.method="loo")
+fit.t25.nt.cv <- crossval(fit.t25.notrim, cv.method="loo")
+fit.t37.nt.cv <- crossval(fit.t37.notrim, cv.method="loo")
+
+#perform randomization t-test to test the significance of a cross-validated model....
+```
+
+### time 7
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+rand.t.test(fit.t7.cv) 
+rand.t.test(fit.t7.nt.cv)
+```
+
+### time 13
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+rand.t.test(fit.t13.cv) 
+rand.t.test(fit.t13.nt.cv) #marginally-significant Comp02
+```
+
+### time 25
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+rand.t.test(fit.t25.cv) 
+rand.t.test(fit.t25.nt.cv)
+```
+
+### time 37
+
+**Comp01 is significant**
+**if trim out OTUs that are not present in at least 20% of samples...Comp02 is marginally significant**
+
+```{r, echo=FALSE}
+rand.t.test(fit.t37.cv) # signif Comp02
+rand.t.test(fit.t37.nt.cv) #signif Comp01
+```
+
+Investigate the biology underlying time37-associated coefs for Comp02
+```{r, include=FALSE}
+coef.comp<-fit.t37.cv$coefficients[,'Comp02']
+coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
+
+#create df of OTU taxon and guild info matched with coef value
+coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
+unique(coef.comp.ann$kingdom)
+
+```
+By trophic mode (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+```{r, include=FALSE}
+#define cols
+colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
+names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
+colvals['unclassified']<-"#D3D3D3"
+
+ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Trophic.Mode)) + 
+  geom_point() + coord_flip() +
+  xlab("Fungal genus") + ylab("Component coefficient estimate") +
+  scale_color_manual(name="Trophic mode", values=colvals) +
+  theme_classic() +
+  geom_hline(yintercept=0, linetype=2)
+
+#color the genus axis labels by asco/basidio
+
+
+```
+By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+```{r, include=FALSE}
+#define cols
+colvals<-rainbow_hcl(length(unique(coef.comp.ann$Guild)))
+names(colvals)<-unique(coef.comp.ann$Guild)
+colvals['unclassified']<-"#D3D3D3"
+
+ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Guild)) + 
+  geom_point() + coord_flip() +
+  xlab("Fungal genus") + ylab("Component coefficient estimate") +
+  scale_color_manual(name="Guild", values=colvals) +
+  theme_classic() +
+  geom_hline(yintercept=0, linetype=2)
+
+#color the genus axis labels by asco/basidio
+
+```
+
+
+
+*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 
 #average OTU abundances by code
@@ -301,6 +564,240 @@ rand.t.test(fit.alpha.cv)
 ##########################################
 
 ## Community+traits as a predictor
+
+*Hyp:* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+
+```{r, include=FALSE, results=FALSE, message=FALSE}
+#run rioja::WAPLS on wood trait residuals
+
+#fxns
+CreateCommTraitResidpair<-function(timePoint, comm.mat, traitResid){
+  
+  #there should be no NAs in the current time point's traitResid
+  traitResid %>%
+    filter(!is.na(trait.resid)) -> traitResid.noNAs
+  
+  #subset the community matrix using these unique codeStems
+  curr.comm<-comm.mat[row.names(comm.mat) %in% traitResid.noNAs$codeStem,]
+  curr.comm<-curr.comm[,colSums(curr.comm) != 0] #get rid of any OTU columns with all 0s
+    
+  #get rid of traitResid rows for which there is missing community data
+  traitResid.noNAs %>%
+    filter(codeStem %in% row.names(curr.comm)) -> curr.traitResid
+  
+  #make sure the row orders match
+    ord<-match(row.names(curr.comm), curr.traitResid$codeStem)
+    curr.traitResid<-curr.traitResid[ord,]
+    
+    #reformat the community matrix
+    curr.comm.reform<-reformatMatrix(curr.comm)
+    row.names(curr.comm.reform)<-row.names(curr.comm)
+    colnames(curr.comm.reform)<-colnames(curr.comm)
+    
+    modelDat.list<-list(traitresid=curr.traitResid, comm=curr.comm.reform)
+    
+    return(modelDat.list)
+    
+}
+
+dataset.t7<-CreateCommTraitResidpair(timePoint="time7", comm.mat = comm.otu.trimmed, 
+                                      traitResid = traitResid.t7)
+dataset.t13<-CreateCommTraitResidpair(timePoint="time13", comm.mat = comm.otu.trimmed, 
+                                      traitResid = traitResid.t13)
+dataset.t25<-CreateCommTraitResidpair(timePoint="time25", comm.mat = comm.otu.trimmed, 
+                                      traitResid = traitResid.t25)
+dataset.t37<-CreateCommTraitResidpair(timePoint="time37", comm.mat = comm.otu.trimmed, 
+                                      traitResid = traitResid.t37)
+
+dataset.t7.notrim<-CreateCommTraitResidpair(timePoint="time7", comm.mat = comm.otu, 
+                                      traitResid = traitResid.t7)
+dataset.t13.notrim<-CreateCommTraitResidpair(timePoint="time13", comm.mat = comm.otu, 
+                                      traitResid = traitResid.t13)
+dataset.t25.notrim<-CreateCommTraitResidpair(timePoint="time25", comm.mat = comm.otu, 
+                                      traitResid = traitResid.t25)
+dataset.t37.notrim<-CreateCommTraitResidpair(timePoint="time37", comm.mat = comm.otu, 
+                                      traitResid = traitResid.t37)
+
+
+#fit models
+fit.tr.t7 <- WAPLS(dataset.t7[['comm']], dataset.t7[['traitresid']]$trait.resid)
+fit.tr.t13 <- WAPLS(dataset.t13[['comm']], dataset.t13[['traitresid']]$trait.resid)
+fit.tr.t25 <- WAPLS(dataset.t25[['comm']], dataset.t25[['traitresid']]$trait.resid)
+fit.tr.t37 <- WAPLS(dataset.t37[['comm']], dataset.t37[['traitresid']]$trait.resid)
+fit.tr.t7.nt <- WAPLS(dataset.t7.notrim[['comm']], dataset.t7.notrim[['traitresid']]$trait.resid)
+fit.tr.t13.nt <- WAPLS(dataset.t13.notrim[['comm']], dataset.t13.notrim[['traitresid']]$trait.resid)
+fit.tr.t25.nt <- WAPLS(dataset.t25.notrim[['comm']], dataset.t25.notrim[['traitresid']]$trait.resid)
+fit.tr.t37.nt <- WAPLS(dataset.t37.notrim[['comm']], dataset.t37.notrim[['traitresid']]$trait.resid)
+
+#cross-validate models using the leave-one-out method
+fit.tr.t7.cv <- crossval(fit.tr.t7, cv.method="loo")
+fit.tr.t13.cv <- crossval(fit.tr.t13, cv.method="loo")
+fit.tr.t25.cv <- crossval(fit.tr.t25, cv.method="loo")
+fit.tr.t37.cv <- crossval(fit.tr.t37, cv.method="loo")
+fit.tr.t7.cv.nt <- crossval(fit.tr.t7.nt, cv.method="loo")
+fit.tr.t13.cv.nt <- crossval(fit.tr.t13.nt, cv.method="loo")
+fit.tr.t25.cv.nt <- crossval(fit.tr.t25.nt, cv.method="loo")
+fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
+
+#rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
+#screeplot(fit.r2.cv)
+
+```
+
+### time 7
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t7.cv) 
+#rand.t.test(fit.tr.t7.cv.nt)
+```
+
+### time 13
+
+**Comp02 is significant**
+**if trim out OTUs that are not present in at least 20% of samples...no components are significant**
+
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t13.cv) 
+rand.t.test(fit.tr.t13.cv.nt) 
+```
+
+Investigate the biology underlying time13-associated coefs for Comp02
+```{r, include=FALSE}
+coef.comp<-fit.tr.t13.cv.nt$coefficients[,'Comp02']
+coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
+
+#create df of OTU taxon and guild info matched with coef value
+coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
+
+#classify samples into quantiles based on coef value
+quant<-quantile(coef.comp.ann$coefComp, c(.05, .95))
+coef.comp.ann$quant<-"middle"
+coef.comp.ann[coef.comp.ann$coefComp > quant[2],'quant']<-"upper95"
+coef.comp.ann[coef.comp.ann$coefComp < quant[1],'quant']<-"lower5"
+plot.df<-subset(coef.comp.ann, quant != "middle") #get rid of the middle for plotting
+unique(plot.df$kingdom)
+
+```
+By trophic mode
+```{r, echo=FALSE, warnings=FALSE, message=FALSE}
+
+#define cols
+colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
+names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
+colvals['unclassified']<-"#D3D3D3"
+
+pTroph<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Trophic.Mode)) + 
+  geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
+  xlab("Fungal species") + ylab("Component coefficient estimate") +
+  scale_color_manual(name="Trophic mode", values=colvals) +
+  theme_classic()
+pTroph
+
+totallower<-sum(plot.df$quant=="lower5")
+totalupper<-sum(plot.df$quant=="upper95")
+
+plot.df %>%
+  group_by(Trophic.Mode, quant) %>%
+  summarize(numOTUs=length(coefComp),
+            freqlower=numOTUs/totallower,
+            frequpper=numOTUs/totalupper) %>%
+  filter(Trophic.Mode != "unclassified") -> tmp
+tmp$freq<-tmp$freqlower 
+tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
+
+ggplot(tmp, aes(x=reorder(Trophic.Mode, freq), y=freq*100)) + 
+  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
+  ylab("OTU frequency (%)") + xlab("Trophic mode")
+
+
+```
+
+```{r, include=FALSE}
+#by guild
+
+# #define cols
+# colvals<-rainbow_hcl(length(unique(coef.comp.ann$Guild)))
+# names(colvals)<-unique(coef.comp.ann$Guild)
+# colvals['unclassified']<-"#D3D3D3"
+# 
+# pGuild<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Guild)) + 
+#   geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
+#   xlab("Fungal species") + ylab("Component coefficient estimate") +
+#   scale_color_manual(name="Guild", values=colvals) +
+#   theme_classic()
+# pGuild
+# 
+# plot.df %>%
+#   group_by(Guild, quant) %>%
+#   summarize(numOTUs=length(coefComp),
+#             freqlower=numOTUs/totallower,
+#             frequpper=numOTUs/totalupper) %>%
+#   filter(Guild != "unclassified") -> tmp
+# tmp$freq<-tmp$freqlower 
+# tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
+# 
+# ggplot(tmp, aes(x=reorder(Guild, freq), y=freq*100)) + 
+#   geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
+#   ylab("OTU frequency (%)") + xlab("Guild")
+
+```
+
+By phylum
+```{r, include=FALSE}
+
+# #define cols
+# colvals<-rainbow_hcl(length(unique(coef.comp.ann$phylum)))
+# names(colvals)<-unique(coef.comp.ann$phylum)
+# colvals['unclassified']<-"#D3D3D3"
+# 
+# pPhylum<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=phylum)) + 
+#   geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
+#   xlab("Fungal species") + ylab("Component coefficient estimate") +
+#   scale_color_manual(name="Phylum", values=colvals) +
+#   theme_classic()
+# pPhylum
+
+plot.df %>%
+  group_by(phylum, quant) %>%
+  summarize(numOTUs=length(coefComp),
+            freqlower=numOTUs/totallower,
+            frequpper=numOTUs/totalupper) %>%
+  filter(phylum != "unclassified") -> tmp
+tmp$freq<-tmp$freqlower 
+tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
+
+ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) + 
+  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
+  ylab("OTU frequency (%)") + xlab("Phylum")
+
+```
+
+
+
+### time 25
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t25.cv) 
+#rand.t.test(fit.tr.t25.cv.nt)
+```
+
+### time 37
+
+**none of the community components are significant predictors**
+
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t37.cv) 
+#rand.t.test(fit.tr.t37.cv.nt) 
+```
+
+
+
+
+
 *Hyp:* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
 ```{r, include=FALSE, results=FALSE, message=FALSE}

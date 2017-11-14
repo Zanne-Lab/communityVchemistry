@@ -464,7 +464,7 @@ load_XRF<-function(){
 
   xrf<-xrf[,c("code","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
   colnames(xrf)<-c("code","P","K","Ca","Mn","Fe","Zn")
-  
+
   return(xrf)
 }
 
@@ -518,7 +518,7 @@ load_XRF_byStem<-function(){
   
   xrf<-xrf[,c("codeStem","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
   colnames(xrf)<-c("codeStem","P","K","Ca","Mn","Fe","Zn")
-  
+
   return(xrf)
 }
 
