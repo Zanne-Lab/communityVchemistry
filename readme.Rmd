@@ -145,7 +145,7 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 ## Wood traits as a predictor
 
 *Hyp:* Stem-specific initial wood traits will predict variation in percent mass loss.
-```{r}
+```{r, include=FALSE}
 
 #function to pull out samples with complete trait info
 CreateTraitPMRpair<-function(timePoint, traits.codeStem, pmr.byStem.df.w){
@@ -347,7 +347,7 @@ paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 
 
 *Hyp:* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
-```{r}
+```{r, include=FALSE}
 
 #fxns
 reformatMatrix<-function(commmat){
@@ -443,8 +443,7 @@ rand.t.test(fit.t25.nt.cv)
 
 ### time 37
 
-**Comp01 is significant**
-**if trim out OTUs that are not present in at least 20% of samples...Comp02 is marginally significant**
+**Comp01 is significant; if trim out OTUs that are not present in at least 20% of samples...Comp02 is significant**
 
 ```{r, echo=FALSE}
 rand.t.test(fit.t37.cv) # signif Comp02
@@ -535,14 +534,14 @@ fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 
 ```{r, echo=FALSE}
 #rand.t.test(fit.r2.cv)
-rand.t.test(fit.r2.cv.notrim)
+#rand.t.test(fit.r2.cv.notrim)
 ```
 
 ### k
 
 **none of the community components are significant predictors**
 ```{r, echo=FALSE}
-rand.t.test(fit.k.cv)
+#rand.t.test(fit.k.cv)
 ```
 
 ### t70
@@ -550,12 +549,12 @@ rand.t.test(fit.k.cv)
 **none of the community components are significant predictors**
 
 ```{r, echo=FALSE}
-rand.t.test(fit.t70.cv)
+#rand.t.test(fit.t70.cv)
 ```
 
 ### alpha --- don't interpret yet
 ```{r, include=FALSE}
-rand.t.test(fit.alpha.cv)
+#rand.t.test(fit.alpha.cv)
 ```
 
 
@@ -655,8 +654,7 @@ rand.t.test(fit.tr.t7.cv)
 
 ### time 13
 
-**Comp02 is significant**
-**if trim out OTUs that are not present in at least 20% of samples...no components are significant**
+**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
 
 ```{r, echo=FALSE}
 rand.t.test(fit.tr.t13.cv) 
@@ -843,7 +841,7 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
 ```{r, echo=FALSE}
-rand.t.test(fit.tr.r2.cv)
+#rand.t.test(fit.tr.r2.cv)
 ```
 
 ### k  
@@ -851,7 +849,7 @@ rand.t.test(fit.tr.r2.cv)
 **none of the community components are significant predictors**  
 
 ```{r, echo=FALSE}
-rand.t.test(fit.tr.k.cv)
+#rand.t.test(fit.tr.k.cv)
 ```
 
 ### t70  
@@ -860,37 +858,13 @@ rand.t.test(fit.tr.k.cv)
 
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 ```{r, echo=FALSE}
-rand.t.test(fit.tr.t70.cv) 
+#rand.t.test(fit.tr.t70.cv) 
 ```
 
 ### alpha --- don't interpret yet
 ```{r, include=FALSE}
-rand.t.test(fit.tr.alpha.cv)
+#rand.t.test(fit.tr.alpha.cv)
 ```
-
-**Note: no longer warrented based on analyses with waterperc represented as g water / g wet weight...**
-
-Investigate the biology underlying t70-associated coefs for Comp05
-```{r, include=FALSE}
-#coef.comp5<-fit.tr.t70.cv$coefficients[,'Comp05']
-#coef.comp5.df<-data.frame(OTUId=names(coef.comp5), coefComp5=coef.comp5)
-
-#create df of OTU taxon and guild info matched with coef value
-#coef.comp5.df %>% left_join(taxAndFunguild) -> coef.comp5.ann
-```
-By trophic mode (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
-```{r, include=FALSE}
-#ggplot(coef.comp5.ann, aes(x=Trophic.Mode, y=coefComp5)) + geom_violin() + coord_flip()
-```
-By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
-```{r, include=FALSE}
-#ggplot(coef.comp5.ann, aes(x=Guild, y=coefComp5)) + geom_violin() + coord_flip()
-```
-By phylum
-```{r, include=FALSE}
-#ggplot(coef.comp5.ann, aes(x=phylum, y=coefComp5)) + geom_violin() + coord_flip()
-```
-
 
 
 
@@ -938,20 +912,20 @@ H.List<-Plot_richOTUtype(rich.spdf=H.spdf,
 
 **No pattern**
 ```{r, echo=FALSE}
-anova(mod.rich.r2)
-anova(mod.rich.k)
-anova(mod.rich.t70)
-anova(mod.rich.alpha)
+# anova(mod.rich.r2)
+# anova(mod.rich.k)
+# anova(mod.rich.t70)
+# anova(mod.rich.alpha)
 ```
 
 ### Shannon's H
 
 **No pattern**
 ```{r, echo=FALSE}
-anova(mod.H.r2)
-anova(mod.H.k)
-anova(mod.H.t70)
-anova(mod.H.alpha)
+# anova(mod.H.r2)
+# anova(mod.H.k)
+# anova(mod.H.t70)
+# anova(mod.H.alpha)
 ```
 
 *Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
@@ -991,11 +965,11 @@ basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf,
 **No pattern**
 
 ```{r, echo=FALSE}
-anova(mod.sapro.r2)
-anova(mod.sapro.k)
-anova(mod.sapro.t70)
-anova(mod.sapro.alpha) #marginally-signif
-#sapList[['alpha']]
+# anova(mod.sapro.r2)
+# anova(mod.sapro.k)
+# anova(mod.sapro.t70)
+# anova(mod.sapro.alpha) #marginally-signif
+# #sapList[['alpha']]
 ```
 
 ### Basidio richness
@@ -1003,10 +977,10 @@ anova(mod.sapro.alpha) #marginally-signif
 **No pattern**
 
 ```{r, echo=FALSE}
-anova(mod.basid.r2)
-anova(mod.basid.k)
-anova(mod.basid.t70)
-anova(mod.basid.alpha)
+# anova(mod.basid.r2)
+# anova(mod.basid.k)
+# anova(mod.basid.t70)
+# anova(mod.basid.alpha)
 ```
 
 
@@ -1046,11 +1020,11 @@ ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf,
 **No pattern**
 
 ```{r, echo=FALSE}
-anova(mod.path.r2)
-anova(mod.path.k)
-anova(mod.path.t70)
-anova(mod.path.alpha) #marginally signif
-#pathList[['alpha']]
+# anova(mod.path.r2)
+# anova(mod.path.k)
+# anova(mod.path.t70)
+# anova(mod.path.alpha) #marginally signif
+# #pathList[['alpha']]
 ```
 
 ### Oomycete richness
@@ -1058,10 +1032,10 @@ anova(mod.path.alpha) #marginally signif
 **No pattern**
 
 ```{r, echo=FALSE}
-anova(mod.oomy.r2)
-anova(mod.oomy.k)
-anova(mod.oomy.t70)
-anova(mod.oomy.alpha)
+# anova(mod.oomy.r2)
+# anova(mod.oomy.k)
+# anova(mod.oomy.t70)
+# anova(mod.oomy.alpha)
 ```
 
 
@@ -1098,7 +1072,7 @@ p.oomy<-PlotResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals, xlab="Oomy
 **No pattern**
 
 ```{r, echo=FALSE}
-lapply(mod.rich, anova)
+#lapply(mod.rich, anova)
 ```
 
 ### Shannon's H
@@ -1106,7 +1080,7 @@ lapply(mod.rich, anova)
 **No pattern**
 
 ```{r, echo=FALSE}
-lapply(mod.H, anova)
+#lapply(mod.H, anova)
 ```
 
 ### Saprotroph richness
@@ -1114,7 +1088,7 @@ lapply(mod.H, anova)
 **No pattern**
 
 ```{r, echo=FALSE}
-lapply(mod.sapro, anova) #marginally signif alpha
+#lapply(mod.sapro, anova) #marginally signif alpha
 #summary(mod.sapro[['alpha']])
 #p.sapro[['alpha']]
 ```
@@ -1124,7 +1098,7 @@ lapply(mod.sapro, anova) #marginally signif alpha
 **No pattern**
 
 ```{r, echo=FALSE}
-lapply(mod.basid, anova)
+#lapply(mod.basid, anova)
 ```
 
 ### Pathogen richness
@@ -1132,7 +1106,7 @@ lapply(mod.basid, anova)
 **No pattern**
 
 ```{r, echo=FALSE}
-lapply(mod.path, anova) #marginally signif for alpha
+#lapply(mod.path, anova) #marginally signif for alpha
 #summary(mod.path[['alpha']])
 #p.path[['alpha']]
 ```
@@ -1142,7 +1116,7 @@ lapply(mod.path, anova) #marginally signif for alpha
 **No pattern**
 
 ```{r, echo=FALSE}
-lapply(mod.oomy, anova)
+#lapply(mod.oomy, anova)
 ```
 
 
@@ -1153,7 +1127,7 @@ lapply(mod.oomy, anova)
 ## Relationship between wood traits and community
 *Hyp:* Average initial microbial communitiy compositions will covary with initial wood traits
 
-```{r}
+```{r, echo=FALSE}
 
 #average OTU abundances by code
 meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
@@ -1171,9 +1145,9 @@ envVars<-as.matrix(traits.mean.trim[,-(1:3)])
 
 #fit models
 fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
-fit.cca
-plot(fit.cca)
-anova(fit.cca)
+#fit.cca
+#plot(fit.cca)
+#anova(fit.cca)
 
 
 ```
