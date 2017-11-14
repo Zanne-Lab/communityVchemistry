@@ -412,34 +412,17 @@ fit.t25.nt.cv <- crossval(fit.t25.notrim, cv.method="loo")
 fit.t37.nt.cv <- crossval(fit.t37.notrim, cv.method="loo")
 
 #perform randomization t-test to test the significance of a cross-validated model....
+#rand.t.test(fit.t7.cv) 
+#rand.t.test(fit.t7.nt.cv)
+#rand.t.test(fit.t13.cv) 
+#rand.t.test(fit.t13.nt.cv) #marginally-significant Comp02
+#rand.t.test(fit.t25.cv) 
+#rand.t.test(fit.t25.nt.cv)
 ```
 
-### time 7
+### time 7, 13, and 25
 
 **none of the community components are significant predictors**
-
-```{r, echo=FALSE}
-rand.t.test(fit.t7.cv) 
-rand.t.test(fit.t7.nt.cv)
-```
-
-### time 13
-
-**none of the community components are significant predictors**
-
-```{r, echo=FALSE}
-rand.t.test(fit.t13.cv) 
-rand.t.test(fit.t13.nt.cv) #marginally-significant Comp02
-```
-
-### time 25
-
-**none of the community components are significant predictors**
-
-```{r, echo=FALSE}
-rand.t.test(fit.t25.cv) 
-rand.t.test(fit.t25.nt.cv)
-```
 
 ### time 37
 
@@ -451,7 +434,7 @@ rand.t.test(fit.t37.nt.cv) #signif Comp01
 ```
 
 Investigate the biology underlying time37-associated coefs for Comp02
-```{r, include=FALSE}
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 coef.comp<-fit.t37.cv$coefficients[,'Comp02']
 coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
 
@@ -460,8 +443,8 @@ coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
 unique(coef.comp.ann$kingdom)
 
 ```
-By trophic mode (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
-```{r, include=FALSE}
+By trophic mode
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
 #define cols
 colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
 names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
@@ -478,24 +461,6 @@ ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Trophic.M
 
 
 ```
-By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
-```{r, include=FALSE}
-#define cols
-colvals<-rainbow_hcl(length(unique(coef.comp.ann$Guild)))
-names(colvals)<-unique(coef.comp.ann$Guild)
-colvals['unclassified']<-"#D3D3D3"
-
-ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Guild)) + 
-  geom_point() + coord_flip() +
-  xlab("Fungal genus") + ylab("Component coefficient estimate") +
-  scale_color_manual(name="Guild", values=colvals) +
-  theme_classic() +
-  geom_hline(yintercept=0, linetype=2)
-
-#color the genus axis labels by asco/basidio
-
-```
-
 
 
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
@@ -523,39 +488,17 @@ fit.k.cv <- crossval(fit.k, cv.method="loo")
 fit.t70.cv <- crossval(fit.t70, cv.method="loo")
 fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 
-#rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
-#screeplot(fit.r2.cv)
-
-```
-
-### r2  
-
-**none of the community components are significant predictors**
-
-```{r, echo=FALSE}
+#perform randomization t-test to test the significance of a cross-validated model
 #rand.t.test(fit.r2.cv)
 #rand.t.test(fit.r2.cv.notrim)
-```
-
-### k
-
-**none of the community components are significant predictors**
-```{r, echo=FALSE}
 #rand.t.test(fit.k.cv)
-```
-
-### t70
-
-**none of the community components are significant predictors**
-
-```{r, echo=FALSE}
 #rand.t.test(fit.t70.cv)
-```
-
-### alpha --- don't interpret yet
-```{r, include=FALSE}
 #rand.t.test(fit.alpha.cv)
 ```
+
+### r2, k, t70, (alpha)
+
+**none of the community components are significant predictors**
 
 
 
@@ -639,18 +582,18 @@ fit.tr.t25.cv.nt <- crossval(fit.tr.t25.nt, cv.method="loo")
 fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
 
 #rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
-#screeplot(fit.r2.cv)
+#rand.t.test(fit.tr.t7.cv) 
+#rand.t.test(fit.tr.t7.cv.nt)
+#rand.t.test(fit.tr.t25.cv) 
+#rand.t.test(fit.tr.t25.cv.nt)
+#rand.t.test(fit.tr.t37.cv) 
+#rand.t.test(fit.tr.t37.cv.nt) 
 
 ```
 
-### time 7
+### time 7, 25, 37
 
 **none of the community components are significant predictors**
-
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t7.cv) 
-#rand.t.test(fit.tr.t7.cv.nt)
-```
 
 ### time 13
 
@@ -711,39 +654,8 @@ ggplot(tmp, aes(x=reorder(Trophic.Mode, freq), y=freq*100)) +
 
 
 ```
-
-```{r, include=FALSE}
-#by guild
-
-# #define cols
-# colvals<-rainbow_hcl(length(unique(coef.comp.ann$Guild)))
-# names(colvals)<-unique(coef.comp.ann$Guild)
-# colvals['unclassified']<-"#D3D3D3"
-# 
-# pGuild<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Guild)) + 
-#   geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
-#   xlab("Fungal species") + ylab("Component coefficient estimate") +
-#   scale_color_manual(name="Guild", values=colvals) +
-#   theme_classic()
-# pGuild
-# 
-# plot.df %>%
-#   group_by(Guild, quant) %>%
-#   summarize(numOTUs=length(coefComp),
-#             freqlower=numOTUs/totallower,
-#             frequpper=numOTUs/totalupper) %>%
-#   filter(Guild != "unclassified") -> tmp
-# tmp$freq<-tmp$freqlower 
-# tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
-# 
-# ggplot(tmp, aes(x=reorder(Guild, freq), y=freq*100)) + 
-#   geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
-#   ylab("OTU frequency (%)") + xlab("Guild")
-
-```
-
 By phylum
-```{r, include=FALSE}
+```{r, echo=FALSE, warnings=FALSE, message=FALSE}
 
 # #define cols
 # colvals<-rainbow_hcl(length(unique(coef.comp.ann$phylum)))
@@ -771,28 +683,6 @@ ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) +
   ylab("OTU frequency (%)") + xlab("Phylum")
 
 ```
-
-
-
-### time 25
-
-**none of the community components are significant predictors**
-
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t25.cv) 
-#rand.t.test(fit.tr.t25.cv.nt)
-```
-
-### time 37
-
-**none of the community components are significant predictors**
-
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t37.cv) 
-#rand.t.test(fit.tr.t37.cv.nt) 
-```
-
-
 
 
 
@@ -830,41 +720,16 @@ fit.tr.t70.cv <- crossval(fit.tr.t70, cv.method="loo")
 fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 
 #rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
-#screeplot(fit.r2.cv)
-
-```
-
-
-### r2  
-
-**none of the community components are significant predictors**  
-
-Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
-```{r, echo=FALSE}
 #rand.t.test(fit.tr.r2.cv)
-```
-
-### k  
-
-**none of the community components are significant predictors**  
-
-```{r, echo=FALSE}
 #rand.t.test(fit.tr.k.cv)
-```
-
-### t70  
-
-**none of the community components are significant predictors**  
-
-Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
-```{r, echo=FALSE}
 #rand.t.test(fit.tr.t70.cv) 
-```
-
-### alpha --- don't interpret yet
-```{r, include=FALSE}
 #rand.t.test(fit.tr.alpha.cv)
 ```
+
+
+### r2, k, t70, (alpha)
+
+**none of the community components are significant predictors**  
 
 
 
@@ -906,27 +771,22 @@ H.List<-Plot_richOTUtype(rich.spdf=H.spdf,
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Shannon's H")
 
-```
-
-### Richness
-
-**No pattern**
-```{r, echo=FALSE}
 # anova(mod.rich.r2)
 # anova(mod.rich.k)
 # anova(mod.rich.t70)
 # anova(mod.rich.alpha)
-```
 
-### Shannon's H
-
-**No pattern**
-```{r, echo=FALSE}
 # anova(mod.H.r2)
 # anova(mod.H.k)
 # anova(mod.H.t70)
 # anova(mod.H.alpha)
+
 ```
+
+### Richness, Shannon's H
+
+**No pattern**
+
 
 *Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
@@ -958,30 +818,22 @@ basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf,
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Basidio")
 
-```
-
-### Saprotroph richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 # anova(mod.sapro.r2)
 # anova(mod.sapro.k)
 # anova(mod.sapro.t70)
 # anova(mod.sapro.alpha) #marginally-signif
 # #sapList[['alpha']]
-```
 
-### Basidio richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 # anova(mod.basid.r2)
 # anova(mod.basid.k)
 # anova(mod.basid.t70)
 # anova(mod.basid.alpha)
+
 ```
+
+### Saprotroph richness, Basidio richness
+
+**No pattern**
 
 
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
@@ -1013,30 +865,23 @@ ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf,
                         valueCol_vec=c("ne.r2", "k","alpha"), 
                         otutypeNam="Oomycete")
 
-```
 
-### Pathogen richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 # anova(mod.path.r2)
 # anova(mod.path.k)
 # anova(mod.path.t70)
 # anova(mod.path.alpha) #marginally signif
 # #pathList[['alpha']]
-```
 
-### Oomycete richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 # anova(mod.oomy.r2)
 # anova(mod.oomy.k)
 # anova(mod.oomy.t70)
 # anova(mod.oomy.alpha)
+
 ```
+
+### Pathogen richness, oomycete richness
+
+**No pattern**
 
 
 
@@ -1065,59 +910,18 @@ p.basid<-PlotResid_diversity(rich.spdf=basidrich.spdf, trait.residuals, xlab="Ba
 p.path<-PlotResid_diversity(rich.spdf=pathrich.spdf, trait.residuals, xlab="Pathogen richness")
 p.oomy<-PlotResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals, xlab="Oomycete richness")
 
-```
-
-### Richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 #lapply(mod.rich, anova)
-```
-
-### Shannon's H
-
-**No pattern**
-
-```{r, echo=FALSE}
 #lapply(mod.H, anova)
-```
-
-### Saprotroph richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 #lapply(mod.sapro, anova) #marginally signif alpha
-#summary(mod.sapro[['alpha']])
-#p.sapro[['alpha']]
-```
-
-### Basidio richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 #lapply(mod.basid, anova)
-```
-
-### Pathogen richness
-
-**No pattern**
-
-```{r, echo=FALSE}
 #lapply(mod.path, anova) #marginally signif for alpha
-#summary(mod.path[['alpha']])
-#p.path[['alpha']]
+#lapply(mod.oomy, anova)
+
 ```
 
-### Oomycete richness
+### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
 
 **No pattern**
-
-```{r, echo=FALSE}
-#lapply(mod.oomy, anova)
-```
 
 
 

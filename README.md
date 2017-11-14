@@ -239,95 +239,9 @@ Community as a predictor
 
 *Hyp:* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 
-### time 7
+### time 7, 13, and 25
 
 **none of the community components are significant predictors**
-
-    ##             RMSE         R2      Avg.Bias  Max.Bias       Skill delta.RMSE
-    ## Comp01 0.1096009 0.04039245 -0.0042025315 0.2086640   -7.426179   3.646601
-    ## Comp02 0.1254558 0.04123537  0.0045006905 0.1767666  -40.754864  14.466035
-    ## Comp03 0.1472351 0.02785978  0.0004267154 0.1727394  -93.867398  17.360158
-    ## Comp04 0.1501175 0.04487863  0.0040991337 0.1600327 -101.532243   1.957664
-    ## Comp05 0.1563567 0.04317337  0.0024552841 0.1777311 -118.632632   4.156223
-    ##            p
-    ## Comp01 0.716
-    ## Comp02 0.955
-    ## Comp03 0.969
-    ## Comp04 0.745
-    ## Comp05 0.932
-
-    ##             RMSE         R2    Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.1160401 0.03500705 0.004146464 0.2118409 -20.41985  9.7359781
-    ## Comp02 0.1140335 0.03867892 0.005554219 0.2053950 -16.29114 -1.7292500
-    ## Comp03 0.1141955 0.04829218 0.005694794 0.2145943 -16.62175  0.1420493
-    ## Comp04 0.1137256 0.05486492 0.004972683 0.2101628 -15.66399 -0.4114765
-    ## Comp05 0.1124598 0.06682365 0.006100160 0.2058893 -13.10370 -1.1129729
-    ##            p
-    ## Comp01 0.911
-    ## Comp02 0.320
-    ## Comp03 0.511
-    ## Comp04 0.337
-    ## Comp05 0.115
-
-### time 13
-
-**none of the community components are significant predictors**
-
-    ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.2139657 0.21846772 -0.01496427 0.6260449  -74.86769 32.2375476
-    ## Comp02 0.2149868 0.06885441 -0.01490427 0.5414328  -76.54081  0.4772558
-    ## Comp03 0.2428530 0.06690494 -0.01653354 0.6290506 -125.27248 12.9617769
-    ## Comp04 0.2693172 0.08533308 -0.01524579 0.6038045 -177.04454 10.8972377
-    ## Comp05 0.2994919 0.07108880 -0.01525324 0.6220238 -242.60334 11.2041512
-    ##            p
-    ## Comp01 1.000
-    ## Comp02 0.538
-    ## Comp03 1.000
-    ## Comp04 1.000
-    ## Comp05 0.999
-
-    ##             RMSE           R2    Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.2163312 4.753407e-02 -0.02301907 0.6295907 -78.75562 33.6995201
-    ## Comp02 0.2023872 5.526947e-06 -0.03447532 0.5853071 -56.45433 -6.4456583
-    ## Comp03 0.2200750 8.812263e-03 -0.04106598 0.6142264 -84.99614  8.7395515
-    ## Comp04 0.2244837 9.323948e-03 -0.04242462 0.6066593 -92.48239  2.0032860
-    ## Comp05 0.2264918 9.961345e-03 -0.04426489 0.6070759 -95.94148  0.8945483
-    ##            p
-    ## Comp01 1.000
-    ## Comp02 0.085
-    ## Comp03 0.999
-    ## Comp04 0.865
-    ## Comp05 0.849
-
-### time 25
-
-**none of the community components are significant predictors**
-
-    ##             RMSE         R2   Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1589171 0.07590492 0.01732259 0.3131693  -9.443048   4.615031
-    ## Comp02 0.1723926 0.05607701 0.02297917 0.3430466 -28.790674   8.479611
-    ## Comp03 0.1786746 0.05969270 0.02226170 0.3307871 -38.347911   3.643983
-    ## Comp04 0.1813230 0.06504168 0.02194579 0.3286657 -42.479674   1.482266
-    ## Comp05 0.1847188 0.06871557 0.02042740 0.3579705 -47.866326   1.872786
-    ##            p
-    ## Comp01 0.758
-    ## Comp02 0.938
-    ## Comp03 0.742
-    ## Comp04 0.673
-    ## Comp05 0.780
-
-    ##             RMSE         R2      Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1568901 0.08501311 -1.251646e-03 0.2783429  -6.668957  3.2806647
-    ## Comp02 0.1734482 0.03761080  1.856222e-03 0.3039221 -30.372702 10.5539613
-    ## Comp03 0.1766744 0.02875939 -6.219912e-05 0.2900092 -35.267824  1.8600581
-    ## Comp04 0.1753588 0.03066941  2.508066e-04 0.2874978 -33.260727 -0.7446700
-    ## Comp05 0.1747009 0.03192784  1.039806e-03 0.2883656 -32.262694 -0.3751703
-    ##            p
-    ## Comp01 0.677
-    ## Comp02 0.999
-    ## Comp03 0.871
-    ## Comp04 0.216
-    ## Comp05 0.261
 
 ### time 37
 
@@ -340,11 +254,11 @@ Community as a predictor
     ## Comp04 0.1879489 0.2205367  0.003539710 0.2822099  6.062045  7.2766925
     ## Comp05 0.1967444 0.1897768  0.002389760 0.2656368 -2.935780  4.6797384
     ##            p
-    ## Comp01 0.375
-    ## Comp02 0.045
-    ## Comp03 0.513
+    ## Comp01 0.391
+    ## Comp02 0.041
+    ## Comp03 0.484
     ## Comp04 0.981
-    ## Comp05 0.919
+    ## Comp05 0.934
 
     ##             RMSE        R2     Avg.Bias  Max.Bias    Skill  delta.RMSE
     ## Comp01 0.1668533 0.2925742 -0.001261747 0.3122426 25.96599 -13.9569840
@@ -354,32 +268,22 @@ Community as a predictor
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
     ## Comp01 0.044
-    ## Comp02 0.217
-    ## Comp03 0.954
-    ## Comp04 0.845
-    ## Comp05 0.908
+    ## Comp02 0.235
+    ## Comp03 0.940
+    ## Comp04 0.825
+    ## Comp05 0.922
 
 Investigate the biology underlying time37-associated coefs for Comp02
 
-By trophic mode (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+    ## [1] "Fungi"
 
-By guild (note that apparently empty cateogies have at least 1 data point, the violin plot just doesn't show it)
+By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png)
 
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
-### r2
+### r2, k, t70, (alpha)
 
 **none of the community components are significant predictors**
-
-### k
-
-**none of the community components are significant predictors**
-
-### t70
-
-**none of the community components are significant predictors**
-
-### alpha --- don't interpret yet
 
 ########################################## 
 
@@ -388,22 +292,9 @@ Community+traits as a predictor
 
 *Hyp:* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 
-### time 7
+### time 7, 25, 37
 
 **none of the community components are significant predictors**
-
-    ##             RMSE          R2    Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1115850 0.007432694 0.004235539 0.2120931  -52.60022  23.531460
-    ## Comp02 0.1209657 0.004020937 0.013461663 0.1991320  -79.33627   8.406790
-    ## Comp03 0.1291656 0.003573218 0.013284545 0.2371421 -104.47335   6.778618
-    ## Comp04 0.1252574 0.001041763 0.011006738 0.2231303  -92.28723  -3.025653
-    ## Comp05 0.1199016 0.001036001 0.011918383 0.2281983  -76.19499  -4.275843
-    ##            p
-    ## Comp01 0.992
-    ## Comp02 0.754
-    ## Comp03 0.877
-    ## Comp04 0.233
-    ## Comp05 0.341
 
 ### time 13
 
@@ -416,10 +307,10 @@ Community+traits as a predictor
     ## Comp04 0.1861811 2.670958e-03 -0.01869200 0.3402859  -95.12131   2.672318
     ## Comp05 0.2000881 9.511791e-03 -0.01941544 0.3603079 -125.35962   7.469616
     ##            p
-    ## Comp01 0.999
-    ## Comp02 0.594
-    ## Comp03 0.976
-    ## Comp04 0.846
+    ## Comp01 0.995
+    ## Comp02 0.593
+    ## Comp03 0.985
+    ## Comp04 0.833
     ## Comp05 1.000
 
     ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
@@ -430,64 +321,20 @@ Community+traits as a predictor
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.046
-    ## Comp03 0.972
-    ## Comp04 0.833
-    ## Comp05 0.391
+    ## Comp02 0.054
+    ## Comp03 0.975
+    ## Comp04 0.845
+    ## Comp05 0.388
 
 Investigate the biology underlying time13-associated coefs for Comp02
 
-By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-32-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-32-2.png)
-
-By phylum
-
-### time 25
-
-**none of the community components are significant predictors**
-
-    ##             RMSE        R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p
-    ## Comp01 0.1620698 0.1329636 0.01919070 0.3483804 -111.3412  45.375801 1.000
-    ## Comp02 0.1795585 0.1117887 0.02724735 0.3954964 -159.4131  10.790831 0.920
-    ## Comp03 0.1926807 0.1869273 0.02416387 0.4476233 -198.7147   7.308055 0.998
-    ## Comp04 0.1905622 0.1539854 0.01920298 0.4451090 -192.1820  -1.099513 0.223
-    ## Comp05 0.1957642 0.1553971 0.02117982 0.4710456 -208.3519   2.729837 0.955
-
-### time 37
-
-**none of the community components are significant predictors**
-
-    ##             RMSE          R2     Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1519790 0.004659334  0.002664229 0.3654074  -56.17994  24.971974
-    ## Comp02 0.1583613 0.009032758 -0.001947198 0.3948058  -69.57286   4.199477
-    ## Comp03 0.1644513 0.007509707 -0.001848282 0.3944939  -82.86600   3.845652
-    ## Comp04 0.1741376 0.004828966 -0.008279261 0.3849332 -105.04227   5.890064
-    ## Comp05 0.1868349 0.013372894 -0.008065750 0.3920523 -136.03383   7.291528
-    ##            p
-    ## Comp01 0.994
-    ## Comp02 0.844
-    ## Comp03 0.884
-    ## Comp04 0.992
-    ## Comp05 0.996
+By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)
 
 *Hyp:* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
-### r2
+### r2, k, t70, (alpha)
 
 **none of the community components are significant predictors**
-
-Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was marginally significant
-
-### k
-
-**none of the community components are significant predictors**
-
-### t70
-
-**none of the community components are significant predictors**
-
-Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
-
-### alpha --- don't interpret yet
 
 ########################################## 
 
@@ -499,32 +346,20 @@ Diversity (and diversity of specific clades) as a predictor
 *Hyp:* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
 Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
 
-### Richness
-
-**No pattern**
-
-### Shannon's H
+### Richness, Shannon's H
 
 **No pattern**
 
 *Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
 
-### Saprotroph richness
-
-**No pattern**
-
-### Basidio richness
+### Saprotroph richness, Basidio richness
 
 **No pattern**
 
 *Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
 
-### Pathogen richness
-
-**No pattern**
-
-### Oomycete richness
+### Pathogen richness, oomycete richness
 
 **No pattern**
 
@@ -535,27 +370,7 @@ Diversity plus traits as a predictor
 
 *Hyp:* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
-### Richness
-
-**No pattern**
-
-### Shannon's H
-
-**No pattern**
-
-### Saprotroph richness
-
-**No pattern**
-
-### Basidio richness
-
-**No pattern**
-
-### Pathogen richness
-
-**No pattern**
-
-### Oomycete richness
+### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
 
 **No pattern**
 
