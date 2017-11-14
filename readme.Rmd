@@ -5,20 +5,6 @@ date: "10/23/2017"
 output: github_document
 ---
 
-Blurb the captures the key questions and analyses that can be a launching point for discussion of framing the chemistryVcommunity paper....
-
-Wood decay rates can vary enormously between species with important conseqences for the nutrient and carbon balance of ecosystems.  
-
-We often look to initial wood traits to explain variation in decay rates and functional form across woody species. Specifically, traits that describe the physical construction and chemical composition of the initial woody material are usually informative; i.e. wood density, lignin and nitrogen content.  
-
-In addition, experimental studies have shown that biological interactions among wood-dwelling fungi can have a large impact on decay. In particular, 'priority effects', or the order in which fungal taxa arrive, can drive variation in decay.  This outcome is likely a result of either/both (i) species-specific inhibitive and facilitative interactions and/or (ii) stochastic arrival of key decayers. 
-
-In this study, we ask whether variation in endophytic fungal communities (composition, diversity, diversity of specific clades) *between* wood species shapes the trajectory of decay. Moreover, we want to know the extent to which this type of predictor is similar to and differenent from information gained by wood traits. ...
-
-.
-
-
-
 
 ```{r, echo=FALSE, message=FALSE}
 #chunk options
@@ -79,6 +65,14 @@ traits.mean<-read_csv("derived_data/traits_mean.csv")
 #traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
 #filter(traits.long, is.na(value))
 
+traits.codeStem<-mergeTraitData_byStem()
+#data that we have
+traits.codeStem.long<-as.data.frame(gather(traits.codeStem, key=trait, value=value, -(1:3)))
+traits.codeStem.long %>%
+  filter(!is.na(value)) %>%
+  group_by(code, trait) %>%
+  summarize(length(value)) %>%
+  spread(key=trait, value='length(value)') -> tmp
 
 ### LOAD MASS LOSS DATA and CALCULATE % MASS REMAINING AT EACH TIMEPOINT
 #initial_mass <- read_in_initial_mass() #uncomment if the data changes
@@ -94,8 +88,40 @@ traits.mean<-read_csv("derived_data/traits_mean.csv")
 #   spread(key=time, value=totalSampleDryMass)
 #remove NAs
 #plotting_df %>% filter(!is.na(pmr)) -> plotting_df
-#write_csv(plotting_df,"derived_data/plotting_df.csv")
-plotting_df<-read_csv("derived_data/plotting_df.csv")
+#write.csv(plotting_df,"derived_data/plotting_df.csv")
+plotting_df<-read.csv("derived_data/plotting_df.csv", row.names=1)
+
+#add codeStem and transform
+plotting_df %>%
+  select(unique, size, time, pmr) %>%
+  separate(unique, into=c("code","StemNposition"), sep=4, extra='merge', remove=FALSE) %>%
+  separate(StemNposition, into=c("Stem","position"), sep=1, extra='merge', remove=TRUE) %>%
+  mutate(codeStem=paste(code, Stem, sep="")) %>%
+  select(codeStem, position, time, pmr) -> pmr.df
+
+#average pmr by codeStem and time
+pmr.df %>%
+  group_by(codeStem, time) %>%
+  summarize(mean.pmr=mean(pmr, na.rm=TRUE),
+            sd.pmr=sd(pmr, na.rm=TRUE),
+            n.pmr=length(pmr)) -> pmr.byStem.df
+
+pmr.byStem.df$code<-substr(pmr.byStem.df$codeStem, 1, 4)
+pmr.byStem.df$species<-tolower(pmr.byStem.df$code)
+pmr.byStem.df$size<-"large"
+pmr.byStem.df[pmr.byStem.df$code == tolower(pmr.byStem.df$code),"size"]<-"small"
+ggplot(pmr.byStem.df, aes(x=time, y=mean.pmr, group=codeStem, color=species, linetype=size)) + 
+  geom_line() + facet_wrap(~species)
+
+#make it wide
+pmr.byStem.df %>%
+  select(codeStem, time, mean.pmr) %>%
+  spread(key=time, value=mean.pmr) %>%
+  rename('time0'=`0`,
+         'time7'=`7`,
+         'time13'=`13`,
+         'time15'=`25`,
+         'time37'=`37`) -> pmr.byStem.df.w
 
 ### CALCULATE DECAY TRAJECTORY FITS
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
@@ -109,12 +135,13 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #        y="Time to 30% mass loss (Weibull)")+
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
+
 ```
 
 
 ##########################################
 
-## Wood traits as a preditor
+## Wood traits as a predictor
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
 ```{r, include=FALSE}
 

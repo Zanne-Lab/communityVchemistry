@@ -3,26 +3,16 @@ Does chemistry or community better predict mass loss?
 Marissa Lee
 10/23/2017
 
-Blurb the captures the key questions and analyses that can be a launching point for discussion of framing the chemistryVcommunity paper....
-
-Wood decay rates can vary enormously between species with important conseqences for the nutrient and carbon balance of ecosystems.
-
-We often look to initial wood traits to explain variation in decay rates and functional form across woody species. Specifically, traits that describe the physical construction and chemical composition of the initial woody material are usually informative; i.e. wood density, lignin and nitrogen content.
-
-In addition, experimental studies have shown that biological interactions among wood-dwelling fungi can have a large impact on decay. In particular, 'priority effects', or the order in which fungal taxa arrive, can drive variation in decay. This outcome is likely a result of either/both (i) species-specific inhibitive and facilitative interactions and/or (ii) stochastic arrival of key decayers.
-
-In this study, we ask whether variation in endophytic fungal communities (composition, diversity, diversity of specific clades) *between* wood species shapes the trajectory of decay. Moreover, we want to know the extent to which this type of predictor is similar to and differenent from information gained by wood traits. ...
-
-.
-
 ### Load microbial community data
 
 ### Load wood trait data
 
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png)
+
 ########################################## 
 
-Wood traits as a preditor
--------------------------
+Wood traits as a predictor
+--------------------------
 
 *Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
 
@@ -148,11 +138,11 @@ Community as a predictor
     ## Comp04 0.1119467 1.116217e-02 0.002666967 0.2514263 -71.33590  0.44020287
     ## Comp05 0.1120426 1.133987e-02 0.002626418 0.2509619 -71.62965  0.08568655
     ##            p
-    ## Comp01 0.899
+    ## Comp01 0.901
     ## Comp02 0.999
-    ## Comp03 0.730
-    ## Comp04 0.782
-    ## Comp05 0.699
+    ## Comp03 0.721
+    ## Comp04 0.786
+    ## Comp05 0.739
 
 ### k
 
@@ -165,11 +155,11 @@ Community as a predictor
     ## Comp04 0.1087908 0.02741427 0.013442320 0.2667951 -35.47840  2.6972785
     ## Comp05 0.1125616 0.01442363 0.011293413 0.2704606 -45.03280  3.4661026
     ##            p
-    ## Comp01 0.896
-    ## Comp02 0.553
-    ## Comp03 0.628
-    ## Comp04 0.883
-    ## Comp05 0.965
+    ## Comp01 0.890
+    ## Comp02 0.539
+    ## Comp03 0.625
+    ## Comp04 0.874
+    ## Comp05 0.964
 
 ### t70
 
@@ -182,11 +172,11 @@ Community as a predictor
     ## Comp04 0.5583885 0.08221500 -0.0056512738 1.349964 -16.751702  4.02377323
     ## Comp05 0.5693485 0.06691379  0.0058129906 1.431625 -21.379860  1.96278895
     ##            p
-    ## Comp01 0.855
-    ## Comp02 0.215
-    ## Comp03 0.510
-    ## Comp04 0.843
-    ## Comp05 0.860
+    ## Comp01 0.849
+    ## Comp02 0.236
+    ## Comp03 0.535
+    ## Comp04 0.831
+    ## Comp05 0.833
 
 ### alpha --- don't interpret yet
 
@@ -212,9 +202,9 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
     ##        delta.RMSE     p
     ## Comp01  27.088047 0.996
     ## Comp02  29.677682 1.000
-    ## Comp03   4.219463 0.913
-    ## Comp04   1.386804 0.780
-    ## Comp05  -0.419656 0.293
+    ## Comp03   4.219463 0.918
+    ## Comp04   1.386804 0.787
+    ## Comp05  -0.419656 0.297
 
 ### k
 
@@ -227,11 +217,11 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
     ## Comp04 0.05147371 0.04410936 0.005052921 0.1270141 -19.09043   3.073904
     ## Comp05 0.05142763 0.04472957 0.005796166 0.1291158 -18.87733  -0.089509
     ##            p
-    ## Comp01 0.877
-    ## Comp02 0.182
-    ## Comp03 0.186
-    ## Comp04 0.945
-    ## Comp05 0.483
+    ## Comp01 0.879
+    ## Comp02 0.192
+    ## Comp03 0.232
+    ## Comp04 0.932
+    ## Comp05 0.494
 
 ### t70
 
@@ -240,10 +230,10 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
 Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, Comp05 was a significant predictor
 
     ##             RMSE        R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p
-    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.256
-    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.531
-    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.898
-    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.715
+    ## Comp01 0.2564979 0.1696737 0.02216625 0.4864828  8.061448 -4.1154070 0.295
+    ## Comp02 0.2615463 0.1965626 0.01788789 0.4573872  4.406754  1.9682055 0.574
+    ## Comp03 0.2745169 0.1851611 0.01979289 0.4458862 -5.309638  4.9591861 0.866
+    ## Comp04 0.2776540 0.1774745 0.02286057 0.4449253 -7.730289  1.1427719 0.713
     ## Comp05 0.2795150 0.1716365 0.02355805 0.4637620 -9.179284  0.6702646 0.643
 
 ### alpha --- don't interpret yet
@@ -854,7 +844,7 @@ anova(fit.cca)
     ## 
     ## Model: cca(formula = meanOTUabund.trim3 ~ envVars)
     ##          Df ChiSquare      F Pr(>F)
-    ## Model    11    2.4529 1.1584  0.135
+    ## Model    11    2.4529 1.1584  0.144
     ## Residual 20    3.8499
 
 ############################################## 
