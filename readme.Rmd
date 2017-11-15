@@ -142,10 +142,10 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 ##########################################
 
-## Wood traits as a predictor
+# Wood traits as a predictor
 
 First, look at just the small stem samples because we have the most trait information on the stem level for theses samples. Compare models using data on code level and codeStem level and with barkthickness and density as predictors to see if codeStem improves model fit...
-```{r}
+```{r, echo=FALSE}
 
 # add code to pmr dataset
 pmr.byStem.df.w %>%
@@ -228,16 +228,13 @@ mod.compare.barkthick
 #  geom_point() + coord_flip()
 
 ```
-For models with **density + barkthickness**, it looks like stem-level data improves model fit for early percent mass remaining time points (after 7 and 13 months) but not later time points.
+For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
 
-For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
-
-
-*Hyp:* Stem-specific initial wood traits will predict variation in percent mass loss.
+## *Hyp1* Stem-specific initial wood traits will predict variation in percent mass loss.
 ```{r, include=FALSE}
 
-#function to pull out samples with complete trait info
-CreateTraitPMRpair<-function(timePoint, traits.codeStem, pmr.byStem.df.w){
+
+CreateTraitPMRpair<-function(timePoint, traits.codeStem, traits.mean, pmr.byStem.df.w){
   
   #make a dataframe using the current time point's pmr and remove NAs
   pmr.byStem.df.w %>%
@@ -249,18 +246,23 @@ CreateTraitPMRpair<-function(timePoint, traits.codeStem, pmr.byStem.df.w){
   traits.codeStem %>%
     filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
   
-  #most complete trait set
+  #stem-level trait set
   curr.traits %>%
     filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
-  #curr.traits<-curr.traits[complete.cases(curr.traits),] #so few if you do this..
-
+  
+  #add species-level traits
+  traits.mean %>%
+    select(code, barkthick) %>%
+    rename('barkthick_smspp'='barkthick')-> select.traits.mean
+  curr.traits %>%
+    left_join(select.traits.mean) -> curr.traits
+  
   #get rid of pmr rows for which there is missing trait data
   pmr.noNAs %>%
     filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
     
   #merge the dataframes
   curr.df<-left_join(curr.pmr, curr.traits) 
-  
   #add code and species and size
   curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
   curr.df$species<-tolower(curr.df$code)
@@ -273,16 +275,16 @@ CreateTraitPMRpair<-function(timePoint, traits.codeStem, pmr.byStem.df.w){
 
 timeList<-list('time7','time13','time25','time37')
 
-#very few complete cases of wood traits on stem-level
-#density and barkthick only on small stems
-datasets<-lapply(timeList, CreateTraitPMRpair, traits.codeStem, pmr.byStem.df.w)
+#function to pull out samples with the following trait info ...
+# stem-level waterperc, xrf, and CN and (small) species-level barkthickness
+datasets<-lapply(timeList, CreateTraitPMRpair, traits.codeStem, traits.mean, pmr.byStem.df.w)
 names(datasets)<-c('time7','time13','time25','time37')
 
 #fit full models (no barkthick or density because these weren't measured on small stems)
-mod.full.t7<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time7']])
-mod.full.t13<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
-mod.full.t25<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
-mod.full.t37<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
+mod.full.t7<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time7']])
+mod.full.t13<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
+mod.full.t25<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
+mod.full.t37<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
 
 #do stepwise model selection
 mod.select.t7<-step(mod.full.t7, direction="backward")
@@ -330,17 +332,17 @@ summary(mod.select.t25) # size, waterperc, P
 
 ### time 37
 
-**larger size stems, less water content, more P leads to more mass remaining after 37 months**  
+**larger size stems, less water content, less thick bark, more P, Mn, and C leads to more mass remaining after 37 months**  
 
 ```{r, echo=FALSE}
-summary(mod.select.t37) # size, waterperc, P
+summary(mod.select.t37) # size, waterperc, barkthick_smspp, P, Mn, C
 #ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
 #  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
 ```
 
 
 
-*Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
+## *Hyp2* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
 ```{r, include=FALSE}
 
 #merge into 1 df
@@ -421,7 +423,7 @@ summary(mod.select.alpha) # density, Zn, C
 
 ##########################################
 
-## Community as a predictor
+# Community as a predictor
 
 ### First, filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
 ```{r, echo=FALSE}
@@ -435,7 +437,7 @@ paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 ```
 
 
-*Hyp:* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+## *Hyp1* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 ```{r, include=FALSE}
 
 #fxns
@@ -552,7 +554,7 @@ ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Trophic.M
 ```
 
 
-*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+## *Hyp2* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 
 #average OTU abundances by code
@@ -594,9 +596,9 @@ fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
 
 ##########################################
 
-## Community+traits as a predictor
+# Community+traits as a predictor
 
-*Hyp:* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+## *Hyp1* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
@@ -775,7 +777,7 @@ ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) +
 
 
 
-*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+## *Hyp2* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
@@ -825,11 +827,11 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 
 ##########################################
 
-## Diversity (and diversity of specific clades) as a predictor  
+# Diversity (and diversity of specific clades) as a predictor  
 
 **Note that the full community matrix was used for these analyses**
 
-*Hyp:* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
+## *Hyp1a* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
 Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
 ```{r, echo=FALSE}
 
@@ -877,7 +879,7 @@ H.List<-Plot_richOTUtype(rich.spdf=H.spdf,
 **No pattern**
 
 
-*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
+## *Hyp1b* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
 ```{r, echo=FALSE}
 
@@ -925,7 +927,7 @@ basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf,
 **No pattern**
 
 
-*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+## *Hyp1c* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
 ```{r, echo=FALSE}
 
 # summarize the presence of ... in each sample
@@ -977,9 +979,9 @@ ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf,
 
 ##############################################
 
-## Diversity plus traits as a predictor
+# Diversity plus traits as a predictor
 
-*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+## *Hyp1* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
 ```{r, echo=FALSE}
 
@@ -1017,8 +1019,9 @@ p.oomy<-PlotResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals, xlab="Oomy
 
 ##############################################
 
-## Relationship between wood traits and community
-*Hyp:* Average initial microbial communitiy compositions will covary with initial wood traits
+# Relationship between wood traits and community
+
+## *Hyp1* Average initial microbial communitiy compositions will covary with initial wood traits
 
 ```{r, echo=FALSE}
 

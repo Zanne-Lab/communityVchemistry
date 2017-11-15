@@ -12,71 +12,13 @@ Marissa Lee
 ########################################## 
 
 Wood traits as a predictor
---------------------------
+==========================
 
 First, look at just the small stem samples because we have the most trait information on the stem level for theses samples. Compare models using data on code level and codeStem level and with barkthickness and density as predictors to see if codeStem improves model fit...
 
-``` r
-# add code to pmr dataset
-pmr.byStem.df.w %>%
-  separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
-
-# (1) subset just the small stems
-# (2) subset samples with waterperc, density, barkthick trait data
-# (3) join with pmr data
-# (4) select useful cols
-traits.codeStem %>% 
-  filter(size=="small") %>%
-  filter(!is.na(density) & !is.na(barkthick)) %>%
-  left_join(pmr.byStem.df.w) %>%
-  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.codeStem
-dim(sm.traits.codeStem)
-```
-
     ## [1] 51  9
 
-``` r
-# (1) subset just the small codes, 
-# (2) subset samples with waterperc, density, barkthick trait data
-# (3) restrict analyses to the same set of wood species as present in stem dataset
-# (4) join with pmr data
-# (5) select useful cols
-traits.mean %>%
-  filter(size=="small") %>%
-  filter(!is.na(density) & !is.na(barkthick)) %>%
-  filter(code %in% unique(sm.traits.codeStem$code)) %>%
-  left_join(pmr.byStem.df.w) %>%
-  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.code
-dim(sm.traits.code)
-```
-
     ## [1] 79  9
-
-``` r
-### density + barkthick
-#fit stem-level models
-mod.stem.t7<-lm(time7 ~ density + barkthick, data=sm.traits.codeStem)
-mod.stem.t13<-lm(time13 ~ density +barkthick, data=sm.traits.codeStem)
-mod.stem.t25<-lm(time25 ~ density +barkthick, data=sm.traits.codeStem)
-mod.stem.t37<-lm(time37 ~ density +barkthick, data=sm.traits.codeStem)
-#fit code-level models
-mod.code.t7<-lm(time7 ~ density +barkthick, data=sm.traits.code)
-mod.code.t13<-lm(time13 ~ density +barkthick, data=sm.traits.code)
-mod.code.t25<-lm(time25 ~ density +barkthick, data=sm.traits.code)
-mod.code.t37<-lm(time37 ~ density +barkthick, data=sm.traits.code)
-#summarize r2 vals
-mod.compare.densitybarkthick<-data.frame(response=c("time7","time13","time25","time37"),
-           r2.stem=c(summary(mod.stem.t7)$r.squared,
-                     summary(mod.stem.t13)$r.squared,
-                     summary(mod.stem.t25)$r.squared,
-                     summary(mod.stem.t37)$r.squared),
-           
-           r2.code=c(summary(mod.code.t7)$r.squared,
-                     summary(mod.code.t13)$r.squared,
-                     summary(mod.code.t25)$r.squared,
-                     summary(mod.code.t37)$r.squared))
-mod.compare.densitybarkthick
-```
 
     ##   response    r2.stem    r2.code
     ## 1    time7 0.09738165 0.03171432
@@ -84,48 +26,16 @@ mod.compare.densitybarkthick
     ## 3   time25 0.03728149 0.03940721
     ## 4   time37 0.14794897 0.20843563
 
-``` r
-### just barkthick
-#fit stem-level models
-mod.stem.t7<-lm(time7 ~ barkthick, data=sm.traits.codeStem)
-mod.stem.t13<-lm(time13 ~ barkthick, data=sm.traits.codeStem)
-mod.stem.t25<-lm(time25 ~ barkthick, data=sm.traits.codeStem)
-mod.stem.t37<-lm(time37 ~ barkthick, data=sm.traits.codeStem)
-#fit code-level models
-mod.code.t7<-lm(time7 ~ barkthick, data=sm.traits.code)
-mod.code.t13<-lm(time13 ~ barkthick, data=sm.traits.code)
-mod.code.t25<-lm(time25 ~ barkthick, data=sm.traits.code)
-mod.code.t37<-lm(time37 ~ barkthick, data=sm.traits.code)
-#summarize r2 vals
-mod.compare.barkthick<-data.frame(response=c("time7","time13","time25","time37"),
-           r2.stem=c(summary(mod.stem.t7)$r.squared,
-                     summary(mod.stem.t13)$r.squared,
-                     summary(mod.stem.t25)$r.squared,
-                     summary(mod.stem.t37)$r.squared),
-           
-           r2.code=c(summary(mod.code.t7)$r.squared,
-                     summary(mod.code.t13)$r.squared,
-                     summary(mod.code.t25)$r.squared,
-                     summary(mod.code.t37)$r.squared))
-mod.compare.barkthick
-```
-
     ##   response      r2.stem    r2.code
     ## 1    time7 0.0141641846 0.03058141
     ## 2   time13 0.0005720156 0.01335815
     ## 3   time25 0.0102544419 0.01047655
     ## 4   time37 0.0976021785 0.03716909
 
-``` r
-#ggplot(sm.traits.codeStem, aes(x=codeStem, y=barkthick, color=code)) + 
-#  geom_point() + coord_flip()
-```
+For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
 
-For models with **density + barkthickness**, it looks like stem-level data improves model fit for early percent mass remaining time points (after 7 and 13 months) but not later time points.
-
-For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
-
-*Hyp:* Stem-specific initial wood traits will predict variation in percent mass loss.
+*Hyp1* Stem-specific initial wood traits will predict variation in percent mass loss.
+-------------------------------------------------------------------------------------
 
 ### time7
 
@@ -205,35 +115,35 @@ For models with just **barkthickness**, fits are about the same... slightly bett
 
 ### time 37
 
-**larger size stems, less water content, more P leads to more mass remaining after 37 months**
+**larger size stems, less water content, less thick bark, more P, Mn, and C leads to more mass remaining after 37 months**
 
     ## 
     ## Call:
-    ## lm(formula = curr.time ~ size + waterperc + P + Mn + Zn + N + 
-    ##     C, data = datasets[["time37"]])
+    ## lm(formula = curr.time ~ size + waterperc + barkthick_smspp + 
+    ##     P + Mn + C, data = datasets[["time37"]])
     ## 
     ## Residuals:
     ##      Min       1Q   Median       3Q      Max 
-    ## -0.33992 -0.08112  0.01198  0.08868  0.27249 
+    ## -0.29648 -0.06784  0.00447  0.08825  0.35934 
     ## 
     ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  0.3343324  0.7751083   0.431  0.66838    
-    ## sizesmall   -0.1924388  0.0444506  -4.329 8.78e-05 ***
-    ## waterperc   -0.0236176  0.0033363  -7.079 9.89e-09 ***
-    ## P            0.0007591  0.0002639   2.877  0.00623 ** 
-    ## Mn           0.0006056  0.0003035   1.995  0.05236 .  
-    ## Zn          -0.0007677  0.0005331  -1.440  0.15708    
-    ## N           -0.2447862  0.1443333  -1.696  0.09712 .  
-    ## C            0.0255493  0.0146858   1.740  0.08906 .  
+    ##                   Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)     -0.2530728  0.7935814  -0.319   0.7513    
+    ## sizesmall       -0.2107369  0.0436198  -4.831 1.68e-05 ***
+    ## waterperc       -0.0251988  0.0033694  -7.479 2.29e-09 ***
+    ## barkthick_smspp -0.0536175  0.0235288  -2.279   0.0276 *  
+    ## P                0.0006537  0.0002506   2.609   0.0124 *  
+    ## Mn               0.0006377  0.0002797   2.280   0.0275 *  
+    ## C                0.0397853  0.0159293   2.498   0.0163 *  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 0.1324 on 43 degrees of freedom
-    ## Multiple R-squared:  0.6233, Adjusted R-squared:  0.562 
-    ## F-statistic: 10.16 on 7 and 43 DF,  p-value: 1.968e-07
+    ## Residual standard error: 0.1294 on 44 degrees of freedom
+    ## Multiple R-squared:  0.6319, Adjusted R-squared:  0.5818 
+    ## F-statistic: 12.59 on 6 and 44 DF,  p-value: 3.269e-08
 
-*Hyp:* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
+*Hyp2* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha). Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha).
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### r2
 
@@ -338,13 +248,14 @@ Note: This result changed when I changed waterperc to g water/g wet weight. When
 ########################################## 
 
 Community as a predictor
-------------------------
+========================
 
 ### First, filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
 
     ## [1] "Keep 150 of 6128 OTUs"
 
-*Hyp:* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+*Hyp1* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### time 7, 13, and 25
 
@@ -361,11 +272,11 @@ Community as a predictor
     ## Comp04 0.1879489 0.2205367  0.003539710 0.2822099  6.062045  7.2766925
     ## Comp05 0.1967444 0.1897768  0.002389760 0.2656368 -2.935780  4.6797384
     ##            p
-    ## Comp01 0.355
-    ## Comp02 0.044
-    ## Comp03 0.503
-    ## Comp04 0.979
-    ## Comp05 0.932
+    ## Comp01 0.379
+    ## Comp02 0.042
+    ## Comp03 0.523
+    ## Comp04 0.986
+    ## Comp05 0.951
 
     ##             RMSE        R2     Avg.Bias  Max.Bias    Skill  delta.RMSE
     ## Comp01 0.1668533 0.2925742 -0.001261747 0.3122426 25.96599 -13.9569840
@@ -374,11 +285,11 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.048
-    ## Comp02 0.224
-    ## Comp03 0.940
-    ## Comp04 0.826
-    ## Comp05 0.884
+    ## Comp01 0.031
+    ## Comp02 0.202
+    ## Comp03 0.948
+    ## Comp04 0.839
+    ## Comp05 0.914
 
 Investigate the biology underlying time37-associated coefs for Comp02
 
@@ -386,7 +297,8 @@ Investigate the biology underlying time37-associated coefs for Comp02
 
 By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-19-1.png)
 
-*Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+*Hyp2* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+-----------------------------------------------------------------------------------------------------------------------------------------
 
 ### r2, k, t70, (alpha)
 
@@ -395,9 +307,10 @@ By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unname
 ########################################## 
 
 Community+traits as a predictor
--------------------------------
+===============================
 
-*Hyp:* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+*Hyp1* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### time 7, 25, 37
 
@@ -414,11 +327,11 @@ Community+traits as a predictor
     ## Comp04 0.1861811 2.670958e-03 -0.01869200 0.3402859  -95.12131   2.672318
     ## Comp05 0.2000881 9.511791e-03 -0.01941544 0.3603079 -125.35962   7.469616
     ##            p
-    ## Comp01 0.999
-    ## Comp02 0.593
-    ## Comp03 0.982
-    ## Comp04 0.816
-    ## Comp05 1.000
+    ## Comp01 0.996
+    ## Comp02 0.609
+    ## Comp03 0.984
+    ## Comp04 0.828
+    ## Comp05 0.999
 
     ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
     ## Comp01 0.1958078 0.09587553 -0.01406066 0.3977193 -115.82077 46.9083971
@@ -428,16 +341,17 @@ Community+traits as a predictor
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.043
-    ## Comp03 0.984
+    ## Comp02 0.045
+    ## Comp03 0.971
     ## Comp04 0.839
-    ## Comp05 0.375
+    ## Comp05 0.368
 
 Investigate the biology underlying time13-associated coefs for Comp02
 
 By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png)
 
-*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+*Hyp2* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### r2, k, t70, (alpha)
 
@@ -446,25 +360,30 @@ By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unname
 ########################################## 
 
 Diversity (and diversity of specific clades) as a predictor
------------------------------------------------------------
+===========================================================
 
 **Note that the full community matrix was used for these analyses**
 
-*Hyp:* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
+*Hyp1a* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
 
 ### Richness, Shannon's H
 
 **No pattern**
 
-*Hyp:* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
+*Hyp1b* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
+--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
 
 ### Saprotroph richness, Basidio richness
 
 **No pattern**
 
-*Hyp:* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+*Hyp1c* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### Pathogen richness, oomycete richness
 
@@ -473,9 +392,10 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fittin
 ############################################## 
 
 Diversity plus traits as a predictor
-------------------------------------
+====================================
 
-*Hyp:* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+*Hyp1* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
 
@@ -484,9 +404,10 @@ Diversity plus traits as a predictor
 ############################################## 
 
 Relationship between wood traits and community
-----------------------------------------------
+==============================================
 
-*Hyp:* Average initial microbial communitiy compositions will covary with initial wood traits
+*Hyp1* Average initial microbial communitiy compositions will covary with initial wood traits
+---------------------------------------------------------------------------------------------
 
 ############################################## 
 
