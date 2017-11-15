@@ -230,9 +230,8 @@ mod.compare.barkthick
 ```
 For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
 
-## *Hyp1* Stem-specific initial wood traits will predict variation in percent mass loss.
+## *Hyp (stem-level)* Stem-specific initial wood traits will predict variation in percent mass loss.
 ```{r, include=FALSE}
-
 
 CreateTraitPMRpair<-function(timePoint, traits.codeStem, traits.mean, pmr.byStem.df.w){
   
@@ -285,12 +284,14 @@ mod.full.t7<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn
 mod.full.t13<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
 mod.full.t25<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
 mod.full.t37<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
+mod.full.t37.nobark<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
 
 #do stepwise model selection
 mod.select.t7<-step(mod.full.t7, direction="backward")
 mod.select.t13<-step(mod.full.t13, direction="backward")
 mod.select.t25<-step(mod.full.t25, direction="backward")
 mod.select.t37<-step(mod.full.t37, direction="backward")
+mod.select.t37.nobark<-step(mod.full.t37.nobark, direction="backward")
 
 #save the residuals
 traitResid.t7<- data.frame(codeStem = datasets[['time7']]$codeStem, trait.resid = mod.select.t7$residuals)
@@ -338,84 +339,8 @@ summary(mod.select.t25) # size, waterperc, P
 summary(mod.select.t37) # size, waterperc, barkthick_smspp, P, Mn, C
 #ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
 #  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
-```
 
-
-
-## *Hyp2* Variation in wood traits will lead to differences in decay model fit (r2), rate (k), and lagginess (alpha).  Specifically, we expect samples with (a) high waterperc, (b) low density and C, (c) high P, K, Ca, Mn, Fe, Zn, and N, and (d) thicker bark (potential mech: limiting microbial colonization) to have better-fiting decay models (r2), faster decay rates (k), and less lagginess (alpha). 
-```{r, include=FALSE}
-
-#merge into 1 df
-spdf %>%
-  select(code, species, size, ne.r2, k, t70, alpha) %>%
-  left_join(traits.mean) %>% 
-  filter(!is.na(P)) %>%
-  filter(!is.na(waterperc)) -> spdf.traits
-
-#fit full models
-mod.full.r<-lm(ne.r2 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-mod.full.k<-lm(k ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-mod.full.t70<-lm(t70 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-mod.full.alpha<-lm(alpha ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-
-#do stepwise model selection
-mod.select.r<-step(mod.full.r, direction="backward")
-mod.select.k<-step(mod.full.k, direction="backward")
-mod.select.t70<-step(mod.full.t70, direction="backward")
-mod.select.alpha<-step(mod.full.alpha, direction="backward")
-
-#save the residuals
-trait.residuals<-data.frame(code=spdf.traits$code,
-  r2.resid=mod.select.r$residuals,
-  k.resid=mod.select.k$residuals,
-  t70.resid=mod.select.t70$residuals,
-  alpha.resid=mod.select.alpha$residuals)
-
-```
-
-### r2  
-
-**greater water content and greater Zn and N leads to better-fitting decay models**  
-
-Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model that greater water content and less C leads to better-fitting decay models
-```{r, echo=FALSE}
-summary(mod.select.r) # waterperc, Zn, N
-#ggplot(spdf.traits, aes(x=waterperc, y=ne.r2, color=species, shape=size)) + geom_point()
-```
-
-### k  
-
-**small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay**
-
-NOTE from Will: Density explains the same part of the variation in decay rates that initial water content does, only less well.  (In other words, although, density gets dropped from the best model by the model selection procedure, if we remove initial water from consideration entirely, density is included in the model as the best predictor.)  
-
-So my current interpretation is that wood water rentention--related to fiber saturation point and partially captured by the density measurement--has a strong effect on long-term decomposition rates, possibly by maintaining fungal activity further into dry periods.  There is also a very likely interaction between this water retention capacity with the fungal community (see results in Setting the Stage paper, Lee et al. in review).
-
-```{r, echo=FALSE}
-summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
-
-ggplot(spdf.traits, aes(x=waterperc, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
-  labs(y="k (year^-1)",x="Initial water content (% wet weight)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
-
-
-ggplot(spdf.traits, aes(x=density, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
-  labs(y="k (year^-1)",x="Initial density (g/cm^3)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
-
-```
-
-### t70  
-
-**small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood "70%"-lives**  
-
-Note: This result changed when I changed waterperc to g water/g wet weight. When waterperc was in terms of g/g dry weight, the best model indicated that large size stems, less water content, more Ca, and less Zn lead to longer wood "70%"-lives
-```{r, echo=FALSE}
-summary(mod.select.t70) # size, waterperc, barkthick, Ca, Zn
-#ggplot(spdf.traits, aes(x=waterperc, y=t70, color=species, size=density)) + geom_point() + facet_grid(~size)
-```
-
-### alpha--- don't interpret yet
-```{r, include=FALSE}
-summary(mod.select.alpha) # density, Zn, C
+summary(mod.select.t37.nobark)
 ```
 
 
@@ -437,7 +362,7 @@ paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 ```
 
 
-## *Hyp1* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+## *Hyp (stem-level)* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 ```{r, include=FALSE}
 
 #fxns
@@ -554,51 +479,13 @@ ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Trophic.M
 ```
 
 
-## *Hyp2* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
-```{r, include=FALSE, results=FALSE, message=FALSE}
-
-#average OTU abundances by code
-meanOTUabund.trim<-AverageOTUabund_byCode(comm.otu, seqSamples)
-meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
-
-#get rid of spdf rows for which there is missing community data... this is eusc
-#spdf[!spdf$code %in% row.names(meanOTUabund.trim),]$code
-spdf.trim<-spdf[spdf$code %in% row.names(meanOTUabund.trim2),]
-
-#fit models
-fit.r2.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$ne.r2)
-fit.r2 <- WAPLS(meanOTUabund.trim2, spdf.trim$ne.r2)
-fit.k <- WAPLS(meanOTUabund.trim2, spdf.trim$k)
-fit.t70 <- WAPLS(meanOTUabund.trim2, spdf.trim$t70)
-fit.alpha <- WAPLS(meanOTUabund.trim2, spdf.trim$alpha)
-
-#cross-validate models using the leave-one-out method
-fit.r2.cv.notrim <- crossval(fit.r2.notrim, cv.method="loo")
-fit.r2.cv <- crossval(fit.r2, cv.method="loo")
-fit.k.cv <- crossval(fit.k, cv.method="loo")
-fit.t70.cv <- crossval(fit.t70, cv.method="loo")
-fit.alpha.cv <- crossval(fit.alpha, cv.method="loo")
-
-#perform randomization t-test to test the significance of a cross-validated model
-#rand.t.test(fit.r2.cv)
-#rand.t.test(fit.r2.cv.notrim)
-#rand.t.test(fit.k.cv)
-#rand.t.test(fit.t70.cv)
-#rand.t.test(fit.alpha.cv)
-```
-
-### r2, k, t70, (alpha)
-
-**none of the community components are significant predictors**
-
-
 
 
 ##########################################
 
 # Community+traits as a predictor
 
-## *Hyp1* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+## *Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
@@ -869,52 +756,6 @@ ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) +
 
 
 
-## *Hyp2* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
-
-```{r, include=FALSE, results=FALSE, message=FALSE}
-#run rioja::WAPLS on wood trait residuals
-
-#average OTU abundances by code
-meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
-
-#make sure that the residuals and community dataframes are aligned
-trait.residuals$code<-as.character(trait.residuals$code)
-trait.residuals[!trait.residuals$code %in% row.names(meanOTUabund.trim2),"code"] # no missing from meanOTUabund.trim
-row.names(meanOTUabund.trim2)[!row.names(meanOTUabund.trim2) %in% trait.residuals$code] #missing olst from trait.residuals
-trait.residuals.trim<-trait.residuals[trait.residuals$code %in% row.names(meanOTUabund.trim2),] #trim
-meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% trait.residuals.trim$code,] #trim
-ord<-match(row.names(meanOTUabund.trim3), trait.residuals.trim$code)
-trait.residuals.trim.o<-trait.residuals.trim[ord,]
-sum(trait.residuals.trim.o$code != row.names(meanOTUabund.trim3)) #this needs to by 0
-
-#make sure there are no empty OTU cols
-sum(colSums(meanOTUabund.trim3)==0)
-
-#fit models
-fit.tr.r2 <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$r2.resid)
-fit.tr.k <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$k.resid)
-fit.tr.t70 <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$t70.resid)
-fit.tr.alpha <- WAPLS(meanOTUabund.trim3, trait.residuals.trim.o$alpha.resid)
-
-#cross-validate models using the leave-one-out method
-fit.tr.r2.cv <- crossval(fit.tr.r2, cv.method="loo")
-fit.tr.k.cv <- crossval(fit.tr.k, cv.method="loo")
-fit.tr.t70.cv <- crossval(fit.tr.t70, cv.method="loo")
-fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
-
-#rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
-#rand.t.test(fit.tr.r2.cv)
-#rand.t.test(fit.tr.k.cv)
-#rand.t.test(fit.tr.t70.cv) 
-#rand.t.test(fit.tr.alpha.cv)
-```
-
-
-### r2, k, t70, (alpha)
-
-**none of the community components are significant predictors**  
-
-
 
 
 ##########################################
@@ -923,148 +764,28 @@ fit.tr.alpha.cv <- crossval(fit.tr.alpha, cv.method="loo")
 
 **Note that the full community matrix was used for these analyses**
 
-## *Hyp1a* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
-Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
-```{r, echo=FALSE}
-
-# summarize the diversity in each sample
-rich.df<-Calc_richOTU(taxAndFunguild, comm.otu)
-H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
-
-# create a merged df wtih spdf
-rich.spdf<-Create_rich_spdf_DF(otutype.df=rich.df, spdf)
-H.spdf<-Create_rich_spdf_DF(otutype.df=H.df, spdf)
-
-# fit models
-mod.rich.r2<-lm(ne.r2~size+mean, data=rich.spdf)
-mod.rich.k<-lm(k~size+mean, data=rich.spdf)
-mod.rich.t70<-lm(t70~size+mean, data=rich.spdf)
-mod.rich.alpha<-lm(alpha~size+mean, data=rich.spdf)
-
-mod.H.r2<-lm(ne.r2~size+mean, data=H.spdf)
-mod.H.k<-lm(k~size+mean, data=H.spdf)
-mod.H.t70<-lm(t70~size+mean, data=H.spdf)
-mod.H.alpha<-lm(alpha~size+mean, data=H.spdf)
-
-# create plots
-richList<-Plot_richOTUtype(rich.spdf=rich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Total")
-H.List<-Plot_richOTUtype(rich.spdf=H.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Shannon's H")
-
-# anova(mod.rich.r2)
-# anova(mod.rich.k)
-# anova(mod.rich.t70)
-# anova(mod.rich.alpha)
-
-# anova(mod.H.r2)
-# anova(mod.H.k)
-# anova(mod.H.t70)
-# anova(mod.H.alpha)
-
-```
+## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay.  
+Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
 
 ### Richness, Shannon's H
 
-**No pattern**
+**????**
 
 
-## *Hyp1b* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
-```{r, echo=FALSE}
-
-# summarize the presence of ... in each sample
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
-
-# create a merged df wtih spdf
-saprorich.spdf<-Create_rich_spdf_DF(otutype.df=sapro.df, spdf)
-basidrich.spdf<-Create_rich_spdf_DF(otutype.df=basidio.df, spdf)
-
-# fit models
-mod.sapro.r2<-lm(ne.r2~size+mean, data=saprorich.spdf)
-mod.sapro.k<-lm(k~size+mean, data=saprorich.spdf)
-mod.sapro.t70<-lm(t70~size+mean, data=saprorich.spdf)
-mod.sapro.alpha<-lm(alpha~size+mean, data=saprorich.spdf)
-mod.basid.r2<-lm(ne.r2~size+mean, data=basidrich.spdf)
-mod.basid.k<-lm(k~size+mean, data=basidrich.spdf)
-mod.basid.t70<-lm(t70~size+mean, data=basidrich.spdf)
-mod.basid.alpha<-lm(alpha~size+mean, data=basidrich.spdf)
-
-# create plots
-sapList<-Plot_richOTUtype(rich.spdf=saprorich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Saprotroph")
-basidList<-Plot_richOTUtype(rich.spdf = basidrich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Basidio")
-
-# anova(mod.sapro.r2)
-# anova(mod.sapro.k)
-# anova(mod.sapro.t70)
-# anova(mod.sapro.alpha) #marginally-signif
-# #sapList[['alpha']]
-
-# anova(mod.basid.r2)
-# anova(mod.basid.k)
-# anova(mod.basid.t70)
-# anova(mod.basid.alpha)
-
-```
+## *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
 
 ### Saprotroph richness, Basidio richness
 
-**No pattern**
+**????**
 
 
-## *Hyp1c* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
-```{r, echo=FALSE}
-
-# summarize the presence of ... in each sample
-path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu) # have to do this with the full community matrix because there are so few of these guys
-
-# create a merged df wtih spdf
-pathrich.spdf<-Create_rich_spdf_DF(otutype.df=path.df, spdf)
-oomyrich.spdf<-Create_rich_spdf_DF(otutype.df=oomy.df, spdf)
-
-# fit models
-mod.path.r2<-lm(ne.r2~size+mean, data=pathrich.spdf)
-mod.path.k<-lm(k~size+mean, data=pathrich.spdf)
-mod.path.t70<-lm(t70~size+mean, data=pathrich.spdf)
-mod.path.alpha<-lm(alpha~size+mean, data=pathrich.spdf)
-mod.oomy.r2<-lm(ne.r2~size+mean, data=oomyrich.spdf)
-mod.oomy.k<-lm(k~size+mean, data=oomyrich.spdf)
-mod.oomy.t70<-lm(t70~size+mean, data=oomyrich.spdf)
-mod.oomy.alpha<-lm(alpha~size+mean, data=oomyrich.spdf)
-
-# create plots
-pathList<-Plot_richOTUtype(rich.spdf=pathrich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Pathogen")
-ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf, 
-                        valueCol_vec=c("ne.r2", "k","alpha"), 
-                        otutypeNam="Oomycete")
-
-
-# anova(mod.path.r2)
-# anova(mod.path.k)
-# anova(mod.path.t70)
-# anova(mod.path.alpha) #marginally signif
-# #pathList[['alpha']]
-
-# anova(mod.oomy.r2)
-# anova(mod.oomy.k)
-# anova(mod.oomy.t70)
-# anova(mod.oomy.alpha)
-
-```
+## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
 
 ### Pathogen richness, oomycete richness
 
-**No pattern**
+**????**
+
 
 
 
@@ -1073,38 +794,11 @@ ooList<-Plot_richOTUtype(rich.spdf=oomyrich.spdf,
 
 # Diversity plus traits as a predictor
 
-## *Hyp1* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
-
-```{r, echo=FALSE}
-
-#run lm mods on wood trait residuals
-mod.rich<-FitResid_diversity(rich.spdf=rich.spdf, trait.residuals)
-mod.H<-FitResid_diversity(rich.spdf=H.spdf, trait.residuals)
-mod.sapro<-FitResid_diversity(rich.spdf=saprorich.spdf, trait.residuals)
-mod.basid<-FitResid_diversity(rich.spdf=basidrich.spdf, trait.residuals)
-mod.path<-FitResid_diversity(rich.spdf=pathrich.spdf, trait.residuals)
-mod.oomy<-FitResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals)
-
-#make plots
-p.rich<-PlotResid_diversity(rich.spdf=rich.spdf, trait.residuals, xlab="Richness")
-p.H<-PlotResid_diversity(rich.spdf=H.spdf, trait.residuals, xlab="Shannon's H")
-p.sapro<-PlotResid_diversity(rich.spdf=saprorich.spdf, trait.residuals, xlab="Saprotroph richness")
-p.basid<-PlotResid_diversity(rich.spdf=basidrich.spdf, trait.residuals, xlab="Basidio richness")
-p.path<-PlotResid_diversity(rich.spdf=pathrich.spdf, trait.residuals, xlab="Pathogen richness")
-p.oomy<-PlotResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals, xlab="Oomycete richness")
-
-#lapply(mod.rich, anova)
-#lapply(mod.H, anova)
-#lapply(mod.sapro, anova) #marginally signif alpha
-#lapply(mod.basid, anova)
-#lapply(mod.path, anova) #marginally signif for alpha
-#lapply(mod.oomy, anova)
-
-```
+## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
 
 ### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
 
-**No pattern**
+**?????**
 
 
 
@@ -1113,29 +807,26 @@ p.oomy<-PlotResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals, xlab="Oomy
 
 # Relationship between wood traits and community
 
-## *Hyp1* Average initial microbial communitiy compositions will covary with initial wood traits
+## *Hyp (stem-level)* Initial microbial communitiy compositions will covary with initial wood traits
 
 ```{r, echo=FALSE}
 
-#average OTU abundances by code
-meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
-
-#get rid of missing data from traits.mean
-traits.mean %>%
-  filter(!is.na(waterperc)) %>% #get NaN row
-  filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
-
-#make sure dimensions of the community matrix match
-meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
-
-#make a envVars matrix for model fitting
-envVars<-as.matrix(traits.mean.trim[,-(1:3)])
-
-#fit models
-fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
-#fit.cca
-#plot(fit.cca)
-#anova(fit.cca)
+# #get rid of missing data from traits.mean
+# traits.mean %>%
+#   filter(!is.na(waterperc)) %>% #get NaN row
+#   filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
+# 
+# #make sure dimensions of the community matrix match
+# meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
+# 
+# #make a envVars matrix for model fitting
+# envVars<-as.matrix(traits.mean.trim[,-(1:3)])
+# 
+# #fit models
+# fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
+# #fit.cca
+# #plot(fit.cca)
+# #anova(fit.cca)
 
 
 ```
@@ -1156,7 +847,19 @@ fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
 
 5. *code/unexpectedTaxa.Rmd* -- Mycorrhizal fungi and animal-associated fungi that somehow made it into our OTU table
 
+6. *code/code_level_analyses.Rmd* -- Aggregated data to the code level, taking trait means, community means, and estimating the fit params for each code's decay trajectory in neg.exp and weibold models...  
 
+1. Traits explain ~ 60-70% of variation in decay over 37 months (r2, k, t70)  
+
+  a. Greater water content and greater Zn and N leads to better-fitting decay models  
+  
+  b. Small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay  
+  
+  c. Small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood “70%”-lives
+
+2. Neither community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70  
+
+3. After accounting for variation in decay due to wood traits, neither the community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
 
 
 
