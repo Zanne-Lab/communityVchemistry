@@ -144,6 +144,95 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 
 ## Wood traits as a predictor
 
+First, look at just the small stem samples because we have the most trait information on the stem level for theses samples. Compare models using data on code level and codeStem level and with barkthickness and density as predictors to see if codeStem improves model fit...
+```{r}
+
+# add code to pmr dataset
+pmr.byStem.df.w %>%
+  separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
+
+# (1) subset just the small stems
+# (2) subset samples with waterperc, density, barkthick trait data
+# (3) join with pmr data
+# (4) select useful cols
+traits.codeStem %>% 
+  filter(size=="small") %>%
+  filter(!is.na(density) & !is.na(barkthick)) %>%
+  left_join(pmr.byStem.df.w) %>%
+  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.codeStem
+dim(sm.traits.codeStem)
+
+
+# (1) subset just the small codes, 
+# (2) subset samples with waterperc, density, barkthick trait data
+# (3) restrict analyses to the same set of wood species as present in stem dataset
+# (4) join with pmr data
+# (5) select useful cols
+traits.mean %>%
+  filter(size=="small") %>%
+  filter(!is.na(density) & !is.na(barkthick)) %>%
+  filter(code %in% unique(sm.traits.codeStem$code)) %>%
+  left_join(pmr.byStem.df.w) %>%
+  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.code
+dim(sm.traits.code)
+
+### density + barkthick
+#fit stem-level models
+mod.stem.t7<-lm(time7 ~ density + barkthick, data=sm.traits.codeStem)
+mod.stem.t13<-lm(time13 ~ density +barkthick, data=sm.traits.codeStem)
+mod.stem.t25<-lm(time25 ~ density +barkthick, data=sm.traits.codeStem)
+mod.stem.t37<-lm(time37 ~ density +barkthick, data=sm.traits.codeStem)
+#fit code-level models
+mod.code.t7<-lm(time7 ~ density +barkthick, data=sm.traits.code)
+mod.code.t13<-lm(time13 ~ density +barkthick, data=sm.traits.code)
+mod.code.t25<-lm(time25 ~ density +barkthick, data=sm.traits.code)
+mod.code.t37<-lm(time37 ~ density +barkthick, data=sm.traits.code)
+#summarize r2 vals
+mod.compare.densitybarkthick<-data.frame(response=c("time7","time13","time25","time37"),
+           r2.stem=c(summary(mod.stem.t7)$r.squared,
+                     summary(mod.stem.t13)$r.squared,
+                     summary(mod.stem.t25)$r.squared,
+                     summary(mod.stem.t37)$r.squared),
+           
+           r2.code=c(summary(mod.code.t7)$r.squared,
+                     summary(mod.code.t13)$r.squared,
+                     summary(mod.code.t25)$r.squared,
+                     summary(mod.code.t37)$r.squared))
+mod.compare.densitybarkthick
+
+### just barkthick
+#fit stem-level models
+mod.stem.t7<-lm(time7 ~ barkthick, data=sm.traits.codeStem)
+mod.stem.t13<-lm(time13 ~ barkthick, data=sm.traits.codeStem)
+mod.stem.t25<-lm(time25 ~ barkthick, data=sm.traits.codeStem)
+mod.stem.t37<-lm(time37 ~ barkthick, data=sm.traits.codeStem)
+#fit code-level models
+mod.code.t7<-lm(time7 ~ barkthick, data=sm.traits.code)
+mod.code.t13<-lm(time13 ~ barkthick, data=sm.traits.code)
+mod.code.t25<-lm(time25 ~ barkthick, data=sm.traits.code)
+mod.code.t37<-lm(time37 ~ barkthick, data=sm.traits.code)
+#summarize r2 vals
+mod.compare.barkthick<-data.frame(response=c("time7","time13","time25","time37"),
+           r2.stem=c(summary(mod.stem.t7)$r.squared,
+                     summary(mod.stem.t13)$r.squared,
+                     summary(mod.stem.t25)$r.squared,
+                     summary(mod.stem.t37)$r.squared),
+           
+           r2.code=c(summary(mod.code.t7)$r.squared,
+                     summary(mod.code.t13)$r.squared,
+                     summary(mod.code.t25)$r.squared,
+                     summary(mod.code.t37)$r.squared))
+mod.compare.barkthick
+
+#ggplot(sm.traits.codeStem, aes(x=codeStem, y=barkthick, color=code)) + 
+#  geom_point() + coord_flip()
+
+```
+For models with **density + barkthickness**, it looks like stem-level data improves model fit for early percent mass remaining time points (after 7 and 13 months) but not later time points.
+
+For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
+
+
 *Hyp:* Stem-specific initial wood traits will predict variation in percent mass loss.
 ```{r, include=FALSE}
 

@@ -14,6 +14,117 @@ Marissa Lee
 Wood traits as a predictor
 --------------------------
 
+First, look at just the small stem samples because we have the most trait information on the stem level for theses samples. Compare models using data on code level and codeStem level and with barkthickness and density as predictors to see if codeStem improves model fit...
+
+``` r
+# add code to pmr dataset
+pmr.byStem.df.w %>%
+  separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
+
+# (1) subset just the small stems
+# (2) subset samples with waterperc, density, barkthick trait data
+# (3) join with pmr data
+# (4) select useful cols
+traits.codeStem %>% 
+  filter(size=="small") %>%
+  filter(!is.na(density) & !is.na(barkthick)) %>%
+  left_join(pmr.byStem.df.w) %>%
+  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.codeStem
+dim(sm.traits.codeStem)
+```
+
+    ## [1] 51  9
+
+``` r
+# (1) subset just the small codes, 
+# (2) subset samples with waterperc, density, barkthick trait data
+# (3) restrict analyses to the same set of wood species as present in stem dataset
+# (4) join with pmr data
+# (5) select useful cols
+traits.mean %>%
+  filter(size=="small") %>%
+  filter(!is.na(density) & !is.na(barkthick)) %>%
+  filter(code %in% unique(sm.traits.codeStem$code)) %>%
+  left_join(pmr.byStem.df.w) %>%
+  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.code
+dim(sm.traits.code)
+```
+
+    ## [1] 79  9
+
+``` r
+### density + barkthick
+#fit stem-level models
+mod.stem.t7<-lm(time7 ~ density + barkthick, data=sm.traits.codeStem)
+mod.stem.t13<-lm(time13 ~ density +barkthick, data=sm.traits.codeStem)
+mod.stem.t25<-lm(time25 ~ density +barkthick, data=sm.traits.codeStem)
+mod.stem.t37<-lm(time37 ~ density +barkthick, data=sm.traits.codeStem)
+#fit code-level models
+mod.code.t7<-lm(time7 ~ density +barkthick, data=sm.traits.code)
+mod.code.t13<-lm(time13 ~ density +barkthick, data=sm.traits.code)
+mod.code.t25<-lm(time25 ~ density +barkthick, data=sm.traits.code)
+mod.code.t37<-lm(time37 ~ density +barkthick, data=sm.traits.code)
+#summarize r2 vals
+mod.compare.densitybarkthick<-data.frame(response=c("time7","time13","time25","time37"),
+           r2.stem=c(summary(mod.stem.t7)$r.squared,
+                     summary(mod.stem.t13)$r.squared,
+                     summary(mod.stem.t25)$r.squared,
+                     summary(mod.stem.t37)$r.squared),
+           
+           r2.code=c(summary(mod.code.t7)$r.squared,
+                     summary(mod.code.t13)$r.squared,
+                     summary(mod.code.t25)$r.squared,
+                     summary(mod.code.t37)$r.squared))
+mod.compare.densitybarkthick
+```
+
+    ##   response    r2.stem    r2.code
+    ## 1    time7 0.09738165 0.03171432
+    ## 2   time13 0.07007181 0.04307107
+    ## 3   time25 0.03728149 0.03940721
+    ## 4   time37 0.14794897 0.20843563
+
+``` r
+### just barkthick
+#fit stem-level models
+mod.stem.t7<-lm(time7 ~ barkthick, data=sm.traits.codeStem)
+mod.stem.t13<-lm(time13 ~ barkthick, data=sm.traits.codeStem)
+mod.stem.t25<-lm(time25 ~ barkthick, data=sm.traits.codeStem)
+mod.stem.t37<-lm(time37 ~ barkthick, data=sm.traits.codeStem)
+#fit code-level models
+mod.code.t7<-lm(time7 ~ barkthick, data=sm.traits.code)
+mod.code.t13<-lm(time13 ~ barkthick, data=sm.traits.code)
+mod.code.t25<-lm(time25 ~ barkthick, data=sm.traits.code)
+mod.code.t37<-lm(time37 ~ barkthick, data=sm.traits.code)
+#summarize r2 vals
+mod.compare.barkthick<-data.frame(response=c("time7","time13","time25","time37"),
+           r2.stem=c(summary(mod.stem.t7)$r.squared,
+                     summary(mod.stem.t13)$r.squared,
+                     summary(mod.stem.t25)$r.squared,
+                     summary(mod.stem.t37)$r.squared),
+           
+           r2.code=c(summary(mod.code.t7)$r.squared,
+                     summary(mod.code.t13)$r.squared,
+                     summary(mod.code.t25)$r.squared,
+                     summary(mod.code.t37)$r.squared))
+mod.compare.barkthick
+```
+
+    ##   response      r2.stem    r2.code
+    ## 1    time7 0.0141641846 0.03058141
+    ## 2   time13 0.0005720156 0.01335815
+    ## 3   time25 0.0102544419 0.01047655
+    ## 4   time37 0.0976021785 0.03716909
+
+``` r
+#ggplot(sm.traits.codeStem, aes(x=codeStem, y=barkthick, color=code)) + 
+#  geom_point() + coord_flip()
+```
+
+For models with **density + barkthickness**, it looks like stem-level data improves model fit for early percent mass remaining time points (after 7 and 13 months) but not later time points.
+
+For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
+
 *Hyp:* Stem-specific initial wood traits will predict variation in percent mass loss.
 
 ### time7
@@ -189,7 +300,7 @@ So my current interpretation is that wood water rentention--related to fiber sat
     ## Multiple R-squared:  0.7486, Adjusted R-squared:  0.6752 
     ## F-statistic: 10.21 on 7 and 24 DF,  p-value: 6.942e-06
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-11-2.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-12-2.png)
 
 ### t70
 
@@ -250,11 +361,11 @@ Community as a predictor
     ## Comp04 0.1879489 0.2205367  0.003539710 0.2822099  6.062045  7.2766925
     ## Comp05 0.1967444 0.1897768  0.002389760 0.2656368 -2.935780  4.6797384
     ##            p
-    ## Comp01 0.377
-    ## Comp02 0.042
-    ## Comp03 0.520
-    ## Comp04 0.984
-    ## Comp05 0.922
+    ## Comp01 0.355
+    ## Comp02 0.044
+    ## Comp03 0.503
+    ## Comp04 0.979
+    ## Comp05 0.932
 
     ##             RMSE        R2     Avg.Bias  Max.Bias    Skill  delta.RMSE
     ## Comp01 0.1668533 0.2925742 -0.001261747 0.3122426 25.96599 -13.9569840
@@ -263,17 +374,17 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.034
-    ## Comp02 0.206
-    ## Comp03 0.947
-    ## Comp04 0.835
-    ## Comp05 0.915
+    ## Comp01 0.048
+    ## Comp02 0.224
+    ## Comp03 0.940
+    ## Comp04 0.826
+    ## Comp05 0.884
 
 Investigate the biology underlying time37-associated coefs for Comp02
 
     ## [1] "Fungi"
 
-By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png)
+By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-19-1.png)
 
 *Hyp:* Average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
@@ -303,10 +414,10 @@ Community+traits as a predictor
     ## Comp04 0.1861811 2.670958e-03 -0.01869200 0.3402859  -95.12131   2.672318
     ## Comp05 0.2000881 9.511791e-03 -0.01941544 0.3603079 -125.35962   7.469616
     ##            p
-    ## Comp01 0.997
-    ## Comp02 0.605
-    ## Comp03 0.990
-    ## Comp04 0.854
+    ## Comp01 0.999
+    ## Comp02 0.593
+    ## Comp03 0.982
+    ## Comp04 0.816
     ## Comp05 1.000
 
     ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
@@ -317,14 +428,14 @@ Community+traits as a predictor
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.060
-    ## Comp03 0.983
-    ## Comp04 0.841
-    ## Comp05 0.390
+    ## Comp02 0.043
+    ## Comp03 0.984
+    ## Comp04 0.839
+    ## Comp05 0.375
 
 Investigate the biology underlying time13-associated coefs for Comp02
 
-By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)
+By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png)
 
 *Hyp:* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 
