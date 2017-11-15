@@ -677,12 +677,12 @@ fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
 #rand.t.test(fit.tr.t7.cv.nt)
 #rand.t.test(fit.tr.t25.cv) 
 #rand.t.test(fit.tr.t25.cv.nt)
-#rand.t.test(fit.tr.t37.cv) 
-#rand.t.test(fit.tr.t37.cv.nt) 
+rand.t.test(fit.tr.t37.cv) 
+rand.t.test(fit.tr.t37.cv.nt) 
 
 ```
 
-### time 7, 25, 37
+### time 7, 25
 
 **none of the community components are significant predictors**
 
@@ -726,6 +726,98 @@ pTroph<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Troph
   scale_color_manual(name="Trophic mode", values=colvals) +
   theme_classic()
 pTroph
+
+totallower<-sum(plot.df$quant=="lower5")
+totalupper<-sum(plot.df$quant=="upper95")
+
+plot.df %>%
+  group_by(Trophic.Mode, quant) %>%
+  summarize(numOTUs=length(coefComp),
+            freqlower=numOTUs/totallower,
+            frequpper=numOTUs/totalupper) %>%
+  filter(Trophic.Mode != "unclassified") -> tmp
+tmp$freq<-tmp$freqlower 
+tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
+
+ggplot(tmp, aes(x=reorder(Trophic.Mode, freq), y=freq*100)) + 
+  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
+  ylab("OTU frequency (%)") + xlab("Trophic mode")
+
+
+```
+By phylum
+```{r, echo=FALSE, warnings=FALSE, message=FALSE}
+
+# #define cols
+# colvals<-rainbow_hcl(length(unique(coef.comp.ann$phylum)))
+# names(colvals)<-unique(coef.comp.ann$phylum)
+# colvals['unclassified']<-"#D3D3D3"
+# 
+# pPhylum<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=phylum)) + 
+#   geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
+#   xlab("Fungal species") + ylab("Component coefficient estimate") +
+#   scale_color_manual(name="Phylum", values=colvals) +
+#   theme_classic()
+# pPhylum
+
+plot.df %>%
+  group_by(phylum, quant) %>%
+  summarize(numOTUs=length(coefComp),
+            freqlower=numOTUs/totallower,
+            frequpper=numOTUs/totalupper) %>%
+  filter(phylum != "unclassified") -> tmp
+tmp$freq<-tmp$freqlower 
+tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
+
+ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) + 
+  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
+  ylab("OTU frequency (%)") + xlab("Phylum")
+
+```
+
+### time 37
+
+**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
+
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t37.cv) 
+rand.t.test(fit.tr.t37.cv.nt) 
+```
+
+Investigate the biology underlying time37-associated coefs for Comp02
+```{r, include=FALSE}
+coef.comp<-fit.tr.t37.cv.nt$coefficients[,'Comp02']
+coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
+
+#create df of OTU taxon and guild info matched with coef value
+coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
+
+#classify samples into quantiles based on coef value
+quant<-quantile(coef.comp.ann$coefComp, c(.05, .95))
+coef.comp.ann$quant<-"middle"
+coef.comp.ann[coef.comp.ann$coefComp > quant[2],'quant']<-"upper95"
+coef.comp.ann[coef.comp.ann$coefComp < quant[1],'quant']<-"lower5"
+plot.df<-subset(coef.comp.ann, quant != "middle") #get rid of the middle for plotting
+unique(plot.df$kingdom)
+
+```
+By trophic mode -- note that one of the species' names has weird characters in it that makes the name dissapear in the ggplots (genus: Montagnula)
+```{r, echo=FALSE, warnings=FALSE, message=FALSE}
+
+#define cols
+colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
+names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
+colvals['unclassified']<-"#D3D3D3"
+
+pTroph<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Trophic.Mode)) + 
+  geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
+  xlab("Fungal species") + ylab("Component coefficient estimate") +
+  scale_color_manual(name="Trophic mode", values=colvals) +
+  theme_classic()
+pTroph
+
+#one of the species names has weird characters in it
+plot.df[plot.df$genus=="Montagnula","species"]
 
 totallower<-sum(plot.df$quant=="lower5")
 totalupper<-sum(plot.df$quant=="upper95")

@@ -272,11 +272,11 @@ Community as a predictor
     ## Comp04 0.1879489 0.2205367  0.003539710 0.2822099  6.062045  7.2766925
     ## Comp05 0.1967444 0.1897768  0.002389760 0.2656368 -2.935780  4.6797384
     ##            p
-    ## Comp01 0.379
-    ## Comp02 0.042
-    ## Comp03 0.523
-    ## Comp04 0.986
-    ## Comp05 0.951
+    ## Comp01 0.341
+    ## Comp02 0.043
+    ## Comp03 0.500
+    ## Comp04 0.980
+    ## Comp05 0.931
 
     ##             RMSE        R2     Avg.Bias  Max.Bias    Skill  delta.RMSE
     ## Comp01 0.1668533 0.2925742 -0.001261747 0.3122426 25.96599 -13.9569840
@@ -285,11 +285,11 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.031
-    ## Comp02 0.202
-    ## Comp03 0.948
-    ## Comp04 0.839
-    ## Comp05 0.914
+    ## Comp01 0.040
+    ## Comp02 0.209
+    ## Comp03 0.938
+    ## Comp04 0.836
+    ## Comp05 0.911
 
 Investigate the biology underlying time37-associated coefs for Comp02
 
@@ -312,7 +312,7 @@ Community+traits as a predictor
 *Hyp1* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-### time 7, 25, 37
+### time 7, 25
 
 **none of the community components are significant predictors**
 
@@ -327,11 +327,11 @@ Community+traits as a predictor
     ## Comp04 0.1861811 2.670958e-03 -0.01869200 0.3402859  -95.12131   2.672318
     ## Comp05 0.2000881 9.511791e-03 -0.01941544 0.3603079 -125.35962   7.469616
     ##            p
-    ## Comp01 0.996
-    ## Comp02 0.609
-    ## Comp03 0.984
-    ## Comp04 0.828
-    ## Comp05 0.999
+    ## Comp01 0.992
+    ## Comp02 0.596
+    ## Comp03 0.985
+    ## Comp04 0.830
+    ## Comp05 0.998
 
     ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
     ## Comp01 0.1958078 0.09587553 -0.01406066 0.3977193 -115.82077 46.9083971
@@ -341,14 +341,52 @@ Community+traits as a predictor
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.045
-    ## Comp03 0.971
-    ## Comp04 0.839
-    ## Comp05 0.368
+    ## Comp02 0.042
+    ## Comp03 0.976
+    ## Comp04 0.862
+    ## Comp05 0.405
 
 Investigate the biology underlying time13-associated coefs for Comp02
 
 By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-24-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-25-1.png)
+
+### time 37
+
+**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
+
+    ##             RMSE         R2      Avg.Bias  Max.Bias      Skill delta.RMSE
+    ## Comp01 0.1633400 0.10912198  0.0048731517 0.5082022  -84.64104  35.882684
+    ## Comp02 0.1610050 0.07419442 -0.0008395380 0.5335838  -79.39971  -1.429547
+    ## Comp03 0.1658073 0.04851359 -0.0005832514 0.5388449  -90.26127   2.982713
+    ## Comp04 0.1742137 0.03721285 -0.0109272133 0.5420594 -110.04267   5.069961
+    ## Comp05 0.1820216 0.06021876 -0.0066978467 0.5502118 -129.29208   4.481828
+    ##            p
+    ## Comp01 1.000
+    ## Comp02 0.337
+    ## Comp03 0.843
+    ## Comp04 0.969
+    ## Comp05 0.984
+
+    ##             RMSE         R2     Avg.Bias  Max.Bias     Skill delta.RMSE
+    ## Comp01 0.1581035 0.03769404 -0.004403347 0.4491610 -72.99197 31.5264121
+    ## Comp02 0.1482860 0.01814330 -0.007838838 0.4536283 -52.17497 -6.2095470
+    ## Comp03 0.1523646 0.01616706 -0.011759602 0.4631645 -60.66122  2.7504944
+    ## Comp04 0.1544560 0.01780653 -0.012873184 0.4640219 -65.10218  1.3726688
+    ## Comp05 0.1551144 0.02096629 -0.012031667 0.4653956 -66.51268  0.4262494
+    ##            p
+    ## Comp01 1.000
+    ## Comp02 0.009
+    ## Comp03 0.953
+    ## Comp04 0.920
+    ## Comp05 0.832
+
+Investigate the biology underlying time37-associated coefs for Comp02
+
+By trophic mode -- note that one of the species' names has weird characters in it that makes the name dissapear in the ggplots (genus: Montagnula) ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-28-1.png)
+
+    ## [1] "Montagnula_alo\xfc\xbe\x98\xa6\x94\xbcs"
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-28-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-29-1.png)
 
 *Hyp2* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
