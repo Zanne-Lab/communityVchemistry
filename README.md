@@ -1,13 +1,31 @@
 Does chemistry or community better predict mass loss?
 ================
-Marissa Lee
 10/23/2017
 
 ### Load microbial community data
 
 ### Load wood trait data
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-2.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-3-3.png)
+
+### Summarize stem-level data
+
+``` r
+# add 'codeStem' to microbial community
+seqSamples$codeStem<-paste(seqSamples$code, seqSamples$Stem, sep="")
+seqSamples[grepl("NA", seqSamples$codeStem),"codeStem"]<-NA
+
+# bind everything together
+pmr.byStem.df.w %>% # mass loss
+  full_join(traits.codeStem) %>% #wood traits
+  full_join(seqSamples) %>% #microbial data
+  select(codeStem, code, seq_sampName, waterperc, density, barkthick, P, K, Ca, Mn, Fe, Zn, N, C, time7, time13, time25, time37) %>%
+  filter(!is.na(codeStem))  %>%
+  separate(codeStem, into=c("code1","Stem"), sep=4) %>%
+  filter(Stem %in% 1:10) -> stem.data
+
+#View(stem.data)
+```
 
 ########################################## 
 
@@ -32,7 +50,7 @@ First, look at just the small stem samples because we have the most trait inform
     ## 3   time25 0.0102544419 0.01047655
     ## 4   time37 0.0976021785 0.03716909
 
-For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-5-1.png) For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
 
 *Hyp (stem-level)* Stem-specific initial wood traits will predict variation in percent mass loss.
 -------------------------------------------------------------------------------------------------
@@ -142,32 +160,6 @@ For models with **density + barkthickness**, it looks like stem-level data impro
     ## Multiple R-squared:  0.6319, Adjusted R-squared:  0.5818 
     ## F-statistic: 12.59 on 6 and 44 DF,  p-value: 3.269e-08
 
-    ## 
-    ## Call:
-    ## lm(formula = curr.time ~ size + waterperc + P + Mn + Zn + N + 
-    ##     C, data = datasets[["time37"]])
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.33992 -0.08112  0.01198  0.08868  0.27249 
-    ## 
-    ## Coefficients:
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept)  0.3343324  0.7751083   0.431  0.66838    
-    ## sizesmall   -0.1924388  0.0444506  -4.329 8.78e-05 ***
-    ## waterperc   -0.0236176  0.0033363  -7.079 9.89e-09 ***
-    ## P            0.0007591  0.0002639   2.877  0.00623 ** 
-    ## Mn           0.0006056  0.0003035   1.995  0.05236 .  
-    ## Zn          -0.0007677  0.0005331  -1.440  0.15708    
-    ## N           -0.2447862  0.1443333  -1.696  0.09712 .  
-    ## C            0.0255493  0.0146858   1.740  0.08906 .  
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 0.1324 on 43 degrees of freedom
-    ## Multiple R-squared:  0.6233, Adjusted R-squared:  0.562 
-    ## F-statistic: 10.16 on 7 and 43 DF,  p-value: 1.968e-07
-
 ########################################## 
 
 Community as a predictor
@@ -186,20 +178,7 @@ Community as a predictor
 
 ### time 37
 
-**Comp01 is significant; if trim out OTUs that are not present in at least 20% of samples...Comp02 is significant**
-
-    ##             RMSE        R2     Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.1884529 0.1515172  0.033192872 0.2942286  5.557560 -2.8184996
-    ## Comp02 0.1749664 0.2407742  0.008951682 0.2788971 18.591259 -7.1564113
-    ## Comp03 0.1752001 0.2660234 -0.000556893 0.2185399 18.373655  0.1335602
-    ## Comp04 0.1879489 0.2205367  0.003539710 0.2822099  6.062045  7.2766925
-    ## Comp05 0.1967444 0.1897768  0.002389760 0.2656368 -2.935780  4.6797384
-    ##            p
-    ## Comp01 0.400
-    ## Comp02 0.034
-    ## Comp03 0.512
-    ## Comp04 0.981
-    ## Comp05 0.934
+**Comp01 is significant (whole community)**
 
     ##             RMSE        R2     Avg.Bias  Max.Bias    Skill  delta.RMSE
     ## Comp01 0.1668533 0.2925742 -0.001261747 0.3122426 25.96599 -13.9569840
@@ -208,17 +187,19 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.036
-    ## Comp02 0.221
-    ## Comp03 0.953
-    ## Comp04 0.866
-    ## Comp05 0.908
+    ## Comp01 0.041
+    ## Comp02 0.202
+    ## Comp03 0.930
+    ## Comp04 0.850
+    ## Comp05 0.918
 
-Investigate the biology underlying time37-associated coefs for Comp02
+This is likely an underlying signiture of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months. Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
-    ## [1] "Fungi"
+Investigate the biology underlying time37-associated coefs for Comp01
 
-By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
+    ## [1] "Fungi"   "Protist"
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
 
 ########################################## 
 
@@ -228,81 +209,9 @@ Community+traits as a predictor
 *Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-### time 7, 25
+### time 7, 13, 25, 37
 
 **none of the community components are significant predictors**
-
-### time 13
-
-**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
-
-    ##             RMSE           R2    Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1684942 7.969996e-03 -0.01227286 0.3008319  -59.80987  26.415927
-    ## Comp02 0.1708079 8.029389e-05 -0.01134351 0.3428988  -64.22886   1.373151
-    ## Comp03 0.1813353 1.626797e-02 -0.01398033 0.3387630  -85.09640   6.163259
-    ## Comp04 0.1861811 2.670958e-03 -0.01869200 0.3402859  -95.12131   2.672318
-    ## Comp05 0.2000881 9.511791e-03 -0.01941544 0.3603079 -125.35962   7.469616
-    ##            p
-    ## Comp01 0.996
-    ## Comp02 0.608
-    ## Comp03 0.978
-    ## Comp04 0.835
-    ## Comp05 1.000
-
-    ##             RMSE         R2    Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1958078 0.09587553 -0.01406066 0.3977193 -115.82077 46.9083971
-    ## Comp02 0.1807162 0.02022406 -0.02532412 0.3640608  -83.83481 -7.7073210
-    ## Comp03 0.1915530 0.02089810 -0.02731081 0.3899540 -106.54333  5.9965450
-    ## Comp04 0.1942539 0.02389339 -0.02709579 0.3915635 -112.40896  1.4100120
-    ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
-    ##            p
-    ## Comp01 1.000
-    ## Comp02 0.043
-    ## Comp03 0.973
-    ## Comp04 0.855
-    ## Comp05 0.377
-
-Investigate the biology underlying time13-associated coefs for Comp02
-
-By trophic mode ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png)![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-19-1.png)
-
-### time 37
-
-**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
-
-    ##             RMSE         R2      Avg.Bias  Max.Bias      Skill delta.RMSE
-    ## Comp01 0.1633400 0.10912198  0.0048731517 0.5082022  -84.64104  35.882684
-    ## Comp02 0.1610050 0.07419442 -0.0008395380 0.5335838  -79.39971  -1.429547
-    ## Comp03 0.1658073 0.04851359 -0.0005832514 0.5388449  -90.26127   2.982713
-    ## Comp04 0.1742137 0.03721285 -0.0109272133 0.5420594 -110.04267   5.069961
-    ## Comp05 0.1820216 0.06021876 -0.0066978467 0.5502118 -129.29208   4.481828
-    ##            p
-    ## Comp01 1.000
-    ## Comp02 0.356
-    ## Comp03 0.846
-    ## Comp04 0.963
-    ## Comp05 0.993
-
-    ##             RMSE         R2     Avg.Bias  Max.Bias     Skill delta.RMSE
-    ## Comp01 0.1581035 0.03769404 -0.004403347 0.4491610 -72.99197 31.5264121
-    ## Comp02 0.1482860 0.01814330 -0.007838838 0.4536283 -52.17497 -6.2095470
-    ## Comp03 0.1523646 0.01616706 -0.011759602 0.4631645 -60.66122  2.7504944
-    ## Comp04 0.1544560 0.01780653 -0.012873184 0.4640219 -65.10218  1.3726688
-    ## Comp05 0.1551144 0.02096629 -0.012031667 0.4653956 -66.51268  0.4262494
-    ##            p
-    ## Comp01 1.000
-    ## Comp02 0.015
-    ## Comp03 0.961
-    ## Comp04 0.935
-    ## Comp05 0.832
-
-Investigate the biology underlying time37-associated coefs for Comp02
-
-By trophic mode -- note that one of the species' names has weird characters in it that makes the name dissapear in the ggplots (genus: Montagnula) ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-22-1.png)
-
-    ## [1] "Montagnula_alo\xfc\xbe\x98\xa6\x94\xbcs"
-
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-22-2.png) By phylum ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-1.png)
 
 ########################################## 
 
@@ -373,18 +282,13 @@ Extra pieces
 
 6.  *code/code\_level\_analyses.Rmd* -- Aggregated data to the code level, taking trait means, community means, and estimating the fit params for each code's decay trajectory in neg.exp and weibold models...
 
-7.  Traits explain ~ 60-70% of variation in decay over 37 months (r2, k, t70)
+### **Code-level findings**
 
-<!-- -->
+-   Traits explain ~ 60-70% of variation in decay over 37 months (r2, k, t70)
 
-1.  Greater water content and greater Zn and N leads to better-fitting decay models
+    1.  Greater water content and greater Zn and N leads to better-fitting decay models
+    2.  Small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
+    3.  Small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood “70%”-lives
+-   Neither community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
 
-2.  Small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay
-
-3.  Small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood “70%”-lives
-
-<!-- -->
-
-1.  Neither community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
-
-2.  After accounting for variation in decay due to wood traits, neither the community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
+-   After accounting for variation in decay due to wood traits, neither the community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70

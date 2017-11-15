@@ -1,6 +1,5 @@
 ---
 title: "Does chemistry or community better predict mass loss?"
-author: "Marissa Lee"
 date: "10/23/2017"
 output: github_document
 ---
@@ -111,8 +110,10 @@ pmr.byStem.df$code<-substr(pmr.byStem.df$codeStem, 1, 4)
 pmr.byStem.df$species<-tolower(pmr.byStem.df$code)
 pmr.byStem.df$size<-"large"
 pmr.byStem.df[pmr.byStem.df$code == tolower(pmr.byStem.df$code),"size"]<-"small"
-ggplot(pmr.byStem.df, aes(x=time, y=mean.pmr, group=codeStem, color=species, linetype=size)) + 
-  geom_line() + facet_wrap(~species)
+ggplot(pmr.byStem.df, aes(x=time, y=mean.pmr*100, group=codeStem, color=species, linetype=size)) + 
+  geom_line() + facet_wrap(~species) +
+  xlab("Time (months)") + ylab("Mass remaining (%)") + theme_bw()
+#ggsave("output/massLoss_byStem.pdf")
 
 #make it wide
 pmr.byStem.df %>%
@@ -130,15 +131,68 @@ pmr.byStem.df %>%
 #spdf<-left_join(spdf, indx) #add code
 #write_csv(spdf,"derived_data/mass_loss_parameters.csv")
 spdf <- read_csv("derived_data/mass_loss_parameters.csv")
+
 # ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
 #   geom_point()+
 #   labs(x="Time to 30% mass loss (negative exponential)", 
 #        y="Time to 30% mass loss (Weibull)")+
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
+#make plot of decay params by wood species
+spdf %>%
+  gather(key="decayParam",value="value", 1:6) %>%
+  filter(decayParam %in% c("k","t70","ne.r2")) %>%
+  arrange(decayParam, -value) -> plot.df
+
+# plot t70 and r2
+plot.df1<-subset(plot.df, decayParam != "k")
+sp.order<-as.character(unique(plot.df1[plot.df1$decayParam=="t70","species"]$species))
+plot.df1$species<-factor(plot.df1$species, levels=sp.order)
+plot.df1$decayParam<-factor(plot.df1$decayParam, levels=c("t70","ne.r2"))
+plot.df1$decayParam<-recode(plot.df1$decayParam, 
+                           "t70"="Time to 70% mass remaining (months)",
+                           "ne.r2"="Neg. expon. R2")
+ggplot(plot.df1, aes(x=species, y=value, shape=size)) + 
+  geom_point() + 
+  coord_flip() +
+  xlab("Wood species") + ylab("") + theme_bw() +
+  scale_shape_manual(values=c('large'=19, 'small'=1)) + 
+  guides(shape=F) +
+  facet_grid(~decayParam, scales="free") 
+#ggsave("output/decayParams_t70_and_r2.pdf")
+
+# plot k
+ggplot(spdf, aes(x=reorder(species, k), y=k, shape=size)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin=k.lower, ymax=k.upper)) +
+  coord_flip() +
+  xlab("Wood species") + ylab("k (year^-1)") + theme_bw() +
+  scale_shape_manual(values=c('large'=19, 'small'=1)) + 
+  guides(shape=F)
+#ggsave("output/decayParams_k.pdf")
+
 
 ```
 
+### Summarize stem-level data
+```{r}
+
+# add 'codeStem' to microbial community
+seqSamples$codeStem<-paste(seqSamples$code, seqSamples$Stem, sep="")
+seqSamples[grepl("NA", seqSamples$codeStem),"codeStem"]<-NA
+
+# bind everything together
+pmr.byStem.df.w %>% # mass loss
+  full_join(traits.codeStem) %>% #wood traits
+  full_join(seqSamples) %>% #microbial data
+  select(codeStem, code, seq_sampName, waterperc, density, barkthick, P, K, Ca, Mn, Fe, Zn, N, C, time7, time13, time25, time37) %>%
+  filter(!is.na(codeStem))  %>%
+  separate(codeStem, into=c("code1","Stem"), sep=4) %>%
+  filter(Stem %in% 1:10) -> stem.data
+
+#View(stem.data)
+
+```
 
 ##########################################
 
@@ -224,8 +278,12 @@ mod.compare.barkthick<-data.frame(response=c("time7","time13","time25","time37")
                      summary(mod.code.t37)$r.squared))
 mod.compare.barkthick
 
-#ggplot(sm.traits.codeStem, aes(x=codeStem, y=barkthick, color=code)) + 
-#  geom_point() + coord_flip()
+# plot that shows variation in barkthick within species
+sm.traits.codeStem$species<-tolower(sm.traits.codeStem$code)
+ggplot(sm.traits.codeStem, aes(x=species, y=barkthick)) + 
+  geom_point(alpha=.5, pch=16) + coord_flip() + theme_bw() +
+  xlab("Wood species") + ylab("Bark thickness (mm)")
+#ggsave('output/stem_barkthick.pdf')
 
 ```
 For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
@@ -340,7 +398,7 @@ summary(mod.select.t37) # size, waterperc, barkthick_smspp, P, Mn, C
 #ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
 #  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
 
-summary(mod.select.t37.nobark)
+#summary(mod.select.t37.nobark)
 ```
 
 
@@ -408,7 +466,7 @@ datasets.nt<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu, pmr.byStem
 names(datasets.nt)<-c('time7','time13','time25','time37')
 
 #fit models
-fit.t7 <- WAPLS(datasets[['time7']][['comm']], datasets[['time7']][['pmr']]$curr.time)
+fit.t7 <- WAPLS(datasets[['time7']][['comm']], datasets[['time7']][['pmr']]$curr.time, npls=15)
 fit.t13 <- WAPLS(datasets[['time13']][['comm']], datasets[['time13']][['pmr']]$curr.time)
 fit.t25 <- WAPLS(datasets[['time25']][['comm']], datasets[['time25']][['pmr']]$curr.time)
 fit.t37 <- WAPLS(datasets[['time37']][['comm']], datasets[['time37']][['pmr']]$curr.time)
@@ -442,42 +500,54 @@ fit.t37.nt.cv <- crossval(fit.t37.notrim, cv.method="loo")
 
 ### time 37
 
-**Comp01 is significant; if trim out OTUs that are not present in at least 20% of samples...Comp02 is significant**
+**Comp01 is significant (whole community)**
 
 ```{r, echo=FALSE}
-rand.t.test(fit.t37.cv) # signif Comp02
+#rand.t.test(fit.t37.cv) # signif Comp02, but very little added info in Comp02 so do not interpret
 rand.t.test(fit.t37.nt.cv) #signif Comp01
 ```
 
-Investigate the biology underlying time37-associated coefs for Comp02
+This is likely an underlying signiture of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
+
+Investigate the biology underlying time37-associated coefs for Comp01
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-coef.comp<-fit.t37.cv$coefficients[,'Comp02']
+coef.comp<-fit.t37.nt.cv$coefficients[,'Comp01']
 coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
 
 #create df of OTU taxon and guild info matched with coef value
 coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
 unique(coef.comp.ann$kingdom)
 
-```
-By trophic mode
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-#define cols
-colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
-names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
-colvals['unclassified']<-"#D3D3D3"
+# #define cols
+# colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
+# names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
+# colvals['unclassified']<-"#D3D3D3"
 
-ggplot(coef.comp.ann, aes(x=reorder(genus,coefComp), y=coefComp, color=Trophic.Mode)) + 
-  geom_point() + coord_flip() +
-  xlab("Fungal genus") + ylab("Component coefficient estimate") +
-  scale_color_manual(name="Trophic mode", values=colvals) +
+p.troph<-ggplot(coef.comp.ann, aes(x=Trophic.Mode, y=coefComp)) + 
+  geom_jitter() + coord_flip() +
+  xlab("Trophic mode") + ylab("Component coefficient estimate") +
   theme_classic() +
   geom_hline(yintercept=0, linetype=2)
 
-#color the genus axis labels by asco/basidio
+p.king<-ggplot(coef.comp.ann, aes(x=kingdom, y=coefComp)) + 
+  geom_jitter() + coord_flip() +
+  xlab("Kingdom") + ylab("Component coefficient estimate") +
+  theme_classic() +
+  geom_hline(yintercept=0, linetype=2)
 
+p.phylum<-ggplot(coef.comp.ann, aes(x=phylum, y=coefComp)) + 
+  geom_jitter() + coord_flip() +
+  xlab("Phylum") + ylab("Component coefficient estimate") +
+  theme_classic() +
+  geom_hline(yintercept=0, linetype=2)
+
+grid.arrange(p.troph, p.king, p.phylum)
+
+
+
+#plot these OTU decay coef versus waterperc coef from boral model
 
 ```
-
 
 
 
@@ -545,9 +615,9 @@ fit.tr.t13 <- WAPLS(dataset.t13[['comm']], dataset.t13[['traitresid']]$trait.res
 fit.tr.t25 <- WAPLS(dataset.t25[['comm']], dataset.t25[['traitresid']]$trait.resid)
 fit.tr.t37 <- WAPLS(dataset.t37[['comm']], dataset.t37[['traitresid']]$trait.resid)
 fit.tr.t7.nt <- WAPLS(dataset.t7.notrim[['comm']], dataset.t7.notrim[['traitresid']]$trait.resid)
-fit.tr.t13.nt <- WAPLS(dataset.t13.notrim[['comm']], dataset.t13.notrim[['traitresid']]$trait.resid)
+fit.tr.t13.nt <- WAPLS(dataset.t13.notrim[['comm']], dataset.t13.notrim[['traitresid']]$trait.resid, npls=20)
 fit.tr.t25.nt <- WAPLS(dataset.t25.notrim[['comm']], dataset.t25.notrim[['traitresid']]$trait.resid)
-fit.tr.t37.nt <- WAPLS(dataset.t37.notrim[['comm']], dataset.t37.notrim[['traitresid']]$trait.resid)
+fit.tr.t37.nt <- WAPLS(dataset.t37.notrim[['comm']], dataset.t37.notrim[['traitresid']]$trait.resid, npls=20)
 
 #cross-validate models using the leave-one-out method
 fit.tr.t7.cv <- crossval(fit.tr.t7, cv.method="loo")
@@ -562,197 +632,18 @@ fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
 #rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
 #rand.t.test(fit.tr.t7.cv) 
 #rand.t.test(fit.tr.t7.cv.nt)
+#rand.t.test(fit.tr.t13.cv) 
+rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but this dimension's RMSE and R2 values have dropped, which suggests that looking at this component is not warrented... doesn't seem to be contributing to a better global fit overall
 #rand.t.test(fit.tr.t25.cv) 
 #rand.t.test(fit.tr.t25.cv.nt)
-rand.t.test(fit.tr.t37.cv) 
-rand.t.test(fit.tr.t37.cv.nt) 
+#rand.t.test(fit.tr.t37.cv) 
+rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but this dimension's RMSE and R2 values have dropped, which suggests that looking at this component is not warrented... doesn't seem to be contributing to a better global fit overall
 
 ```
 
-### time 7, 25
+### time 7, 13, 25, 37
 
 **none of the community components are significant predictors**
-
-### time 13
-
-**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
-
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t13.cv) 
-rand.t.test(fit.tr.t13.cv.nt) 
-```
-
-Investigate the biology underlying time13-associated coefs for Comp02
-```{r, include=FALSE}
-coef.comp<-fit.tr.t13.cv.nt$coefficients[,'Comp02']
-coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
-
-#create df of OTU taxon and guild info matched with coef value
-coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
-
-#classify samples into quantiles based on coef value
-quant<-quantile(coef.comp.ann$coefComp, c(.05, .95))
-coef.comp.ann$quant<-"middle"
-coef.comp.ann[coef.comp.ann$coefComp > quant[2],'quant']<-"upper95"
-coef.comp.ann[coef.comp.ann$coefComp < quant[1],'quant']<-"lower5"
-plot.df<-subset(coef.comp.ann, quant != "middle") #get rid of the middle for plotting
-unique(plot.df$kingdom)
-
-```
-By trophic mode
-```{r, echo=FALSE, warnings=FALSE, message=FALSE}
-
-#define cols
-colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
-names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
-colvals['unclassified']<-"#D3D3D3"
-
-pTroph<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Trophic.Mode)) + 
-  geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
-  xlab("Fungal species") + ylab("Component coefficient estimate") +
-  scale_color_manual(name="Trophic mode", values=colvals) +
-  theme_classic()
-pTroph
-
-totallower<-sum(plot.df$quant=="lower5")
-totalupper<-sum(plot.df$quant=="upper95")
-
-plot.df %>%
-  group_by(Trophic.Mode, quant) %>%
-  summarize(numOTUs=length(coefComp),
-            freqlower=numOTUs/totallower,
-            frequpper=numOTUs/totalupper) %>%
-  filter(Trophic.Mode != "unclassified") -> tmp
-tmp$freq<-tmp$freqlower 
-tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
-
-ggplot(tmp, aes(x=reorder(Trophic.Mode, freq), y=freq*100)) + 
-  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
-  ylab("OTU frequency (%)") + xlab("Trophic mode")
-
-
-```
-By phylum
-```{r, echo=FALSE, warnings=FALSE, message=FALSE}
-
-# #define cols
-# colvals<-rainbow_hcl(length(unique(coef.comp.ann$phylum)))
-# names(colvals)<-unique(coef.comp.ann$phylum)
-# colvals['unclassified']<-"#D3D3D3"
-# 
-# pPhylum<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=phylum)) + 
-#   geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
-#   xlab("Fungal species") + ylab("Component coefficient estimate") +
-#   scale_color_manual(name="Phylum", values=colvals) +
-#   theme_classic()
-# pPhylum
-
-plot.df %>%
-  group_by(phylum, quant) %>%
-  summarize(numOTUs=length(coefComp),
-            freqlower=numOTUs/totallower,
-            frequpper=numOTUs/totalupper) %>%
-  filter(phylum != "unclassified") -> tmp
-tmp$freq<-tmp$freqlower 
-tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
-
-ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) + 
-  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
-  ylab("OTU frequency (%)") + xlab("Phylum")
-
-```
-
-### time 37
-
-**Comp02 is significant, but if trim out OTUs that are not present in at least 20% of samples then no components are significant**
-
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t37.cv) 
-rand.t.test(fit.tr.t37.cv.nt) 
-```
-
-Investigate the biology underlying time37-associated coefs for Comp02
-```{r, include=FALSE}
-coef.comp<-fit.tr.t37.cv.nt$coefficients[,'Comp02']
-coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
-
-#create df of OTU taxon and guild info matched with coef value
-coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
-
-#classify samples into quantiles based on coef value
-quant<-quantile(coef.comp.ann$coefComp, c(.05, .95))
-coef.comp.ann$quant<-"middle"
-coef.comp.ann[coef.comp.ann$coefComp > quant[2],'quant']<-"upper95"
-coef.comp.ann[coef.comp.ann$coefComp < quant[1],'quant']<-"lower5"
-plot.df<-subset(coef.comp.ann, quant != "middle") #get rid of the middle for plotting
-unique(plot.df$kingdom)
-
-```
-By trophic mode -- note that one of the species' names has weird characters in it that makes the name dissapear in the ggplots (genus: Montagnula)
-```{r, echo=FALSE, warnings=FALSE, message=FALSE}
-
-#define cols
-colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
-names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
-colvals['unclassified']<-"#D3D3D3"
-
-pTroph<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=Trophic.Mode)) + 
-  geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
-  xlab("Fungal species") + ylab("Component coefficient estimate") +
-  scale_color_manual(name="Trophic mode", values=colvals) +
-  theme_classic()
-pTroph
-
-#one of the species names has weird characters in it
-plot.df[plot.df$genus=="Montagnula","species"]
-
-totallower<-sum(plot.df$quant=="lower5")
-totalupper<-sum(plot.df$quant=="upper95")
-
-plot.df %>%
-  group_by(Trophic.Mode, quant) %>%
-  summarize(numOTUs=length(coefComp),
-            freqlower=numOTUs/totallower,
-            frequpper=numOTUs/totalupper) %>%
-  filter(Trophic.Mode != "unclassified") -> tmp
-tmp$freq<-tmp$freqlower 
-tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
-
-ggplot(tmp, aes(x=reorder(Trophic.Mode, freq), y=freq*100)) + 
-  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
-  ylab("OTU frequency (%)") + xlab("Trophic mode")
-
-
-```
-By phylum
-```{r, echo=FALSE, warnings=FALSE, message=FALSE}
-
-# #define cols
-# colvals<-rainbow_hcl(length(unique(coef.comp.ann$phylum)))
-# names(colvals)<-unique(coef.comp.ann$phylum)
-# colvals['unclassified']<-"#D3D3D3"
-# 
-# pPhylum<-ggplot(plot.df, aes(x=reorder(species,coefComp), y=coefComp, color=phylum)) + 
-#   geom_point() + coord_flip() + facet_grid(~quant, scale="free") +
-#   xlab("Fungal species") + ylab("Component coefficient estimate") +
-#   scale_color_manual(name="Phylum", values=colvals) +
-#   theme_classic()
-# pPhylum
-
-plot.df %>%
-  group_by(phylum, quant) %>%
-  summarize(numOTUs=length(coefComp),
-            freqlower=numOTUs/totallower,
-            frequpper=numOTUs/totalupper) %>%
-  filter(phylum != "unclassified") -> tmp
-tmp$freq<-tmp$freqlower 
-tmp[tmp$quant=="upper95","freq"]<-tmp[tmp$quant=="upper95","frequpper"]
-
-ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) + 
-  geom_bar(stat="identity") + facet_grid(~quant) + coord_flip() +
-  ylab("OTU frequency (%)") + xlab("Phylum")
-
-```
 
 
 
@@ -766,6 +657,7 @@ ggplot(tmp, aes(x=reorder(phylum, freq), y=freq*100)) +
 
 ## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay.  
 Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
+
 
 ### Richness, Shannon's H
 
@@ -809,27 +701,7 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass re
 
 ## *Hyp (stem-level)* Initial microbial communitiy compositions will covary with initial wood traits
 
-```{r, echo=FALSE}
 
-# #get rid of missing data from traits.mean
-# traits.mean %>%
-#   filter(!is.na(waterperc)) %>% #get NaN row
-#   filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
-# 
-# #make sure dimensions of the community matrix match
-# meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
-# 
-# #make a envVars matrix for model fitting
-# envVars<-as.matrix(traits.mean.trim[,-(1:3)])
-# 
-# #fit models
-# fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
-# #fit.cca
-# #plot(fit.cca)
-# #anova(fit.cca)
-
-
-```
 
 
 
@@ -847,19 +719,19 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass re
 
 5. *code/unexpectedTaxa.Rmd* -- Mycorrhizal fungi and animal-associated fungi that somehow made it into our OTU table
 
-6. *code/code_level_analyses.Rmd* -- Aggregated data to the code level, taking trait means, community means, and estimating the fit params for each code's decay trajectory in neg.exp and weibold models...  
+6. *code/code_level_analyses.Rmd* -- Aggregated data to the code level, taking trait means, community means, and estimating the fit params for each code's decay trajectory in neg.exp and weibold models...   
 
-1. Traits explain ~ 60-70% of variation in decay over 37 months (r2, k, t70)  
+### **Code-level findings**  
 
-  a. Greater water content and greater Zn and N leads to better-fitting decay models  
-  
-  b. Small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay  
-  
-  c. Small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood “70%”-lives
+- Traits explain ~ 60-70% of variation in decay over 37 months (r2, k, t70)  
 
-2. Neither community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70  
+    a. Greater water content and greater Zn and N leads to better-fitting decay models
+    b. Small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay  
+    c. Small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood “70%”-lives
+    
+- Neither community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70  
 
-3. After accounting for variation in decay due to wood traits, neither the community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
+- After accounting for variation in decay due to wood traits, neither the community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
 
 
 
