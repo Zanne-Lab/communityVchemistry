@@ -507,7 +507,7 @@ fit.t37.nt.cv <- crossval(fit.t37.notrim, cv.method="loo")
 rand.t.test(fit.t37.nt.cv) #signif Comp01
 ```
 
-This is likely an underlying signiture of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
+This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
 Investigate the biology underlying time37-associated coefs for Comp01
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -549,6 +549,37 @@ grid.arrange(p.troph, p.king, p.phylum)
 
 ```
 
+Look at the relationship between OTU wood trait coefs and the WA-PLS component scores
+```{r}
+
+xVar.df<-read.csv("data/xVar_OTUcoefs.csv", row.names=1) #import wood trait coefs estimated by boral in the wooddecay repo
+
+xVar.df %>%
+  left_join(coef.comp.ann) %>% # left join is going to drop the oomycetes that weren't included in the boral analysis
+  filter(runNum=="runNum1") -> tmp.df #just look at the first model run estimates
+
+# look at the wood traits included in the best model to explain pmr at 37 months
+# larger size stems, less water content, less thick bark, (more P and Mn -- small effect sizes), and more C leads to more mass remaining after 37 months
+# size was included as a roweffect in the boral model, so there are no OTU-specific estimates
+
+tmp.df %>%
+  select(OTUId, phylum, Trophic.Mode, coefComp, waterperc, barkthick, C) %>%
+  gather(key="trait", value="coefEst", -(1:4)) %>%
+  arrange(-coefComp) -> tmp.df1
+
+#check out outliers
+#tmp.df1[1:20,] #very few of the top ranking OTUs are taxon ID'd
+
+p<-ggplot(tmp.df1, aes(x=coefEst, y=coefComp)) + 
+  geom_point() + theme_bw() +
+  ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
+  xlab("Wood trait response (boral coef estimate)") +
+  facet_wrap(phylum ~ trait)
+p
+
+```
+
+By eye, it looks like the asco response to barkthickness is driving the WA-PLS association...maybe also some outliers that are associated with low water content too.
 
 
 ##########################################

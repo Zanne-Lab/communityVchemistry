@@ -187,19 +187,52 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.039
-    ## Comp02 0.208
-    ## Comp03 0.952
-    ## Comp04 0.838
-    ## Comp05 0.904
+    ## Comp01 0.044
+    ## Comp02 0.211
+    ## Comp03 0.939
+    ## Comp04 0.846
+    ## Comp05 0.900
 
-This is likely an underlying signiture of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months. Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
+This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months. Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
 Investigate the biology underlying time37-associated coefs for Comp01
 
     ## [1] "Fungi"   "Protist"
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-14-1.png)
+
+Look at the relationship between OTU wood trait coefs and the WA-PLS component scores
+
+``` r
+xVar.df<-read.csv("data/xVar_OTUcoefs.csv", row.names=1) #import wood trait coefs estimated by boral in the wooddecay repo
+
+xVar.df %>%
+  left_join(coef.comp.ann) %>% # left join is going to drop the oomycetes that weren't included in the boral analysis
+  filter(runNum=="runNum1") -> tmp.df #just look at the first model run estimates
+
+# look at the wood traits included in the best model to explain pmr at 37 months
+# larger size stems, less water content, less thick bark, (more P and Mn -- small effect sizes), and more C leads to more mass remaining after 37 months
+# size was included as a roweffect in the boral model, so there are no OTU-specific estimates
+
+tmp.df %>%
+  select(OTUId, phylum, Trophic.Mode, coefComp, waterperc, barkthick, C) %>%
+  gather(key="trait", value="coefEst", -(1:4)) %>%
+  arrange(-coefComp) -> tmp.df1
+
+#check out outliers
+#tmp.df1[1:20,] #very few of the top ranking OTUs are taxon ID'd
+
+p<-ggplot(tmp.df1, aes(x=coefEst, y=coefComp)) + 
+  geom_point() + theme_bw() +
+  ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
+  xlab("Wood trait response (boral coef estimate)") +
+  facet_wrap(phylum ~ trait)
+p
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-15-1.png)
+
+By eye, it looks like the asco response to barkthickness is driving the WA-PLS association...maybe also some outliers that are associated with low water content too.
 
 ########################################## 
 
@@ -223,12 +256,12 @@ Closer look at time13 findings...
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.042
-    ## Comp03 0.976
-    ## Comp04 0.857
-    ## Comp05 0.393
+    ## Comp02 0.041
+    ## Comp03 0.982
+    ## Comp04 0.854
+    ## Comp05 0.362
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-16-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-17-1.png)
 
 Closer look at time37 findings...
 
@@ -240,12 +273,12 @@ Closer look at time37 findings...
     ## Comp05 0.1551144 0.02096629 -0.012031667 0.4653956 -66.51268  0.4262494
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.004
-    ## Comp03 0.969
-    ## Comp04 0.913
-    ## Comp05 0.826
+    ## Comp02 0.006
+    ## Comp03 0.957
+    ## Comp04 0.936
+    ## Comp05 0.864
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-17-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png)
 
 There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset. Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1. If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
 
