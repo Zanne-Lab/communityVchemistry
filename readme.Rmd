@@ -633,14 +633,14 @@ fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
 #rand.t.test(fit.tr.t7.cv) 
 #rand.t.test(fit.tr.t7.cv.nt)
 #rand.t.test(fit.tr.t13.cv) 
-rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
-screeplot(fit.tr.t13.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+#rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
+#screeplot(fit.tr.t13.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
 
 #rand.t.test(fit.tr.t25.cv) 
 #rand.t.test(fit.tr.t25.cv.nt)
 #rand.t.test(fit.tr.t37.cv) 
-rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but...
-screeplot(fit.tr.t37.cv.nt) # again, the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+#rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but...
+#screeplot(fit.tr.t37.cv.nt) # again, the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
 
 
 ```
@@ -648,6 +648,18 @@ screeplot(fit.tr.t37.cv.nt) # again, the cross-validated RMSE is way higher than
 ### time 7, 13, 25, 37
 
 **none of the community components are significant predictors**
+
+Closer look at time13 findings...  
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
+screeplot(fit.tr.t13.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+```  
+
+Closer look at time37 findings...  
+```{r, echo=FALSE}
+rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but...
+screeplot(fit.tr.t37.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+```  
 
 There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset.  Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1.  If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
 
