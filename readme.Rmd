@@ -615,9 +615,9 @@ fit.tr.t13 <- WAPLS(dataset.t13[['comm']], dataset.t13[['traitresid']]$trait.res
 fit.tr.t25 <- WAPLS(dataset.t25[['comm']], dataset.t25[['traitresid']]$trait.resid)
 fit.tr.t37 <- WAPLS(dataset.t37[['comm']], dataset.t37[['traitresid']]$trait.resid)
 fit.tr.t7.nt <- WAPLS(dataset.t7.notrim[['comm']], dataset.t7.notrim[['traitresid']]$trait.resid)
-fit.tr.t13.nt <- WAPLS(dataset.t13.notrim[['comm']], dataset.t13.notrim[['traitresid']]$trait.resid, npls=20)
+fit.tr.t13.nt <- WAPLS(dataset.t13.notrim[['comm']], dataset.t13.notrim[['traitresid']]$trait.resid)
 fit.tr.t25.nt <- WAPLS(dataset.t25.notrim[['comm']], dataset.t25.notrim[['traitresid']]$trait.resid)
-fit.tr.t37.nt <- WAPLS(dataset.t37.notrim[['comm']], dataset.t37.notrim[['traitresid']]$trait.resid, npls=20)
+fit.tr.t37.nt <- WAPLS(dataset.t37.notrim[['comm']], dataset.t37.notrim[['traitresid']]$trait.resid) #look at more components with the argument npls=20
 
 #cross-validate models using the leave-one-out method
 fit.tr.t7.cv <- crossval(fit.tr.t7, cv.method="loo")
@@ -629,15 +629,19 @@ fit.tr.t13.cv.nt <- crossval(fit.tr.t13.nt, cv.method="loo")
 fit.tr.t25.cv.nt <- crossval(fit.tr.t25.nt, cv.method="loo")
 fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
 
-#rand.t.test(fit.alpha.cv) #perform randomization t-test to test the significance of a cross-validated model
+#perform randomization t-test to test the significance of a cross-validated model
 #rand.t.test(fit.tr.t7.cv) 
 #rand.t.test(fit.tr.t7.cv.nt)
 #rand.t.test(fit.tr.t13.cv) 
-rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but this dimension's RMSE and R2 values have dropped, which suggests that looking at this component is not warrented... doesn't seem to be contributing to a better global fit overall
+rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
+screeplot(fit.tr.t13.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+
 #rand.t.test(fit.tr.t25.cv) 
 #rand.t.test(fit.tr.t25.cv.nt)
 #rand.t.test(fit.tr.t37.cv) 
-rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but this dimension's RMSE and R2 values have dropped, which suggests that looking at this component is not warrented... doesn't seem to be contributing to a better global fit overall
+rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but...
+screeplot(fit.tr.t37.cv.nt) # again, the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+
 
 ```
 
@@ -645,7 +649,7 @@ rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but this dimension's RM
 
 **none of the community components are significant predictors**
 
-
+There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset.  Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1.  If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
 
 
 

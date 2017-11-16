@@ -187,11 +187,11 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.041
-    ## Comp02 0.202
-    ## Comp03 0.930
-    ## Comp04 0.850
-    ## Comp05 0.918
+    ## Comp01 0.031
+    ## Comp02 0.204
+    ## Comp03 0.945
+    ## Comp04 0.844
+    ## Comp05 0.884
 
 This is likely an underlying signiture of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months. Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
@@ -212,6 +212,8 @@ Community+traits as a predictor
 ### time 7, 13, 25, 37
 
 **none of the community components are significant predictors**
+
+There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset. Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1. If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
 
 ########################################## 
 
