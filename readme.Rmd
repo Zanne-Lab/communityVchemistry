@@ -574,19 +574,60 @@ p<-ggplot(tmp.df1, aes(x=coefEst, y=coefComp)) +
   geom_point() + theme_bw() +
   ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
   xlab("Wood trait response (boral coef estimate)") +
-  facet_wrap(phylum ~ trait)
+  facet_wrap(phylum~ trait)
 p
 
-```
+tmp.df1 %>%
+  filter(phylum=="Ascomycota") %>%
+  filter(trait=="barkthick") -> tmp
 
-By eye, it looks like the asco response to barkthickness is driving the WA-PLS association...maybe also some outliers that are associated with low water content too.
+mod<-lm(coefComp ~ coefEst, data=tmp)
+summary(mod) 
+# signif relationship w/in ascos+barkthick (not on whole community)
+```
+When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...
+
+The asco response to barkthickness is driving the WA-PLS association. It also seems like there are some asco and basidio outliers that are associated with low water content and carry decay information.
+
+
+```{r}
+
+tmp.df1 %>%
+  filter(Trophic.Mode %in% c("Pathotroph","Saprotroph")) -> tmp
+
+p<-ggplot(tmp, aes(x=coefEst, y=coefComp)) + 
+  geom_point() + theme_bw() +
+  ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
+  xlab("Wood trait response (boral coef estimate)") +
+  facet_grid(Trophic.Mode~ trait)
+p
+
+tmp %>%
+  filter(trait=="barkthick") %>%
+  filter(Trophic.Mode=="Saprotroph")-> tmp.bt.sap
+
+mod<-lm(coefComp ~ coefEst, data=tmp.bt.sap)
+summary(mod) 
+# signif relationship w/in sapros+barkthick (not on whole community)
+
+tmp %>%
+  filter(trait=="waterperc") %>%
+  filter(Trophic.Mode=="Saprotroph")-> tmp.bt.wp
+
+mod<-lm(coefComp ~ coefEst, data=tmp.bt.wp)
+summary(mod) 
+# NOT a signif relationship w/in sapros+waterperc
+
+```
+Known saprotrophs respond to barkthickness and in doing so predict decay.  In contrast, the response of pathogens to barkthickness does not carry information about decay. There's also a non-significant but trending relationship between saprotroph responses to water content and decay. --- This is getting a bit far from the real data, but still intriguing?
+I *think* this shows that the presence of a given bark-phillic (and water-phobic) saprotroph in the initial community is more likely to explain mass remaining than the presence of non-saprotroph with an equally strong bark 'preference'.
 
 
 ##########################################
 
 # Community+traits as a predictor
 
-## *Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+## *Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with density, includes small-species level bark thickness), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
@@ -705,14 +746,71 @@ There are two cases where there's a large % decrease in model RMSE from Componen
 ## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay.  
 Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
 
+```{r}
+
+# summarize the diversity in each sample
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #these have codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+
+# create a merged df with pmr
+rich.pmr<-left_join(pmr.byStem.df.w, rich.df) %>% filter(!is.na(seq_sampName))
+H.pmr<-left_join(pmr.byStem.df.w, H.df) %>% filter(!is.na(seq_sampName))
+
+# fit models
+mod1<-lm(time7~size+sub_rich, data=rich.pmr)
+mod2<-lm(time13~size+sub_rich, data=rich.pmr)
+mod3<-lm(time25~size+sub_rich, data=rich.pmr)
+mod4<-lm(time37~size+sub_rich, data=rich.pmr)
+mod.rich.list<-list(mod1, mod2, mod3, mod4)
+
+mod1<-lm(time7~size+sub_rich, data=H.pmr)
+mod2<-lm(time13~size+sub_rich, data=H.pmr)
+mod3<-lm(time25~size+sub_rich, data=H.pmr)
+mod4<-lm(time37~size+sub_rich, data=H.pmr)
+mod.H.list<-list(mod1, mod2, mod3, mod4)
+
+#summary
+lapply(mod.rich.list, summary)
+lapply(mod.H.list, summary)
+
+```
 
 ### Richness, Shannon's H
 
-**????**
+**No pattern**
 
 
 ## *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
+
+```{r}
+
+# summarize the diversity in each sample
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #these have codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+
+# create a merged df with pmr
+rich.pmr<-left_join(pmr.byStem.df.w, rich.df) %>% filter(!is.na(seq_sampName))
+H.pmr<-left_join(pmr.byStem.df.w, H.df) %>% filter(!is.na(seq_sampName))
+
+# fit models
+mod1<-lm(time7~size+sub_rich, data=rich.pmr)
+mod2<-lm(time13~size+sub_rich, data=rich.pmr)
+mod3<-lm(time25~size+sub_rich, data=rich.pmr)
+mod4<-lm(time37~size+sub_rich, data=rich.pmr)
+mod.rich.list<-list(mod1, mod2, mod3, mod4)
+
+mod1<-lm(time7~size+sub_rich, data=H.pmr)
+mod2<-lm(time13~size+sub_rich, data=H.pmr)
+mod3<-lm(time25~size+sub_rich, data=H.pmr)
+mod4<-lm(time37~size+sub_rich, data=H.pmr)
+mod.H.list<-list(mod1, mod2, mod3, mod4)
+
+#summary
+lapply(mod.rich.list, summary)
+lapply(mod.H.list, summary)
+
+```
 
 ### Saprotroph richness, Basidio richness
 
