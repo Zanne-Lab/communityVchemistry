@@ -290,46 +290,6 @@ For models with **density + barkthickness**, it looks like stem-level data impro
 
 ## *Hyp (stem-level)* Stem-specific initial wood traits will predict variation in percent mass loss.
 ```{r, include=FALSE}
-
-CreateTraitPMRpair<-function(timePoint, traits.codeStem, traits.mean, pmr.byStem.df.w){
-  
-  #make a dataframe using the current time point's pmr and remove NAs
-  pmr.byStem.df.w %>%
-    select_("codeStem",timePoint) %>%
-    rename_("curr.time"=timePoint) %>%
-    filter(!is.na(curr.time)) -> pmr.noNAs
-  
-  #subset the trait matrix using these unique codeStems
-  traits.codeStem %>%
-    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
-  
-  #stem-level trait set
-  curr.traits %>%
-    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
-  
-  #add species-level traits
-  traits.mean %>%
-    select(code, barkthick) %>%
-    rename('barkthick_smspp'='barkthick')-> select.traits.mean
-  curr.traits %>%
-    left_join(select.traits.mean) -> curr.traits
-  
-  #get rid of pmr rows for which there is missing trait data
-  pmr.noNAs %>%
-    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
-    
-  #merge the dataframes
-  curr.df<-left_join(curr.pmr, curr.traits) 
-  #add code and species and size
-  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
-  curr.df$species<-tolower(curr.df$code)
-  curr.df$size<-"large"
-  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
-  
-  return(curr.df)
-    
-  }
-
 timeList<-list('time7','time13','time25','time37')
 
 #function to pull out samples with the following trait info ...
@@ -361,7 +321,7 @@ traitResid.t37<- data.frame(codeStem = datasets[['time37']]$codeStem, trait.resi
 
 ### time7 
 
-**less water content and C leads to more mass remaining after 7 months**  
+**less water content and C leads to more mass remaining after 7 months**
 
 ```{r, echo=FALSE}
 summary(mod.select.t7) # waterperc, C (marginally)
@@ -422,42 +382,6 @@ paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 
 ## *Hyp (stem-level)* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 ```{r, include=FALSE}
-
-#fxns
-reformatMatrix<-function(commmat){
-  newmat<-matrix(as.numeric(as.matrix(commmat)), ncol=dim(commmat)[2], nrow=dim(commmat)[1])
-  return(newmat)
-}
-CreateCommPMRpair<-function(timePoint, comm.mat, pmr.byStem.df.w){
-    
-  #make a dataframe using the current time point's pmr and remove NAs
-  pmr.byStem.df.w %>%
-    select_("codeStem",timePoint) %>%
-    rename_("curr.time"=timePoint) %>%
-    filter(!is.na(curr.time)) -> pmr.noNAs
-  
-  #subset the community matrix using these unique codeStems
-  curr.comm<-comm.mat[row.names(comm.mat) %in% pmr.noNAs$codeStem,]
-  curr.comm<-curr.comm[,colSums(curr.comm) != 0] #get rid of any OTU columns with all 0s
-    
-  #get rid of pmr rows for which there is missing community data
-  pmr.noNAs %>%
-    filter(codeStem %in% row.names(curr.comm)) -> curr.pmr
-    
-    #make sure the row orders match
-    ord<-match(row.names(curr.comm), curr.pmr$codeStem)
-    curr.pmr<-curr.pmr[ord,]
-    
-    #reformat the community matrix
-    curr.comm.reform<-reformatMatrix(curr.comm)
-    row.names(curr.comm.reform)<-row.names(curr.comm)
-    colnames(curr.comm.reform)<-colnames(curr.comm)
-    
-    modelDat.list<-list(pmr=curr.pmr, comm=curr.comm.reform)
-    
-    return(modelDat.list)
-    
-  }
 
 timeList<-list('time7','time13','time25','time37')
 datasets<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu.trimmed, pmr.byStem.df.w)
@@ -632,36 +556,6 @@ I *think* this shows that the presence of a given bark-phillic (and water-phobic
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
 
-#fxns
-CreateCommTraitResidpair<-function(timePoint, comm.mat, traitResid){
-  
-  #there should be no NAs in the current time point's traitResid
-  traitResid %>%
-    filter(!is.na(trait.resid)) -> traitResid.noNAs
-  
-  #subset the community matrix using these unique codeStems
-  curr.comm<-comm.mat[row.names(comm.mat) %in% traitResid.noNAs$codeStem,]
-  curr.comm<-curr.comm[,colSums(curr.comm) != 0] #get rid of any OTU columns with all 0s
-    
-  #get rid of traitResid rows for which there is missing community data
-  traitResid.noNAs %>%
-    filter(codeStem %in% row.names(curr.comm)) -> curr.traitResid
-  
-  #make sure the row orders match
-    ord<-match(row.names(curr.comm), curr.traitResid$codeStem)
-    curr.traitResid<-curr.traitResid[ord,]
-    
-    #reformat the community matrix
-    curr.comm.reform<-reformatMatrix(curr.comm)
-    row.names(curr.comm.reform)<-row.names(curr.comm)
-    colnames(curr.comm.reform)<-colnames(curr.comm)
-    
-    modelDat.list<-list(traitresid=curr.traitResid, comm=curr.comm.reform)
-    
-    return(modelDat.list)
-    
-}
-
 dataset.t7<-CreateCommTraitResidpair(timePoint="time7", comm.mat = comm.otu.trimmed, 
                                       traitResid = traitResid.t7)
 dataset.t13<-CreateCommTraitResidpair(timePoint="time13", comm.mat = comm.otu.trimmed, 
@@ -770,8 +664,14 @@ mod4<-lm(time37~size+sub_rich, data=H.pmr)
 mod.H.list<-list(mod1, mod2, mod3, mod4)
 
 #summary
-lapply(mod.rich.list, summary)
-lapply(mod.H.list, summary)
+#lapply(mod.rich.list, summary)
+#lapply(mod.H.list, summary)
+
+#example plots
+#ggplot(rich.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+#  ylab("Mass remaining after 7 months (%)") + xlab("OTU richness")
+#ggplot(H.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
+#  ylab("Mass remaining after 7 months (%)") + xlab("OTU diversity (H)")
 
 ```
 
@@ -785,43 +685,86 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass re
 
 ```{r}
 
-# summarize the diversity in each sample
-rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #these have codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
-H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+# summarize the presence of ... in each sample
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
 
-# create a merged df with pmr
-rich.pmr<-left_join(pmr.byStem.df.w, rich.df) %>% filter(!is.na(seq_sampName))
-H.pmr<-left_join(pmr.byStem.df.w, H.df) %>% filter(!is.na(seq_sampName))
+# create a merged df wtih spdf
+sapro.pmr<-left_join(pmr.byStem.df.w, sapro.df) %>% filter(!is.na(seq_sampName))
+basidio.pmr<-left_join(pmr.byStem.df.w, basidio.df) %>% filter(!is.na(seq_sampName))
 
 # fit models
-mod1<-lm(time7~size+sub_rich, data=rich.pmr)
-mod2<-lm(time13~size+sub_rich, data=rich.pmr)
-mod3<-lm(time25~size+sub_rich, data=rich.pmr)
-mod4<-lm(time37~size+sub_rich, data=rich.pmr)
-mod.rich.list<-list(mod1, mod2, mod3, mod4)
+mod1<-lm(time7~size+sub_rich, data=sapro.pmr)
+mod2<-lm(time13~size+sub_rich, data=sapro.pmr)
+mod3<-lm(time25~size+sub_rich, data=sapro.pmr)
+mod4<-lm(time37~size+sub_rich, data=sapro.pmr)
+mod.sapro.list<-list(mod1, mod2, mod3, mod4)
 
-mod1<-lm(time7~size+sub_rich, data=H.pmr)
-mod2<-lm(time13~size+sub_rich, data=H.pmr)
-mod3<-lm(time25~size+sub_rich, data=H.pmr)
-mod4<-lm(time37~size+sub_rich, data=H.pmr)
-mod.H.list<-list(mod1, mod2, mod3, mod4)
+mod1<-lm(time7~size+sub_rich, data=basidio.pmr)
+mod2<-lm(time13~size+sub_rich, data=basidio.pmr)
+mod3<-lm(time25~size+sub_rich, data=basidio.pmr)
+mod4<-lm(time37~size+sub_rich, data=basidio.pmr)
+mod.basidio.list<-list(mod1, mod2, mod3, mod4)
 
 #summary
-lapply(mod.rich.list, summary)
-lapply(mod.H.list, summary)
+#lapply(mod.sapro.list, summary)
+#lapply(mod.basidio.list, summary)
+
+#example plots
+#ggplot(sapro.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+#  ylab("Mass remaining after 7 months (%)") + xlab("Saprotroph richness")
+#ggplot(basidio.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
+#  ylab("Mass remaining after 7 months (%)") + xlab("Basidio richness")
+
 
 ```
 
 ### Saprotroph richness, Basidio richness
 
-**????**
+**No pattern**
 
 
 ## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
 
+```{r}
+
+# summarize the presence of ... in each sample
+patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
+
+# create a merged df with pmr
+patho.pmr<-left_join(pmr.byStem.df.w, patho.df) %>% filter(!is.na(seq_sampName))
+oomy.pmr<-left_join(pmr.byStem.df.w, oomy.df) %>% filter(!is.na(seq_sampName))
+
+# fit models
+mod1<-lm(time7~size+sub_rich, data=patho.pmr)
+mod2<-lm(time13~size+sub_rich, data=patho.pmr)
+mod3<-lm(time25~size+sub_rich, data=patho.pmr)
+mod4<-lm(time37~size+sub_rich, data=patho.pmr)
+mod.patho.list<-list(mod1, mod2, mod3, mod4)
+
+mod1<-lm(time7~size+sub_rich, data=oomy.pmr)
+mod2<-lm(time13~size+sub_rich, data=oomy.pmr)
+mod3<-lm(time25~size+sub_rich, data=oomy.pmr)
+mod4<-lm(time37~size+sub_rich, data=oomy.pmr)
+mod.oomy.list<-list(mod1, mod2, mod3, mod4)
+
+#summary
+#lapply(mod.patho.list, summary)
+#lapply(mod.oomy.list, summary)
+
+#example plots
+#ggplot(patho.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+#  ylab("Mass remaining after 7 months (%)") + xlab("Pathogen richness")
+#ggplot(oomy.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
+#  ylab("Mass remaining after 7 months (%)") + xlab("Oomycete richness")
+
+
+```
+
 ### Pathogen richness, oomycete richness
 
-**????**
+**No pattern**
 
 
 
@@ -833,9 +776,56 @@ lapply(mod.H.list, summary)
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
 
+```{r}
+
+# summarize the presence of ... in each sample (same as chunks above)
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) 
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
+patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
+
+# create a merged df with trait residuals
+trait.residuals.list<-list(t7=traitResid.t7, 
+                           t13=traitResid.t13, 
+                           t25=traitResid.t25, 
+                           t37=traitResid.t37)
+
+#merge the trait residuals and diversity dataframe
+rich.tr.list<-Create_rich_tr_DF(trait.residuals.list, rich.df)
+H.tr.list<-Create_rich_tr_DF(trait.residuals.list, H.df)
+sapro.tr.list<-Create_rich_tr_DF(trait.residuals.list, sapro.df)
+basidio.tr.list<-Create_rich_tr_DF(trait.residuals.list, basidio.df)
+patho.tr.list<-Create_rich_tr_DF(trait.residuals.list, patho.df)
+oomy.tr.list<-Create_rich_tr_DF(trait.residuals.list, oomy.df)
+
+# fit models
+mod.rich<-FitResid_diversity_byStem(rich.tr.list)
+mod.H<-FitResid_diversity_byStem(H.tr.list)
+mod.sapro<-FitResid_diversity_byStem(sapro.tr.list)
+mod.basidio<-FitResid_diversity_byStem(basidio.tr.list)
+mod.patho<-FitResid_diversity_byStem(patho.tr.list)
+mod.oomy<-FitResid_diversity_byStem(oomy.tr.list)
+
+# summary
+#lapply(mod.rich, summary)
+#lapply(mod.H, summary)
+#lapply(mod.sapro, summary)
+#lapply(mod.basidio, summary)
+#lapply(mod.patho, summary)
+#lapply(mod.oomy, summary)
+
+
+#example plots
+ggplot(rich.tr.list[['t7']], aes(y=trait.resid, x=sub_rich)) + geom_point() + 
+  ylab("Trait residuals at 7 months") + xlab("OTU richness")
+
+```
+
 ### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
 
-**?????**
+**No pattern**
 
 
 
@@ -846,6 +836,35 @@ lapply(mod.H.list, summary)
 
 ## *Hyp (stem-level)* Initial microbial communitiy compositions will covary with initial wood traits
 
+```{r}
+
+#stem-level trait set
+traits.codeStem %>%
+    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & 
+             !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
+  
+#add species-level traits, get rid of rows for which there is missing community data
+  traits.mean %>%
+    select(code, barkthick) %>%
+    rename('barkthick_smspp'='barkthick')-> select.traits.mean
+  curr.traits %>%
+    left_join(select.traits.mean) %>%
+    filter(codeStem %in% row.names(comm.otu)) %>%
+    select(codeStem, size, waterperc, barkthick_smspp, P, K, Ca, Mn, Fe, Zn, N, C) -> curr.traits
+
+#make sure dimensions of the community matrix match
+comm.otu1<-comm.otu[row.names(comm.otu) %in% curr.traits$codeStem,]
+
+#make a envVars matrix for model fitting
+envVars<-as.matrix(curr.traits[,-(1:2)])
+
+#fit models
+fit.cca <- cca(comm.otu1 ~ envVars)
+#fit.cca
+#plot(fit.cca)
+anova(fit.cca)
+
+```
 
 
 

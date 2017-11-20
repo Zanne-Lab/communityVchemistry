@@ -111,6 +111,19 @@ Create_rich_spdf_DF<-function(otutype.df, spdf){
   
 }
 
+Create_rich_tr_DF<-function(trait.residuals.list, rich.df){
+  
+  rich.tr.list<-list()
+  for(i in 1:length(trait.residuals.list)){
+    curr.trait.residuals<-trait.residuals.list[[i]]
+    rich.tr.list[[i]]<-curr.trait.residuals %>% left_join(rich.df)
+  }
+  names(rich.tr.list)<-names(trait.residuals.list)
+  
+  return(rich.tr.list)
+  
+}
+
 Plot_richOTUtype<-function(rich.spdf, valueCol_vec, otutypeNam){
   
   # create xlab
@@ -149,6 +162,18 @@ FitResid_diversity<-function(rich.spdf, trait.residuals){
   
   return(mod.list)
   
+}
+
+FitResid_diversity_byStem<-function(rich.tr.list){
+  
+  mod.list<-list()
+  for(i in 1:length(rich.tr.list)){
+    curr.df<-rich.tr.list[[i]]
+    mod.list[[i]]<-lm(trait.resid ~ size + sub_rich, data=curr.df)
+  }
+  names(mod.list)<-names(rich.tr.list)
+  
+  return(mod.list)
 }
 
 PlotResid_diversity<-function(rich.spdf, trait.residuals, xlab){
@@ -313,4 +338,108 @@ Plot_signifCor<-function(sign, valueCol_vec, pairsPresent.df, spdf, seqSamples){
   names(pList)<-valueCol_vec
   
   return(pList)
+}
+
+reformatMatrix<-function(commmat){
+  newmat<-matrix(as.numeric(as.matrix(commmat)), ncol=dim(commmat)[2], nrow=dim(commmat)[1])
+  return(newmat)
+}
+
+CreateCommPMRpair<-function(timePoint, comm.mat, pmr.byStem.df.w){
+  
+  #make a dataframe using the current time point's pmr and remove NAs
+  pmr.byStem.df.w %>%
+    select_("codeStem",timePoint) %>%
+    rename_("curr.time"=timePoint) %>%
+    filter(!is.na(curr.time)) -> pmr.noNAs
+  
+  #subset the community matrix using these unique codeStems
+  curr.comm<-comm.mat[row.names(comm.mat) %in% pmr.noNAs$codeStem,]
+  curr.comm<-curr.comm[,colSums(curr.comm) != 0] #get rid of any OTU columns with all 0s
+  
+  #get rid of pmr rows for which there is missing community data
+  pmr.noNAs %>%
+    filter(codeStem %in% row.names(curr.comm)) -> curr.pmr
+  
+  #make sure the row orders match
+  ord<-match(row.names(curr.comm), curr.pmr$codeStem)
+  curr.pmr<-curr.pmr[ord,]
+  
+  #reformat the community matrix
+  curr.comm.reform<-reformatMatrix(curr.comm)
+  row.names(curr.comm.reform)<-row.names(curr.comm)
+  colnames(curr.comm.reform)<-colnames(curr.comm)
+  
+  modelDat.list<-list(pmr=curr.pmr, comm=curr.comm.reform)
+  
+  return(modelDat.list)
+  
+}
+
+CreateCommTraitResidpair<-function(timePoint, comm.mat, traitResid){
+  
+  #there should be no NAs in the current time point's traitResid
+  traitResid %>%
+    filter(!is.na(trait.resid)) -> traitResid.noNAs
+  
+  #subset the community matrix using these unique codeStems
+  curr.comm<-comm.mat[row.names(comm.mat) %in% traitResid.noNAs$codeStem,]
+  curr.comm<-curr.comm[,colSums(curr.comm) != 0] #get rid of any OTU columns with all 0s
+  
+  #get rid of traitResid rows for which there is missing community data
+  traitResid.noNAs %>%
+    filter(codeStem %in% row.names(curr.comm)) -> curr.traitResid
+  
+  #make sure the row orders match
+  ord<-match(row.names(curr.comm), curr.traitResid$codeStem)
+  curr.traitResid<-curr.traitResid[ord,]
+  
+  #reformat the community matrix
+  curr.comm.reform<-reformatMatrix(curr.comm)
+  row.names(curr.comm.reform)<-row.names(curr.comm)
+  colnames(curr.comm.reform)<-colnames(curr.comm)
+  
+  modelDat.list<-list(traitresid=curr.traitResid, comm=curr.comm.reform)
+  
+  return(modelDat.list)
+  
+}
+
+CreateTraitPMRpair<-function(timePoint, traits.codeStem, traits.mean, pmr.byStem.df.w){
+  
+  #make a dataframe using the current time point's pmr and remove NAs
+  pmr.byStem.df.w %>%
+    select_("codeStem",timePoint) %>%
+    rename_("curr.time"=timePoint) %>%
+    filter(!is.na(curr.time)) -> pmr.noNAs
+  
+  #subset the trait matrix using these unique codeStems
+  traits.codeStem %>%
+    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
+  
+  #stem-level trait set
+  curr.traits %>%
+    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
+  
+  #add species-level traits
+  traits.mean %>%
+    select(code, barkthick) %>%
+    rename('barkthick_smspp'='barkthick')-> select.traits.mean
+  curr.traits %>%
+    left_join(select.traits.mean) -> curr.traits
+  
+  #get rid of pmr rows for which there is missing trait data
+  pmr.noNAs %>%
+    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
+  
+  #merge the dataframes
+  curr.df<-left_join(curr.pmr, curr.traits) 
+  #add code and species and size
+  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
+  curr.df$species<-tolower(curr.df$code)
+  curr.df$size<-"large"
+  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
+  
+  return(curr.df)
+  
 }
