@@ -187,11 +187,11 @@ Community as a predictor
     ## Comp04 0.1708756 0.2921546 -0.014679983 0.2863511 22.35357   1.5345464
     ## Comp05 0.1725708 0.2854071 -0.014202926 0.2902932 20.80528   0.9920909
     ##            p
-    ## Comp01 0.044
-    ## Comp02 0.211
-    ## Comp03 0.939
-    ## Comp04 0.846
-    ## Comp05 0.900
+    ## Comp01 0.050
+    ## Comp02 0.217
+    ## Comp03 0.948
+    ## Comp04 0.863
+    ## Comp05 0.901
 
 This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months. Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
@@ -226,21 +226,133 @@ p<-ggplot(tmp.df1, aes(x=coefEst, y=coefComp)) +
   geom_point() + theme_bw() +
   ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
   xlab("Wood trait response (boral coef estimate)") +
-  facet_wrap(phylum ~ trait)
+  facet_wrap(phylum~ trait)
 p
 ```
 
 ![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-15-1.png)
 
-By eye, it looks like the asco response to barkthickness is driving the WA-PLS association...maybe also some outliers that are associated with low water content too.
+``` r
+tmp.df1 %>%
+  filter(phylum=="Ascomycota") %>%
+  filter(trait=="barkthick") -> tmp
+
+mod<-lm(coefComp ~ coefEst, data=tmp)
+summary(mod) 
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = coefComp ~ coefEst, data = tmp)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.35634 -0.07582  0.00355  0.08278  0.35523 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  0.46903    0.01587  29.549   <2e-16 ***
+    ## coefEst      0.02389    0.00949   2.518   0.0135 *  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.1563 on 95 degrees of freedom
+    ## Multiple R-squared:  0.06256,    Adjusted R-squared:  0.05269 
+    ## F-statistic:  6.34 on 1 and 95 DF,  p-value: 0.01348
+
+``` r
+# signif relationship w/in ascos+barkthick (not on whole community)
+```
+
+When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...
+
+The asco response to barkthickness is driving the WA-PLS association. It also seems like there are some asco and basidio outliers that are associated with low water content and carry decay information.
+
+``` r
+tmp.df1 %>%
+  filter(Trophic.Mode %in% c("Pathotroph","Saprotroph")) -> tmp
+
+p<-ggplot(tmp, aes(x=coefEst, y=coefComp)) + 
+  geom_point() + theme_bw() +
+  ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
+  xlab("Wood trait response (boral coef estimate)") +
+  facet_grid(Trophic.Mode~ trait)
+p
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-16-1.png)
+
+``` r
+tmp %>%
+  filter(trait=="barkthick") %>%
+  filter(Trophic.Mode=="Saprotroph")-> tmp.bt.sap
+
+mod<-lm(coefComp ~ coefEst, data=tmp.bt.sap)
+summary(mod) 
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = coefComp ~ coefEst, data = tmp.bt.sap)
+    ## 
+    ## Residuals:
+    ##       Min        1Q    Median        3Q       Max 
+    ## -0.192029 -0.087525 -0.007654  0.103087  0.201244 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  0.48464    0.03130  15.486 1.24e-10 ***
+    ## coefEst      0.04120    0.01757   2.345   0.0332 *  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.1233 on 15 degrees of freedom
+    ## Multiple R-squared:  0.2683, Adjusted R-squared:  0.2196 
+    ## F-statistic: 5.501 on 1 and 15 DF,  p-value: 0.03317
+
+``` r
+# signif relationship w/in sapros+barkthick (not on whole community)
+
+tmp %>%
+  filter(trait=="waterperc") %>%
+  filter(Trophic.Mode=="Saprotroph")-> tmp.bt.wp
+
+mod<-lm(coefComp ~ coefEst, data=tmp.bt.wp)
+summary(mod) 
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = coefComp ~ coefEst, data = tmp.bt.wp)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -0.24044 -0.05998 -0.01236  0.07057  0.24098 
+    ## 
+    ## Coefficients:
+    ##             Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept)  0.48391    0.03556  13.608 7.62e-10 ***
+    ## coefEst     -0.01898    0.01228  -1.545    0.143    
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 0.1338 on 15 degrees of freedom
+    ## Multiple R-squared:  0.1373, Adjusted R-squared:  0.07979 
+    ## F-statistic: 2.387 on 1 and 15 DF,  p-value: 0.1431
+
+``` r
+# NOT a signif relationship w/in sapros+waterperc
+```
+
+Known saprotrophs respond to barkthickness and in doing so predict decay. In contrast, the response of pathogens to barkthickness does not carry information about decay. There's also a non-significant but trending relationship between saprotroph responses to water content and decay. --- This is getting a bit far from the real data, but still intriguing? I *think* this shows that the presence of a given bark-phillic (and water-phobic) saprotroph in the initial community is more likely to explain mass remaining than the presence of non-saprotroph with an equally strong bark 'preference'.
 
 ########################################## 
 
 Community+traits as a predictor
 ===============================
 
-*Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with barkthick or density), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+*Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with density, includes small-species level bark thickness), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 ### time 7, 13, 25, 37
 
@@ -256,12 +368,12 @@ Closer look at time13 findings...
     ## Comp05 0.1938709 0.02017169 -0.02696350 0.3920242 -111.57224 -0.1971538
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.041
-    ## Comp03 0.982
-    ## Comp04 0.854
-    ## Comp05 0.362
+    ## Comp02 0.043
+    ## Comp03 0.977
+    ## Comp04 0.853
+    ## Comp05 0.398
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-17-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png)
 
 Closer look at time37 findings...
 
@@ -273,12 +385,12 @@ Closer look at time37 findings...
     ## Comp05 0.1551144 0.02096629 -0.012031667 0.4653956 -66.51268  0.4262494
     ##            p
     ## Comp01 1.000
-    ## Comp02 0.006
-    ## Comp03 0.957
-    ## Comp04 0.936
-    ## Comp05 0.864
+    ## Comp02 0.012
+    ## Comp03 0.959
+    ## Comp04 0.918
+    ## Comp05 0.840
 
-![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-18-1.png)
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-19-1.png)
 
 There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset. Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1. If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
 
@@ -294,25 +406,124 @@ Diversity (and diversity of specific clades) as a predictor
 
 Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
 
+``` r
+# summarize the diversity in each sample
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #these have codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+
+# create a merged df with pmr
+rich.pmr<-left_join(pmr.byStem.df.w, rich.df) %>% filter(!is.na(seq_sampName))
+H.pmr<-left_join(pmr.byStem.df.w, H.df) %>% filter(!is.na(seq_sampName))
+
+# fit models
+mod1<-lm(time7~size+sub_rich, data=rich.pmr)
+mod2<-lm(time13~size+sub_rich, data=rich.pmr)
+mod3<-lm(time25~size+sub_rich, data=rich.pmr)
+mod4<-lm(time37~size+sub_rich, data=rich.pmr)
+mod.rich.list<-list(mod1, mod2, mod3, mod4)
+
+mod1<-lm(time7~size+sub_rich, data=H.pmr)
+mod2<-lm(time13~size+sub_rich, data=H.pmr)
+mod3<-lm(time25~size+sub_rich, data=H.pmr)
+mod4<-lm(time37~size+sub_rich, data=H.pmr)
+mod.H.list<-list(mod1, mod2, mod3, mod4)
+
+#summary
+#lapply(mod.rich.list, summary)
+#lapply(mod.H.list, summary)
+
+#example plots
+#ggplot(rich.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+#  ylab("Mass remaining after 7 months (%)") + xlab("OTU richness")
+#ggplot(H.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
+#  ylab("Mass remaining after 7 months (%)") + xlab("OTU diversity (H)")
+```
+
 ### Richness, Shannon's H
 
-**????**
+**No pattern**
 
 *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.
 --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
 
+``` r
+# summarize the presence of ... in each sample
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
+
+# create a merged df wtih spdf
+sapro.pmr<-left_join(pmr.byStem.df.w, sapro.df) %>% filter(!is.na(seq_sampName))
+basidio.pmr<-left_join(pmr.byStem.df.w, basidio.df) %>% filter(!is.na(seq_sampName))
+
+# fit models
+mod1<-lm(time7~size+sub_rich, data=sapro.pmr)
+mod2<-lm(time13~size+sub_rich, data=sapro.pmr)
+mod3<-lm(time25~size+sub_rich, data=sapro.pmr)
+mod4<-lm(time37~size+sub_rich, data=sapro.pmr)
+mod.sapro.list<-list(mod1, mod2, mod3, mod4)
+
+mod1<-lm(time7~size+sub_rich, data=basidio.pmr)
+mod2<-lm(time13~size+sub_rich, data=basidio.pmr)
+mod3<-lm(time25~size+sub_rich, data=basidio.pmr)
+mod4<-lm(time37~size+sub_rich, data=basidio.pmr)
+mod.basidio.list<-list(mod1, mod2, mod3, mod4)
+
+#summary
+#lapply(mod.sapro.list, summary)
+#lapply(mod.basidio.list, summary)
+
+#example plots
+#ggplot(sapro.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+#  ylab("Mass remaining after 7 months (%)") + xlab("Saprotroph richness")
+#ggplot(basidio.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
+#  ylab("Mass remaining after 7 months (%)") + xlab("Basidio richness")
+```
+
 ### Saprotroph richness, Basidio richness
 
-**????**
+**No pattern**
 
 *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+``` r
+# summarize the presence of ... in each sample
+patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
+
+# create a merged df with pmr
+patho.pmr<-left_join(pmr.byStem.df.w, patho.df) %>% filter(!is.na(seq_sampName))
+oomy.pmr<-left_join(pmr.byStem.df.w, oomy.df) %>% filter(!is.na(seq_sampName))
+
+# fit models
+mod1<-lm(time7~size+sub_rich, data=patho.pmr)
+mod2<-lm(time13~size+sub_rich, data=patho.pmr)
+mod3<-lm(time25~size+sub_rich, data=patho.pmr)
+mod4<-lm(time37~size+sub_rich, data=patho.pmr)
+mod.patho.list<-list(mod1, mod2, mod3, mod4)
+
+mod1<-lm(time7~size+sub_rich, data=oomy.pmr)
+mod2<-lm(time13~size+sub_rich, data=oomy.pmr)
+mod3<-lm(time25~size+sub_rich, data=oomy.pmr)
+mod4<-lm(time37~size+sub_rich, data=oomy.pmr)
+mod.oomy.list<-list(mod1, mod2, mod3, mod4)
+
+#summary
+#lapply(mod.patho.list, summary)
+#lapply(mod.oomy.list, summary)
+
+#example plots
+#ggplot(patho.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+#  ylab("Mass remaining after 7 months (%)") + xlab("Pathogen richness")
+#ggplot(oomy.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
+#  ylab("Mass remaining after 7 months (%)") + xlab("Oomycete richness")
+```
+
 ### Pathogen richness, oomycete richness
 
-**????**
+**No pattern**
 
 ############################################## 
 
@@ -322,9 +533,56 @@ Diversity plus traits as a predictor
 *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
 ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
+``` r
+# summarize the presence of ... in each sample (same as chunks above)
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) 
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
+patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
+
+# create a merged df with trait residuals
+trait.residuals.list<-list(t7=traitResid.t7, 
+                           t13=traitResid.t13, 
+                           t25=traitResid.t25, 
+                           t37=traitResid.t37)
+
+#merge the trait residuals and diversity dataframe
+rich.tr.list<-Create_rich_tr_DF(trait.residuals.list, rich.df)
+H.tr.list<-Create_rich_tr_DF(trait.residuals.list, H.df)
+sapro.tr.list<-Create_rich_tr_DF(trait.residuals.list, sapro.df)
+basidio.tr.list<-Create_rich_tr_DF(trait.residuals.list, basidio.df)
+patho.tr.list<-Create_rich_tr_DF(trait.residuals.list, patho.df)
+oomy.tr.list<-Create_rich_tr_DF(trait.residuals.list, oomy.df)
+
+# fit models
+mod.rich<-FitResid_diversity_byStem(rich.tr.list)
+mod.H<-FitResid_diversity_byStem(H.tr.list)
+mod.sapro<-FitResid_diversity_byStem(sapro.tr.list)
+mod.basidio<-FitResid_diversity_byStem(basidio.tr.list)
+mod.patho<-FitResid_diversity_byStem(patho.tr.list)
+mod.oomy<-FitResid_diversity_byStem(oomy.tr.list)
+
+# summary
+#lapply(mod.rich, summary)
+#lapply(mod.H, summary)
+#lapply(mod.sapro, summary)
+#lapply(mod.basidio, summary)
+#lapply(mod.patho, summary)
+#lapply(mod.oomy, summary)
+
+
+#example plots
+ggplot(rich.tr.list[['t7']], aes(y=trait.resid, x=sub_rich)) + geom_point() + 
+  ylab("Trait residuals at 7 months") + xlab("OTU richness")
+```
+
+![](readme_files/figure-markdown_github-ascii_identifiers/unnamed-chunk-23-1.png)
+
 ### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
 
-**?????**
+**No pattern**
 
 ############################################## 
 
@@ -333,6 +591,45 @@ Relationship between wood traits and community
 
 *Hyp (stem-level)* Initial microbial communitiy compositions will covary with initial wood traits
 -------------------------------------------------------------------------------------------------
+
+``` r
+#stem-level trait set
+traits.codeStem %>%
+    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & 
+             !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
+  
+#add species-level traits, get rid of rows for which there is missing community data
+  traits.mean %>%
+    select(code, barkthick) %>%
+    rename('barkthick_smspp'='barkthick')-> select.traits.mean
+  curr.traits %>%
+    left_join(select.traits.mean) %>%
+    filter(codeStem %in% row.names(comm.otu)) %>%
+    select(codeStem, size, waterperc, barkthick_smspp, P, K, Ca, Mn, Fe, Zn, N, C) -> curr.traits
+
+#make sure dimensions of the community matrix match
+comm.otu1<-comm.otu[row.names(comm.otu) %in% curr.traits$codeStem,]
+
+#make a envVars matrix for model fitting
+envVars<-as.matrix(curr.traits[,-(1:2)])
+
+#fit models
+fit.cca <- cca(comm.otu1 ~ envVars)
+#fit.cca
+#plot(fit.cca)
+anova(fit.cca)
+```
+
+    ## Permutation test for cca under reduced model
+    ## Permutation: free
+    ## Number of permutations: 999
+    ## 
+    ## Model: cca(formula = comm.otu1 ~ envVars)
+    ##          Df ChiSquare      F Pr(>F)    
+    ## Model    10    4.4885 1.1873  0.001 ***
+    ## Residual 45   17.0123                  
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 
 ############################################## 
 
