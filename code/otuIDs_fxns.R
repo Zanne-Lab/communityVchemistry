@@ -423,8 +423,9 @@ CreateTraitPMRpair<-function(timePoint, traits.codeStem, traits.mean, pmr.byStem
   
   #add species-level traits
   traits.mean %>%
-    select(code, barkthick) %>%
-    rename('barkthick_smspp'='barkthick')-> select.traits.mean
+    select(code, barkthick, density) %>%
+    rename('barkthick_smspp'='barkthick',
+           'density_smspp'='density')-> select.traits.mean
   curr.traits %>%
     left_join(select.traits.mean) -> curr.traits
   

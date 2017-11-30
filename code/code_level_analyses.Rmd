@@ -93,6 +93,7 @@ summary(mod.select.k) # size, waterperc, barkthick, Ca, Zn, N
 
 ggplot(spdf.traits, aes(x=waterperc, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +
   labs(y="k (year^-1)",x="Initial water content (% wet weight)")+geom_smooth(method="lm",se=FALSE)+theme_bw()
+ggsave("../output/waterperc_by_k.pdf")
 
 
 ggplot(spdf.traits, aes(x=density, y=k)) + geom_point(aes(color=species)) + facet_grid(~size) +

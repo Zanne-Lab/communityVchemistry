@@ -22,12 +22,15 @@ library(tidyr)
 library(gridExtra)
 library(rioja)
 library(colorspace)
+library(grid)
+library(lmtest) # for coxtest()
 
 #fxns
 source("code/load_fxns.R")
 source("code/curve_fitting_fxns.R")
 source("code/distance_fxns.R")
 source("code/otuIDs_fxns.R")
+source("code/prettyProducts_fxns.R")
 ```
 
 ### Load microbial community data
@@ -110,10 +113,6 @@ pmr.byStem.df$code<-substr(pmr.byStem.df$codeStem, 1, 4)
 pmr.byStem.df$species<-tolower(pmr.byStem.df$code)
 pmr.byStem.df$size<-"large"
 pmr.byStem.df[pmr.byStem.df$code == tolower(pmr.byStem.df$code),"size"]<-"small"
-ggplot(pmr.byStem.df, aes(x=time, y=mean.pmr*100, group=codeStem, color=species, linetype=size)) + 
-  geom_line() + facet_wrap(~species) +
-  xlab("Time (months)") + ylab("Mass remaining (%)") + theme_bw()
-#ggsave("output/massLoss_byStem.pdf")
 
 #make it wide
 pmr.byStem.df %>%
@@ -123,7 +122,8 @@ pmr.byStem.df %>%
          'time7'=`7`,
          'time13'=`13`,
          'time25'=`25`,
-         'time37'=`37`) -> pmr.byStem.df.w
+         'time37'=`37`) %>%
+  separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
 
 ### CALCULATE DECAY TRAJECTORY FITS
 #spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
@@ -138,39 +138,74 @@ spdf <- read_csv("derived_data/mass_loss_parameters.csv")
 #        y="Time to 30% mass loss (Weibull)")+
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
+```
+
+Figure 1. Wood species x decay params
+```{r}
+
 #make plot of decay params by wood species
-spdf %>%
-  gather(key="decayParam",value="value", 1:6) %>%
-  filter(decayParam %in% c("k","t70","ne.r2")) %>%
-  arrange(decayParam, -value) -> plot.df
+spdf.p<-left_join(spdf, stemSamples)
 
-# plot t70 and r2
-plot.df1<-subset(plot.df, decayParam != "k")
-sp.order<-as.character(unique(plot.df1[plot.df1$decayParam=="t70","species"]$species))
-plot.df1$species<-factor(plot.df1$species, levels=sp.order)
-plot.df1$decayParam<-factor(plot.df1$decayParam, levels=c("t70","ne.r2"))
-plot.df1$decayParam<-recode(plot.df1$decayParam, 
-                           "t70"="Time to 70% mass remaining (months)",
-                           "ne.r2"="Neg. expon. R2")
-ggplot(plot.df1, aes(x=species, y=value, shape=size)) + 
-  geom_point() + 
+# t70
+p.t70<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) + 
+  geom_point() +
+  #geom_errorbar(aes(ymin=t70.lower, ymax=t70.upper)) +
   coord_flip() +
-  xlab("Wood species") + ylab("") + theme_bw() +
+  xlab("Wood species") + ylab("Time to 70% mass remaining (years)") + theme_bw() +
   scale_shape_manual(values=c('large'=19, 'small'=1)) + 
-  guides(shape=F) +
-  facet_grid(~decayParam, scales="free") 
-#ggsave("output/decayParams_t70_and_r2.pdf")
+  guides(shape=F) + 
+  theme(plot.margin = unit(c(0,1,0,0), "lines"))
 
-# plot k
-ggplot(spdf, aes(x=reorder(species, k), y=k, shape=size)) + 
+# k
+p.k<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) + 
   geom_point() +
   geom_errorbar(aes(ymin=k.lower, ymax=k.upper)) +
   coord_flip() +
   xlab("Wood species") + ylab("k (year^-1)") + theme_bw() +
   scale_shape_manual(values=c('large'=19, 'small'=1)) + 
-  guides(shape=F)
-#ggsave("output/decayParams_k.pdf")
+  guides(shape=F) +
+  theme(axis.text.y = element_blank(), 
+            axis.ticks.y = element_blank(), 
+            axis.title.y = element_blank(),
+            plot.margin = unit(c(0,1,0,0), "lines"),
+            plot.background = element_blank())
 
+# ne.r2
+p.r2<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) + 
+  geom_point() +
+  coord_flip() +
+  xlab("Wood species") + ylab("Neg. expon. R2") + theme_bw() +
+  scale_shape_manual(values=c('large'=19, 'small'=1)) + 
+  guides(shape=F) +
+  theme(axis.text.y = element_blank(), 
+            axis.ticks.y = element_blank(), 
+            axis.title.y = element_blank(),
+            plot.margin = unit(c(0,1,0,0), "lines"),
+            plot.background = element_blank())
+
+pdf("output/codeDecayParams.pdf", width=10, height=6)
+grid.newpage()
+grid.draw(cbind(ggplotGrob(p.t70), ggplotGrob(p.k), ggplotGrob(p.r2), size = "last"))
+dev.off()
+
+```
+
+Figure 2. Time x percent mass remaining by wood species
+```{r}
+
+#order the wood species by t70 to match species order in previous figure
+woodSp.o<-levels(reorder(spdf.p$species, -spdf.p$t70))
+
+pmr.byStem.df$species<-factor(pmr.byStem.df$species, levels=rev(woodSp.o))
+
+p.pmrBystem<-ggplot(pmr.byStem.df, aes(x=time/12, y=mean.pmr*100, group=codeStem, linetype=size)) + 
+  geom_line() + facet_wrap(~species) +
+  xlab("Time (years)") + ylab("Mass remaining (%)") + theme_bw() +
+  scale_linetype_manual(values=c(2,1)) + guides(linetype=FALSE)
+
+pdf("output/massLoss_byStem.pdf", width=6, height=6)
+p.pmrBystem
+dev.off()
 
 ```
 
@@ -190,7 +225,7 @@ pmr.byStem.df.w %>% # mass loss
   separate(codeStem, into=c("code1","Stem"), sep=4) %>%
   filter(Stem %in% 1:10) -> stem.data
 
-#View(stem.data)
+#stem.data
 
 ```
 
@@ -198,118 +233,172 @@ pmr.byStem.df.w %>% # mass loss
 
 # Wood traits as a predictor
 
-First, look at just the small stem samples because we have the most trait information on the stem level for theses samples. Compare models using data on code level and codeStem level and with barkthickness and density as predictors to see if codeStem improves model fit...
-```{r, echo=FALSE}
+We expect initial wood traits will explain varitation in species+size decay rate (k and t70), species+size lagginess (alpha), and stem-level percent mass remaining at 7, 13, 25, and 37 months of decay. Specifically, we expect samples with (a) high water percent, (b) low density and total C, (c) high macro and micro nutrients, and (d) thicker bark (potential mech: limiting microbial colonization) to have faster decay and less lagginess. 
 
-# add code to pmr dataset
-pmr.byStem.df.w %>%
-  separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
+## *Hyp (species+size-level)* Species+size-level initial wood traits will predict variation decay rates and lagginess.
+```{r, include=FALSE}
 
-# (1) subset just the small stems
-# (2) subset samples with waterperc, density, barkthick trait data
-# (3) join with pmr data
-# (4) select useful cols
-traits.codeStem %>% 
-  filter(size=="small") %>%
-  filter(!is.na(density) & !is.na(barkthick)) %>%
-  left_join(pmr.byStem.df.w) %>%
-  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.codeStem
-dim(sm.traits.codeStem)
+#merge predictor and response variables into 1 df
+spdf %>%
+  select(code, species, size, ne.r2, k, t70, alpha) %>%
+  left_join(traits.mean) %>% 
+  filter(!is.na(P)) %>%
+  filter(!is.na(waterperc)) -> spdf.traits
 
+#fit full models
+mod.full.r<-lm(ne.r2 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+mod.full.k<-lm(k ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+mod.full.t70<-lm(t70 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+mod.full.alpha<-lm(alpha ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
 
-# (1) subset just the small codes, 
-# (2) subset samples with waterperc, density, barkthick trait data
-# (3) restrict analyses to the same set of wood species as present in stem dataset
-# (4) join with pmr data
-# (5) select useful cols
-traits.mean %>%
-  filter(size=="small") %>%
-  filter(!is.na(density) & !is.na(barkthick)) %>%
-  filter(code %in% unique(sm.traits.codeStem$code)) %>%
-  left_join(pmr.byStem.df.w) %>%
-  select(codeStem, code, size, density, barkthick, time7, time13, time25, time37) -> sm.traits.code
-dim(sm.traits.code)
+#do stepwise model selection
+mod.select.r<-step(mod.full.r, direction="backward")
+mod.select.k<-step(mod.full.k, direction="backward")
+mod.select.t70<-step(mod.full.t70, direction="backward")
+mod.select.alpha<-step(mod.full.alpha, direction="backward")
+mod.list<-list(mod.select.t70, mod.select.k) #don't include results for alpha yet
 
-### density + barkthick
-#fit stem-level models
-mod.stem.t7<-lm(time7 ~ density + barkthick, data=sm.traits.codeStem)
-mod.stem.t13<-lm(time13 ~ density +barkthick, data=sm.traits.codeStem)
-mod.stem.t25<-lm(time25 ~ density +barkthick, data=sm.traits.codeStem)
-mod.stem.t37<-lm(time37 ~ density +barkthick, data=sm.traits.codeStem)
-#fit code-level models
-mod.code.t7<-lm(time7 ~ density +barkthick, data=sm.traits.code)
-mod.code.t13<-lm(time13 ~ density +barkthick, data=sm.traits.code)
-mod.code.t25<-lm(time25 ~ density +barkthick, data=sm.traits.code)
-mod.code.t37<-lm(time37 ~ density +barkthick, data=sm.traits.code)
-#summarize r2 vals
-mod.compare.densitybarkthick<-data.frame(response=c("time7","time13","time25","time37"),
-           r2.stem=c(summary(mod.stem.t7)$r.squared,
-                     summary(mod.stem.t13)$r.squared,
-                     summary(mod.stem.t25)$r.squared,
-                     summary(mod.stem.t37)$r.squared),
-           
-           r2.code=c(summary(mod.code.t7)$r.squared,
-                     summary(mod.code.t13)$r.squared,
-                     summary(mod.code.t25)$r.squared,
-                     summary(mod.code.t37)$r.squared))
-mod.compare.densitybarkthick
+#make table that summarizes the best models for each response variable
+respvars<-c("t70","k")
+prettyTab<-MakeSummaryTable_traits(respvars, mod.list, termorder="code")
+prettyTab
+write.csv(prettyTab, "output/traitsummary_code.csv")
 
-### just barkthick
-#fit stem-level models
-mod.stem.t7<-lm(time7 ~ barkthick, data=sm.traits.codeStem)
-mod.stem.t13<-lm(time13 ~ barkthick, data=sm.traits.codeStem)
-mod.stem.t25<-lm(time25 ~ barkthick, data=sm.traits.codeStem)
-mod.stem.t37<-lm(time37 ~ barkthick, data=sm.traits.codeStem)
-#fit code-level models
-mod.code.t7<-lm(time7 ~ barkthick, data=sm.traits.code)
-mod.code.t13<-lm(time13 ~ barkthick, data=sm.traits.code)
-mod.code.t25<-lm(time25 ~ barkthick, data=sm.traits.code)
-mod.code.t37<-lm(time37 ~ barkthick, data=sm.traits.code)
-#summarize r2 vals
-mod.compare.barkthick<-data.frame(response=c("time7","time13","time25","time37"),
-           r2.stem=c(summary(mod.stem.t7)$r.squared,
-                     summary(mod.stem.t13)$r.squared,
-                     summary(mod.stem.t25)$r.squared,
-                     summary(mod.stem.t37)$r.squared),
-           
-           r2.code=c(summary(mod.code.t7)$r.squared,
-                     summary(mod.code.t13)$r.squared,
-                     summary(mod.code.t25)$r.squared,
-                     summary(mod.code.t37)$r.squared))
-mod.compare.barkthick
-
-# plot that shows variation in barkthick within species
-sm.traits.codeStem$species<-tolower(sm.traits.codeStem$code)
-ggplot(sm.traits.codeStem, aes(x=species, y=barkthick)) + 
-  geom_point(alpha=.5, pch=16) + coord_flip() + theme_bw() +
-  xlab("Wood species") + ylab("Bark thickness (mm)")
-#ggsave('output/stem_barkthick.pdf')
+#save the residuals
+trait.residuals<-data.frame(code=spdf.traits$code,
+  r2.resid=mod.select.r$residuals,
+  k.resid=mod.select.k$residuals,
+  t70.resid=mod.select.t70$residuals,
+  alpha.resid=mod.select.alpha$residuals)
 
 ```
-For models with **density + barkthickness**, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For models with just **barkthickness**, fits are about the same... slightly better on the stem-level at the last time point
 
-## *Hyp (stem-level)* Stem-specific initial wood traits will predict variation in percent mass loss.
+
+## *Hyp (stem-level)* Stem-level initial wood traits will predict variation in percent mass loss at each time step.
+
+First, we need to decide what trait data (and samples) to include in this analysis since we don't have full coverage of stem-level trait data. 
+Density and bark thickness were only measured on small sized stems.  If there is not be very much within-species variation in these traits that contribute to variation in percent mass loss than we can justify including species-level estimates of these traits in the stem-level model. 
+
+Plot the small-sized stem-level measures of density and barkthick
+```{r, echo=FALSE}
+
+# prep a dataset with pmr, stem-level and code-level density and barkthick
+traits.codeStem %>%
+  filter(size=="small") %>%
+  select(codeStem, code, density, barkthick) %>%
+  filter(!is.na(density) & !is.na(barkthick)) %>%
+  rename("density_stem"="density",
+         "barkthick_stem"="barkthick") -> db.stem
+traits.mean %>%
+  filter(size=="small") %>%
+  select(code, density, barkthick) %>%
+  filter(!is.na(density) & !is.na(barkthick)) %>%
+  rename("density_code"="density",
+         "barkthick_code"="barkthick") -> db.code
+db.stem %>%
+  left_join(db.code) %>%
+  left_join(pmr.byStem.df.w) -> db.df
+
+
+# look at the within-species variation in density and barkthick
+p.denVar<-ggplot(db.df, aes(x=reorder(code, density_code), y=density_stem)) + 
+  geom_point(pch=1) + theme_bw() + coord_flip() +
+  xlab("Wood species") + ylab("Density (g/cm3)")
+p.barVar<-ggplot(db.df, aes(x=reorder(code, barkthick_code), y=barkthick_stem)) + 
+  geom_point(pch=1) + theme_bw() + coord_flip() +
+  xlab("Wood species") + ylab("Bark thickness (mm)") +
+  theme(axis.text.y = element_blank(), 
+            axis.ticks.y = element_blank(), 
+            axis.title.y = element_blank(),
+            plot.margin = unit(c(0,1,0,0), "lines"),
+            plot.background = element_blank())
+
+pdf("output/densityNbarkthick_var.pdf", width=8, height=6)
+grid.newpage()
+grid.draw(cbind(ggplotGrob(p.denVar), ggplotGrob(p.barVar), size = "last"))
+dev.off()
+
+```
+
+Compare model fits (r2) using stem and species-level data to identify how much information about percent mass remaining is lost by using species-level estimates...For density, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For barkthickness, fits are about the same.
+```{r}
+
+### density
+#fit stem-level models
+mod.stem.t7<-lm(time7 ~ density_stem, data=db.df)
+mod.stem.t13<-lm(time13 ~ density_stem, data=db.df)
+mod.stem.t25<-lm(time25 ~ density_stem, data=db.df)
+mod.stem.t37<-lm(time37 ~ density_stem, data=db.df)
+mod.stem.density.list<-list(mod.stem.t7, mod.stem.t13, mod.stem.t25, mod.stem.t37)
+#fit code-level models
+mod.code.t7<-lm(time7 ~ density_code, data=db.df)
+mod.code.t13<-lm(time13 ~ density_code, data=db.df)
+mod.code.t25<-lm(time25 ~ density_code, data=db.df)
+mod.code.t37<-lm(time37 ~ density_code, data=db.df)
+mod.code.density.list<-list(mod.code.t7, mod.code.t13, mod.code.t25, mod.code.t37)
+
+### barkthick
+#fit stem-level models
+mod.stem.t7<-lm(time7 ~ barkthick_stem, data=db.df)
+mod.stem.t13<-lm(time13 ~ barkthick_stem, data=db.df)
+mod.stem.t25<-lm(time25 ~ barkthick_stem, data=db.df)
+mod.stem.t37<-lm(time37 ~ barkthick_stem, data=db.df)
+mod.stem.barkthick.list<-list(mod.stem.t7, mod.stem.t13, mod.stem.t25, mod.stem.t37)
+#fit code-level models
+mod.code.t7<-lm(time7 ~ barkthick_code, data=db.df)
+mod.code.t13<-lm(time13 ~ barkthick_code, data=db.df)
+mod.code.t25<-lm(time25 ~ barkthick_code, data=db.df)
+mod.code.t37<-lm(time37 ~ barkthick_code, data=db.df)
+mod.code.barkthick.list<-list(mod.code.t7, mod.code.t13, mod.code.t25, mod.code.t37)
+
+#cox test to compare non-nested models
+respvars<-c("t7", "t13", "t25", "t37")
+Do_coxTests(mod.stem.density.list, mod.code.density.list, respvars)
+Do_coxTests(mod.stem.barkthick.list, mod.code.barkthick.list, respvars)
+
+#compare model r2s
+density.r2s<-Do_compareR2(mod.stem.density.list, mod.code.density.list, respvars)
+barkthick.r2s<-Do_compareR2(mod.stem.barkthick.list, mod.code.barkthick.list, respvars)
+density.r2s %>%
+  rename('density_code_r2'='code.r2s',
+         'density_stem_r2'='stem.r2s') %>%
+  left_join(barkthick.r2s) %>%
+  rename('barkthick_code_r2'='code.r2s',
+         'barkthick_stem_r2'='stem.r2s') -> compare.r2.Tab
+compare.r2.Tab
+write.csv(compare.r2.Tab, file="output/stemVspecies_r2s.csv")
+
+```
+
+Compile a "stem-level" dataframe with (a) stem-level percent mass remaining values, (b) stem-level traits including waterperc and chemistry along, and (c) small species-level density and bark thickness data. 
 ```{r, include=FALSE}
 timeList<-list('time7','time13','time25','time37')
 
 #function to pull out samples with the following trait info ...
 # stem-level waterperc, xrf, and CN and (small) species-level barkthickness
 datasets<-lapply(timeList, CreateTraitPMRpair, traits.codeStem, traits.mean, pmr.byStem.df.w)
-names(datasets)<-c('time7','time13','time25','time37')
+names(datasets)<-timeList
 
 #fit full models (no barkthick or density because these weren't measured on small stems)
-mod.full.t7<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time7']])
-mod.full.t13<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
-mod.full.t25<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
-mod.full.t37<-lm(curr.time ~ size + waterperc + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
-mod.full.t37.nobark<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
+mod.full.t7<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time7']])
+mod.full.t13<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
+mod.full.t25<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
+mod.full.t37<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
+#mod.full.t37.nobark<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
 
 #do stepwise model selection
 mod.select.t7<-step(mod.full.t7, direction="backward")
 mod.select.t13<-step(mod.full.t13, direction="backward")
 mod.select.t25<-step(mod.full.t25, direction="backward")
 mod.select.t37<-step(mod.full.t37, direction="backward")
-mod.select.t37.nobark<-step(mod.full.t37.nobark, direction="backward")
+mod.list<-list(mod.select.t7, mod.select.t13, mod.select.t25, mod.select.t37)
+#mod.select.t37.nobark<-step(mod.full.t37.nobark, direction="backward")
+
+#make table that summarizes the best models for each response variable
+respvars<-c("pmr7","pmr13","pmr25","pmr37")
+prettyTab<-MakeSummaryTable_traits(respvars, mod.list, termorder = "stem")
+prettyTab
+write.csv(prettyTab, "output/traitsummary_stems.csv")
 
 #save the residuals
 traitResid.t7<- data.frame(codeStem = datasets[['time7']]$codeStem, trait.resid = mod.select.t7$residuals)
@@ -319,47 +408,6 @@ traitResid.t37<- data.frame(codeStem = datasets[['time37']]$codeStem, trait.resi
 
 ```
 
-### time7 
-
-**less water content and C leads to more mass remaining after 7 months**
-
-```{r, echo=FALSE}
-summary(mod.select.t7) # waterperc, C (marginally)
-#ggplot(datasets[['time7']], aes(x=waterperc, y=curr.time*100, color=species)) + 
-#  geom_point() + ylab("Mass remaining after 7 months (%)")
-```
-
-### time 13
-
-**larger size stems, less water content, more P and Mn, and less N leads to more mass remaining after 13 months**  
-
-```{r, echo=FALSE}
-summary(mod.select.t13) # size, waterperc, N
-#ggplot(datasets[['time13']], aes(x=waterperc, y=curr.time*100, color=species, size=N)) + 
-#  geom_point() + ylab("Mass remaining after 13 months (%)") + facet_grid(~size)
-```
-
-### time 25
-
-**larger size stems, less water content, more P leads to more mass remaining after 25 months**  
-
-```{r, echo=FALSE}
-summary(mod.select.t25) # size, waterperc, P
-#ggplot(datasets[['time25']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
-#  geom_point() + ylab("Mass remaining after 25 months (%)") + facet_grid(~size)
-```
-
-### time 37
-
-**larger size stems, less water content, less thick bark, more P, Mn, and C leads to more mass remaining after 37 months**  
-
-```{r, echo=FALSE}
-summary(mod.select.t37) # size, waterperc, barkthick_smspp, P, Mn, C
-#ggplot(datasets[['time37']], aes(x=waterperc, y=curr.time*100, color=species, size=P)) + 
-#  geom_point() + ylab("Mass remaining after 37 months (%)") + facet_grid(~size)
-
-#summary(mod.select.t37.nobark)
-```
 
 
 
@@ -711,8 +759,8 @@ mod.basidio.list<-list(mod1, mod2, mod3, mod4)
 #lapply(mod.basidio.list, summary)
 
 #example plots
-#ggplot(sapro.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
-#  ylab("Mass remaining after 7 months (%)") + xlab("Saprotroph richness")
+ggplot(sapro.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
+  ylab("Mass remaining after 7 months (%)") + xlab("Saprotroph richness")
 #ggplot(basidio.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
 #  ylab("Mass remaining after 7 months (%)") + xlab("Basidio richness")
 
