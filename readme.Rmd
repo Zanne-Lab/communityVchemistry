@@ -410,13 +410,11 @@ traitResid.t37<- data.frame(codeStem = datasets[['time37']]$codeStem, trait.resi
 
 
 
-
-
 ##########################################
 
 # Community as a predictor
 
-### First, filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
+Filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
 ```{r, echo=FALSE}
 
 minSamps<-floor(dim(comm.otu)[1] * .2) #how many samples is 20% of them?
@@ -427,15 +425,59 @@ paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 
 ```
 
+## *Hyp (species+size-level)* Species+size-level (average) initial microbial community composition will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
+```{r, include=FALSE, results=FALSE, message=FALSE}
 
-## *Hyp (stem-level)* Stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+#average OTU abundances by code
+meanOTUabund.trim<-AverageOTUabund_byCode(comm.otu, seqSamples)
+meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
+
+#get rid of spdf rows for which there is missing community data... this is eusc
+#spdf[!spdf$code %in% row.names(meanOTUabund.trim),]$code
+spdf.trim<-spdf[spdf$code %in% row.names(meanOTUabund.trim2),]
+
+#fit models
+fit.r2.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$ne.r2)
+fit.r2 <- WAPLS(meanOTUabund.trim2, spdf.trim$ne.r2)
+fit.k.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$k)
+fit.k <- WAPLS(meanOTUabund.trim2, spdf.trim$k)
+fit.t70.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$t70)
+fit.t70 <- WAPLS(meanOTUabund.trim2, spdf.trim$t70)
+
+#cross-validate models using the leave-one-out method
+fit.r2.cv.notrim <- crossval(fit.r2.notrim, cv.method="loo")
+fit.r2.cv <- crossval(fit.r2, cv.method="loo")
+fit.k.cv.notrim <- crossval(fit.k.notrim, cv.method="loo")
+fit.k.cv <- crossval(fit.k, cv.method="loo")
+fit.t70.cv.notrim <- crossval(fit.t70.notrim, cv.method="loo")
+fit.t70.cv <- crossval(fit.t70, cv.method="loo")
+
+#perform randomization t-test to test the significance of a cross-validated model
+wapls.out<-list(rand.t.test(fit.t70.cv),
+                rand.t.test(fit.k.cv),
+                rand.t.test(fit.r2.cv))
+wapls.out.notrim<-list(rand.t.test(fit.t70.cv.notrim),
+                       rand.t.test(fit.k.cv.notrim),
+                       rand.t.test(fit.r2.cv.notrim))
+respvars<-c("t70","k","ne.r2")
+prettyTab<-MakeSummaryTable_comcomp(wapls.out, respvars)
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars)
+prettyTab$trim<-"no"
+prettyTab.notrim$trim<-"yes"
+prettyTabs.code<-rbind(prettyTab, prettyTab.notrim)
+prettyTabs.code
+
+```
+
+
+## *Hyp (stem-level)* Stem-level initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 ```{r, include=FALSE}
 
 timeList<-list('time7','time13','time25','time37')
 datasets<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu.trimmed, pmr.byStem.df.w)
-names(datasets)<-c('time7','time13','time25','time37')
+names(datasets)<-unlist(timeList)
 datasets.nt<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu, pmr.byStem.df.w)
-names(datasets.nt)<-c('time7','time13','time25','time37')
+names(datasets.nt)<-unlist(timeList)
 
 #fit models
 fit.t7 <- WAPLS(datasets[['time7']][['comm']], datasets[['time7']][['pmr']]$curr.time, npls=15)
@@ -458,28 +500,30 @@ fit.t25.nt.cv <- crossval(fit.t25.notrim, cv.method="loo")
 fit.t37.nt.cv <- crossval(fit.t37.notrim, cv.method="loo")
 
 #perform randomization t-test to test the significance of a cross-validated model....
-#rand.t.test(fit.t7.cv) 
-#rand.t.test(fit.t7.nt.cv)
-#rand.t.test(fit.t13.cv) 
-#rand.t.test(fit.t13.nt.cv) #marginally-significant Comp02
-#rand.t.test(fit.t25.cv) 
-#rand.t.test(fit.t25.nt.cv)
+wapls.out<-list(rand.t.test(fit.t7.cv),
+                rand.t.test(fit.t13.cv),
+                rand.t.test(fit.t25.cv),
+                rand.t.test(fit.t37.cv))
+wapls.out.notrim<-list(rand.t.test(fit.t7.nt.cv),
+                rand.t.test(fit.t13.nt.cv),
+                rand.t.test(fit.t25.nt.cv),
+                rand.t.test(fit.t37.nt.cv))
+
+respvars<-unlist(timeList)
+prettyTab<-MakeSummaryTable_comcomp(wapls.out, respvars)
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars)
+prettyTab$trim<-"no"
+prettyTab.notrim$trim<-"yes"
+prettyTabs.stem<-rbind(prettyTab, prettyTab.notrim)
+prettyTabs.stem
+
+# merge code and stem-level summary tables
+tmp<-left_join(prettyTabs.code, prettyTabs.stem)
+commTab<-tmp[,c("trim","stat","t70","k","ne.r2",unlist(timeList))]
+write.csv(commTab, file="commcompsummary.csv")
+
 ```
-
-### time 7, 13, and 25
-
-**none of the community components are significant predictors**
-
-### time 37
-
-**Comp01 is significant (whole community)**
-
-```{r, echo=FALSE}
-#rand.t.test(fit.t37.cv) # signif Comp02, but very little added info in Comp02 so do not interpret
-rand.t.test(fit.t37.nt.cv) #signif Comp01
-```
-
-This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
+Comp01 (of the trimmed community) is a significant predictor of percent mass remaining at 37 months. This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
 Investigate the biology underlying time37-associated coefs for Comp01
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
@@ -514,7 +558,6 @@ p.phylum<-ggplot(coef.comp.ann, aes(x=phylum, y=coefComp)) +
   geom_hline(yintercept=0, linetype=2)
 
 grid.arrange(p.troph, p.king, p.phylum)
-
 
 
 #plot these OTU decay coef versus waterperc coef from boral model
@@ -557,42 +600,8 @@ mod<-lm(coefComp ~ coefEst, data=tmp)
 summary(mod) 
 # signif relationship w/in ascos+barkthick (not on whole community)
 ```
-When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...
+When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...The asco response to barkthickness is driving the WA-PLS association. It also seems like there are some asco and basidio outliers that are associated with low water content and carry decay information.
 
-The asco response to barkthickness is driving the WA-PLS association. It also seems like there are some asco and basidio outliers that are associated with low water content and carry decay information.
-
-
-```{r}
-
-tmp.df1 %>%
-  filter(Trophic.Mode %in% c("Pathotroph","Saprotroph")) -> tmp
-
-p<-ggplot(tmp, aes(x=coefEst, y=coefComp)) + 
-  geom_point() + theme_bw() +
-  ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
-  xlab("Wood trait response (boral coef estimate)") +
-  facet_grid(Trophic.Mode~ trait)
-p
-
-tmp %>%
-  filter(trait=="barkthick") %>%
-  filter(Trophic.Mode=="Saprotroph")-> tmp.bt.sap
-
-mod<-lm(coefComp ~ coefEst, data=tmp.bt.sap)
-summary(mod) 
-# signif relationship w/in sapros+barkthick (not on whole community)
-
-tmp %>%
-  filter(trait=="waterperc") %>%
-  filter(Trophic.Mode=="Saprotroph")-> tmp.bt.wp
-
-mod<-lm(coefComp ~ coefEst, data=tmp.bt.wp)
-summary(mod) 
-# NOT a signif relationship w/in sapros+waterperc
-
-```
-Known saprotrophs respond to barkthickness and in doing so predict decay.  In contrast, the response of pathogens to barkthickness does not carry information about decay. There's also a non-significant but trending relationship between saprotroph responses to water content and decay. --- This is getting a bit far from the real data, but still intriguing?
-I *think* this shows that the presence of a given bark-phillic (and water-phobic) saprotroph in the initial community is more likely to explain mass remaining than the presence of non-saprotroph with an equally strong bark 'preference'.
 
 
 ##########################################

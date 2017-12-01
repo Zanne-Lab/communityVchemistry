@@ -77,3 +77,12 @@ Do_compareR2<-function(mod.stem.list, mod.code.list, respvars){
   summ.r2s<-data.frame(respvars, code.r2s, stem.r2s)
   return(summ.r2s)
 }
+
+MakeSummaryTable_comcomp<-function(wapls.out, respvars){
+  
+  tmp<-lapply(wapls.out, function(x) x["Comp01",])
+  tmp<-do.call(cbind,lapply(tmp,data.frame))
+  colnames(tmp)<-respvars
+  prettyTab<-data.frame(stat=row.names(tmp), round(tmp, digits=2))
+  return(prettyTab)
+}
