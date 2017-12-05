@@ -1,11 +1,19 @@
-#prettyProducts_fxns.R
 
-MakeSummaryTable_traits<-function(respvars, mod.list, termorder){
+ModelFit_manyYs<-function(y, rhs, curr.data){
   
-  #summarize
-  sum.list<-lapply(mod.list, summary)
+  #create model formula
+  string<-paste(y, " ~ ", rhs)
+  fmla<-as.formula(string)
   
-  #pull term coefs
+  #fit full model
+  mod.full<-lm(formula=fmla, data=curr.data)
+  
+  #return a list with the best model for each response var
+  return(mod.full)
+}
+
+PullLmCoefs<-function(sum.list, respvars){
+  
   coefs.list<-lapply(sum.list, function(x){
     df<-data.frame(term=row.names(x$coefficients), x$coefficients)
     colnames(df)<-c("term","est","se","t.value","pval")
@@ -23,7 +31,11 @@ MakeSummaryTable_traits<-function(respvars, mod.list, termorder){
                            round(coefs.df$se, digits=3),
                            coefs.df$stars)
   
-  #pull model fit stats
+  return(coefs.df)
+}
+
+PullLmFitStats<-function(sum.list, respvars){
+  
   fitstats.list<-lapply(sum.list, function(x){
     df<-data.frame(Fstat = round(x$fstatistic['value'], digits=2),
                    numdf = x$fstatistic['numdf'],
@@ -37,14 +49,28 @@ MakeSummaryTable_traits<-function(respvars, mod.list, termorder){
   fitstat.df<-data.frame(t(fitstats.df))
   fitstat.df$term<-row.names(fitstat.df)
   
+  return(fitstat.df)
+}
+
+MakeLmSummaryTable<-function(respvars, mod.list, termorder){
+  
+  #summarize
+  sum.list<-lapply(mod.list, summary)
+  
+  #pull term coefs
+  coefs.df<-PullLmCoefs(sum.list, respvars)
+  
+  #pull model fit stats
+  fitstat.df<-PullLmFitStats(sum.list, respvars)
+  
   #reformat
   coefs.df %>%
     select(respvar, term, printvec) %>%
     spread(respvar, printvec) -> coefs.df
-  if(termorder=='stem'){
+  if(termorder=='stemTraits'){
     row.order<-c("(Intercept)","sizesmall","waterperc","density_smspp","barkthick_smspp","C","N","P","Mn")
   }
-  if(termorder=='code'){
+  if(termorder=='codeTraits'){
     row.order<-c("(Intercept)","sizesmall","waterperc","barkthick","C","N","Ca","Zn")
   }
   if(termorder=='none'){
@@ -58,6 +84,20 @@ MakeSummaryTable_traits<-function(respvars, mod.list, termorder){
   
   return(prettyTab)
   
+}
+
+ExtractResids<-function(mod.list, dataset.list, sampleName){
+  
+  resid.dfs<-list()
+  for(i in 1:length(mod.list)){
+    mod <- mod.list[[i]]
+    dataset <- dataset.list[[i]]
+    resid.dfs[[i]]<-data.frame(resid=mod$resid, sampleName=dataset[,sampleName])
+  }
+  names(resid.dfs)<-names(mod.list)
+  resid.df<-bind_rows(resid.dfs, .id="resp")
+  
+  return(resid.df)
 }
 
 Do_coxTests<-function(mod.stem.list, mod.code.list, respvars){
@@ -85,4 +125,25 @@ MakeSummaryTable_comcomp<-function(wapls.out, respvars){
   colnames(tmp)<-respvars
   prettyTab<-data.frame(stat=row.names(tmp), round(tmp, digits=2))
   return(prettyTab)
+}
+
+MakeSummaryTable_diversity<-function(respvars, mod.list){
+  
+  #summarize
+  sum.list<-lapply(mod.list, summary)
+  
+  #pull term coefs
+  coefs.df<-PullLmCoefs(sum.list, respvars)
+  
+  #pull model fit stats
+  fitstat.df<-PullLmFitStats(sum.list, respvars)
+  
+  #reformat
+  coefs.df %>%
+    select(respvar, term, printvec) %>%
+    spread(respvar, printvec) -> coefs.df
+  prettyTab<-rbind(coefs.df, rep(NA, length(colnames(coefs.df))), fitstat.df)
+  
+  return(prettyTab)
+  
 }

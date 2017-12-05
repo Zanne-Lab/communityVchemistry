@@ -10,31 +10,35 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 #libraries
-devtools::install_github("cornwell-lab-unsw/litterfitter")
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(vegan)
-library(knitr)
-library(litterfitter)
-library(magrittr)
-library(tidyr)
-library(gridExtra)
-library(rioja)
-library(colorspace)
-library(grid)
+library(knitr) #r markdown
+library(readr) #read/write
+library(magrittr) #data formatting
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(grid) #plotting
+devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
+library(litterfitter) #fit decay models to timeseries
 library(lmtest) # for coxtest()
+library(vegan) #diversity metrics
+library(rioja) #WA-PLS
+
+#library(colorspace)
+#library(gridExtra)
 
 #fxns
-source("code/load_fxns.R")
-source("code/curve_fitting_fxns.R")
-source("code/distance_fxns.R")
-source("code/otuIDs_fxns.R")
-source("code/prettyProducts_fxns.R")
+source("code/summaryTable_fxns.R")
+source("code/analysisDF_fxns.R")
+
+#source("code/distance_fxns.R")
+#source("code/otuIDs_fxns.R")
+
 ```
 
 ### Load microbial community data
 ```{r, echo=FALSE}
+source("code/load_microbeData_fxns.R")
+
 #stem sample meta data
 #stemSamples<-load_stemSamples() #uncomment if the data changes
 #write_csv(stemSamples, "derived_data/stemSamples.csv")
@@ -45,6 +49,7 @@ stemSamples<-read_csv("derived_data/stemSamples.csv")
 #comm.otu<-add_oomycetes(fung.otu) #add the oomycetes #uncomment if the data changes
 #write.csv(comm.otu, "derived_data/comm_otu.csv")
 comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1)
+#plot_sampleEffortCurves(comm.otu) #this takes a while... uncomment if the data changes
 
 #create sequence sample meta data table
 #seqSamples<-load_seqSamples(comm.otu, stemSamples) #uncomment if the data changes
@@ -56,87 +61,49 @@ seqSamples<-read_csv("derived_data/seqSamples.csv")
 #write_csv(taxAndFunguild, "derived_data/taxaAndFunguild.csv")
 taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 
-#plot_sampleEffortCurves(comm.otu)
 ```
 
 ### Load wood trait data
 ```{r, echo=FALSE}
+source("code/load_traitData_fxns.R")
+
+# species+size-level trait data
 #traits.mean<-mergeTraitData() #uncomment if the data changes
-#write_csv(traits.mean, "derived_data/traits_mean.csv") 
-traits.mean<-read_csv("derived_data/traits_mean.csv")
-#missing data
-#traits.long<-as.data.frame(gather(traits.mean, key=trait, value=value, -(1:3)))
-#filter(traits.long, is.na(value))
+#write_csv(traits.mean, "derived_data/traits_code.csv") 
+traits.code<-read_csv("derived_data/traits_code.csv")
 
-traits.codeStem<-mergeTraitData_byStem()
-#data that we have
-traits.codeStem.long<-as.data.frame(gather(traits.codeStem, key=trait, value=value, -(1:3)))
-traits.codeStem.long %>%
-  filter(!is.na(value)) %>%
-  group_by(code, trait) %>%
-  summarize(length(value)) %>%
-  spread(key=trait, value='length(value)') -> tmp
+# stem-level trait data
+#traits.codeStem<-mergeTraitData_byStem() #uncomment if the data changes
+#write_csv(traits.codeStem, "derived_data/traits_stem.csv")
+traits.stem<-read_csv("derived_data/traits_stem.csv")
+```
 
-### LOAD MASS LOSS DATA and CALCULATE % MASS REMAINING AT EACH TIMEPOINT
+### Load decay data
+```{r}
+source("code/load_decayData_fxns.R")
+
+# load mass loss data and calculate percent mass remaining (pmr)
 #initial_mass <- read_in_initial_mass() #uncomment if the data changes
 #harvest_mass<-LoadHarvestFiles()
-#mass.data<-bind_rows(initial_mass, harvest_mass)
-#missing data
-#mass.data %>% filter(is.na(totalSampleDryMass))
-#plotting_df<-Calc_massRemaining(mass.data)
-#matching failures
-# plotting_df %>%
-#   filter(is.na(pmr)) %>%
-#   select(unique, species, size, time, totalSampleDryMass, notes) %>%
-#   spread(key=time, value=totalSampleDryMass)
-#remove NAs
-#plotting_df %>% filter(!is.na(pmr)) -> plotting_df
-#write.csv(plotting_df,"derived_data/plotting_df.csv")
-plotting_df<-read.csv("derived_data/plotting_df.csv", row.names=1)
+#pmr<-Calc_massRemaining(initial_mass, harvest_mass)
+#write.csv(pmr,"derived_data/pmr.csv")
+pmr<-read.csv("derived_data/pmr.csv", row.names=1)
 
-#add codeStem and transform
-plotting_df %>%
-  select(unique, size, time, pmr) %>%
-  separate(unique, into=c("code","StemNposition"), sep=4, extra='merge', remove=FALSE) %>%
-  separate(StemNposition, into=c("Stem","position"), sep=1, extra='merge', remove=TRUE) %>%
-  mutate(codeStem=paste(code, Stem, sep="")) %>%
-  select(codeStem, position, time, pmr) -> pmr.df
+# average pmr for each stem and timepoint
+pmr_byStem<-AvgPMR_byStem(pmr)
 
-#average pmr by codeStem and time
-pmr.df %>%
-  group_by(codeStem, time) %>%
-  summarize(mean.pmr=mean(pmr, na.rm=TRUE),
-            sd.pmr=sd(pmr, na.rm=TRUE),
-            n.pmr=length(pmr)) -> pmr.byStem.df
+# calculate decay trajectory fits for each species+size
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
 
-pmr.byStem.df$code<-substr(pmr.byStem.df$codeStem, 1, 4)
-pmr.byStem.df$species<-tolower(pmr.byStem.df$code)
-pmr.byStem.df$size<-"large"
-pmr.byStem.df[pmr.byStem.df$code == tolower(pmr.byStem.df$code),"size"]<-"small"
-
-#make it wide
-pmr.byStem.df %>%
-  select(codeStem, time, mean.pmr) %>%
-  spread(key=time, value=mean.pmr) %>%
-  rename('time0'=`0`,
-         'time7'=`7`,
-         'time13'=`13`,
-         'time25'=`25`,
-         'time37'=`37`) %>%
-  separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
-
-### CALCULATE DECAY TRAJECTORY FITS
-#spdf <- fit_all_curves(plotting_df) #this recalculates all the curve fits, uncomment if the data changes
-#indx<-select(stemSamples, code, species, size)
-#spdf<-left_join(spdf, indx) #add code
-#write_csv(spdf,"derived_data/mass_loss_parameters.csv")
-spdf <- read_csv("derived_data/mass_loss_parameters.csv")
-
-# ggplot(spdf,aes(x=t70,y=w.t70,col=size))+
+# ggplot(decayfits,aes(x=t70,y=w.t70,col=size))+
 #   geom_point()+
 #   labs(x="Time to 30% mass loss (negative exponential)", 
 #        y="Time to 30% mass loss (Weibull)")+
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+
+rm(pmr_df)
 
 ```
 
@@ -144,10 +111,10 @@ Figure 1. Wood species x decay params
 ```{r}
 
 #make plot of decay params by wood species
-spdf.p<-left_join(spdf, stemSamples)
+decayfits.p<-left_join(decayfits, stemSamples)
 
 # t70
-p.t70<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) + 
+p.t70<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) + 
   geom_point() +
   #geom_errorbar(aes(ymin=t70.lower, ymax=t70.upper)) +
   coord_flip() +
@@ -157,7 +124,7 @@ p.t70<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) +
   theme(plot.margin = unit(c(0,1,0,0), "lines"))
 
 # k
-p.k<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) + 
+p.k<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) + 
   geom_point() +
   geom_errorbar(aes(ymin=k.lower, ymax=k.upper)) +
   coord_flip() +
@@ -171,7 +138,7 @@ p.k<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) +
             plot.background = element_blank())
 
 # ne.r2
-p.r2<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) + 
+p.r2<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) + 
   geom_point() +
   coord_flip() +
   xlab("Wood species") + ylab("Neg. expon. R2") + theme_bw() +
@@ -183,51 +150,45 @@ p.r2<-ggplot(spdf.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) +
             plot.margin = unit(c(0,1,0,0), "lines"),
             plot.background = element_blank())
 
-pdf("output/codeDecayParams.pdf", width=10, height=6)
+pdf("output/decayfits.pdf", width=10, height=6)
 grid.newpage()
 grid.draw(cbind(ggplotGrob(p.t70), ggplotGrob(p.k), ggplotGrob(p.r2), size = "last"))
 dev.off()
+
+rm(p.t70, p.k, p.r2)
 
 ```
 
 Figure 2. Time x percent mass remaining by wood species
 ```{r}
 
-#order the wood species by t70 to match species order in previous figure
-woodSp.o<-levels(reorder(spdf.p$species, -spdf.p$t70))
+#make a long version of pmr.byStem.df.w
+pmr_byStem %>%
+  gather(key="time",value="mean.pmr", 4:8, na.rm=TRUE) %>%
+  separate(time, into=c("drop","timeNum"), sep="time") %>%
+  mutate(timeNum=as.numeric(timeNum)) %>%
+  mutate(species=tolower(code)) %>%
+  mutate(size = case_when(code == species ~ "small", 
+                          code != species ~ "large")) %>%
+  select(-drop) -> pmr.byStem.df
 
+#order the wood species by t70 to match species order in previous figure
+woodSp.o<-levels(reorder(decayfits.p$species, -decayfits.p$t70))
 pmr.byStem.df$species<-factor(pmr.byStem.df$species, levels=rev(woodSp.o))
 
-p.pmrBystem<-ggplot(pmr.byStem.df, aes(x=time/12, y=mean.pmr*100, group=codeStem, linetype=size)) + 
+p.pmrBystem<-ggplot(pmr.byStem.df, aes(x=timeNum, y=mean.pmr*100, group=codeStem, linetype=size)) + 
   geom_line() + facet_wrap(~species) +
   xlab("Time (years)") + ylab("Mass remaining (%)") + theme_bw() +
   scale_linetype_manual(values=c(2,1)) + guides(linetype=FALSE)
 
-pdf("output/massLoss_byStem.pdf", width=6, height=6)
+pdf("output/pmr_byStem.pdf", width=6, height=6)
 p.pmrBystem
 dev.off()
 
-```
-
-### Summarize stem-level data
-```{r}
-
-# add 'codeStem' to microbial community
-seqSamples$codeStem<-paste(seqSamples$code, seqSamples$Stem, sep="")
-seqSamples[grepl("NA", seqSamples$codeStem),"codeStem"]<-NA
-
-# bind everything together
-pmr.byStem.df.w %>% # mass loss
-  full_join(traits.codeStem) %>% #wood traits
-  full_join(seqSamples) %>% #microbial data
-  select(codeStem, code, seq_sampName, waterperc, density, barkthick, P, K, Ca, Mn, Fe, Zn, N, C, time7, time13, time25, time37) %>%
-  filter(!is.na(codeStem))  %>%
-  separate(codeStem, into=c("code1","Stem"), sep=4) %>%
-  filter(Stem %in% 1:10) -> stem.data
-
-#stem.data
+rm(decayfits.p, woodSp.o, p.pmrBystem, pmr.byStem.df)
 
 ```
+
 
 ##########################################
 
@@ -238,41 +199,39 @@ We expect initial wood traits will explain varitation in species+size decay rate
 ## *Hyp (species+size-level)* Species+size-level initial wood traits will predict variation decay rates and lagginess.
 ```{r, include=FALSE}
 
-#merge predictor and response variables into 1 df
-spdf %>%
+#merge traits and response variables into 1 df
+decayfits %>%
   select(code, species, size, ne.r2, k, t70, alpha) %>%
-  left_join(traits.mean) %>% 
+  left_join(traits.code) %>% 
   filter(!is.na(P)) %>%
-  filter(!is.na(waterperc)) -> spdf.traits
+  filter(!is.na(waterperc)) -> decayfits.traits
 
-#fit full models
-mod.full.r<-lm(ne.r2 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-mod.full.k<-lm(k ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-mod.full.t70<-lm(t70 ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
-mod.full.alpha<-lm(alpha ~ size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C, data=spdf.traits)
+#set up full models
+respVars <- list("k","t70","ne.r2")
+rhs <- "size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C"
+mod.full.list<-lapply(respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits) # summaryTable_fxns.R
 
 #do stepwise model selection
-mod.select.r<-step(mod.full.r, direction="backward")
-mod.select.k<-step(mod.full.k, direction="backward")
-mod.select.t70<-step(mod.full.t70, direction="backward")
-mod.select.alpha<-step(mod.full.alpha, direction="backward")
-mod.list<-list(mod.select.t70, mod.select.k) #don't include results for alpha yet
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x)) 
+  mod.select<-step(x.updated, direction="backward")
+  return(mod.select)
+  })
 
-#make table that summarizes the best models for each response variable
-respvars<-c("t70","k")
-prettyTab<-MakeSummaryTable_traits(respvars, mod.list, termorder="code")
+#summarize the best models
+prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list, termorder="codeTraits") # summaryTable_fxns.R
 prettyTab
 write.csv(prettyTab, "output/traitsummary_code.csv")
 
-#save the residuals
-trait.residuals<-data.frame(code=spdf.traits$code,
-  r2.resid=mod.select.r$residuals,
-  k.resid=mod.select.k$residuals,
-  t70.resid=mod.select.t70$residuals,
-  alpha.resid=mod.select.alpha$residuals)
+#extract and save the residuals
+dataset.list<-rep(list(decayfits.traits), length(respVars))
+names(mod.select.list)<-respVars
+traitResiduals.code<-ExtractResids(mod.list=mod.select.list, dataset.list=dataset.list, sampleName = "code") # summaryTable_fxns.R
+
+rm(mod.full.list, mod.select.list, 
+   prettyTab, decayfits.traits)
 
 ```
-
 
 ## *Hyp (stem-level)* Stem-level initial wood traits will predict variation in percent mass loss at each time step.
 
@@ -283,13 +242,13 @@ Plot the small-sized stem-level measures of density and barkthick
 ```{r, echo=FALSE}
 
 # prep a dataset with pmr, stem-level and code-level density and barkthick
-traits.codeStem %>%
+traits.stem %>%
   filter(size=="small") %>%
   select(codeStem, code, density, barkthick) %>%
   filter(!is.na(density) & !is.na(barkthick)) %>%
   rename("density_stem"="density",
          "barkthick_stem"="barkthick") -> db.stem
-traits.mean %>%
+traits.code %>%
   filter(size=="small") %>%
   select(code, density, barkthick) %>%
   filter(!is.na(density) & !is.na(barkthick)) %>%
@@ -297,8 +256,7 @@ traits.mean %>%
          "barkthick_code"="barkthick") -> db.code
 db.stem %>%
   left_join(db.code) %>%
-  left_join(pmr.byStem.df.w) -> db.df
-
+  left_join(pmr_byStem) -> db.df
 
 # look at the within-species variation in density and barkthick
 p.denVar<-ggplot(db.df, aes(x=reorder(code, density_code), y=density_stem)) + 
@@ -313,52 +271,32 @@ p.barVar<-ggplot(db.df, aes(x=reorder(code, barkthick_code), y=barkthick_stem)) 
             plot.margin = unit(c(0,1,0,0), "lines"),
             plot.background = element_blank())
 
-pdf("output/densityNbarkthick_var.pdf", width=8, height=6)
+pdf("output/variation_densityNbarkthick.pdf", width=8, height=6)
 grid.newpage()
 grid.draw(cbind(ggplotGrob(p.denVar), ggplotGrob(p.barVar), size = "last"))
 dev.off()
 
+rm(db.stem, db.code, p.denVar, p.barVar)
+
 ```
 
 Compare model fits (r2) using stem and species-level data to identify how much information about percent mass remaining is lost by using species-level estimates...For density, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For barkthickness, fits are about the same.
-```{r}
+```{r, echo=FALSE}
 
-### density
-#fit stem-level models
-mod.stem.t7<-lm(time7 ~ density_stem, data=db.df)
-mod.stem.t13<-lm(time13 ~ density_stem, data=db.df)
-mod.stem.t25<-lm(time25 ~ density_stem, data=db.df)
-mod.stem.t37<-lm(time37 ~ density_stem, data=db.df)
-mod.stem.density.list<-list(mod.stem.t7, mod.stem.t13, mod.stem.t25, mod.stem.t37)
-#fit code-level models
-mod.code.t7<-lm(time7 ~ density_code, data=db.df)
-mod.code.t13<-lm(time13 ~ density_code, data=db.df)
-mod.code.t25<-lm(time25 ~ density_code, data=db.df)
-mod.code.t37<-lm(time37 ~ density_code, data=db.df)
-mod.code.density.list<-list(mod.code.t7, mod.code.t13, mod.code.t25, mod.code.t37)
-
-### barkthick
-#fit stem-level models
-mod.stem.t7<-lm(time7 ~ barkthick_stem, data=db.df)
-mod.stem.t13<-lm(time13 ~ barkthick_stem, data=db.df)
-mod.stem.t25<-lm(time25 ~ barkthick_stem, data=db.df)
-mod.stem.t37<-lm(time37 ~ barkthick_stem, data=db.df)
-mod.stem.barkthick.list<-list(mod.stem.t7, mod.stem.t13, mod.stem.t25, mod.stem.t37)
-#fit code-level models
-mod.code.t7<-lm(time7 ~ barkthick_code, data=db.df)
-mod.code.t13<-lm(time13 ~ barkthick_code, data=db.df)
-mod.code.t25<-lm(time25 ~ barkthick_code, data=db.df)
-mod.code.t37<-lm(time37 ~ barkthick_code, data=db.df)
-mod.code.barkthick.list<-list(mod.code.t7, mod.code.t13, mod.code.t25, mod.code.t37)
+#set up models
+respVars <- list("time7", "time13", "time25", "time37")
+mod.stem_density.list <- lapply(respVars, ModelFit_manyYs, rhs="density_stem", curr.data=db.df) # summaryTable_fxns.R
+mod.code_density.list <- lapply(respVars, ModelFit_manyYs, rhs="density_code", curr.data=db.df) # summaryTable_fxns.R
+mod.stem_barkthick.list <- lapply(respVars, ModelFit_manyYs, rhs="barkthick_stem", curr.data=db.df) # summaryTable_fxns.R
+mod.code_barkthick.list <- lapply(respVars, ModelFit_manyYs, rhs="barkthick_code", curr.data=db.df) # summaryTable_fxns.R
 
 #cox test to compare non-nested models
-respvars<-c("t7", "t13", "t25", "t37")
-Do_coxTests(mod.stem.density.list, mod.code.density.list, respvars)
-Do_coxTests(mod.stem.barkthick.list, mod.code.barkthick.list, respvars)
+#Do_coxTests(mod.stem_density.list, mod.code_density.list, respvars=unlist(respVars))
+#Do_coxTests(mod.stem_barkthick.list, mod.code_barkthick.list, respvars=unlist(respVars))
 
 #compare model r2s
-density.r2s<-Do_compareR2(mod.stem.density.list, mod.code.density.list, respvars)
-barkthick.r2s<-Do_compareR2(mod.stem.barkthick.list, mod.code.barkthick.list, respvars)
+density.r2s<-Do_compareR2(mod.stem_density.list, mod.code_density.list, respvars=unlist(respVars))
+barkthick.r2s<-Do_compareR2(mod.stem_barkthick.list, mod.code_barkthick.list, respvars=unlist(respVars))
 density.r2s %>%
   rename('density_code_r2'='code.r2s',
          'density_stem_r2'='stem.r2s') %>%
@@ -366,45 +304,48 @@ density.r2s %>%
   rename('barkthick_code_r2'='code.r2s',
          'barkthick_stem_r2'='stem.r2s') -> compare.r2.Tab
 compare.r2.Tab
-write.csv(compare.r2.Tab, file="output/stemVspecies_r2s.csv")
+write.csv(compare.r2.Tab, file="output/smallsize_codeVstem_r2s.csv")
+
+rm(db.df, mod.stem_density.list, mod.code_density.list, mod.stem_barkthick.list, mod.code_barkthick.list,
+   density.r2s, barkthick.r2s, compare.r2.Tab)
 
 ```
 
 Compile a "stem-level" dataframe with (a) stem-level percent mass remaining values, (b) stem-level traits including waterperc and chemistry along, and (c) small species-level density and bark thickness data. 
 ```{r, include=FALSE}
-timeList<-list('time7','time13','time25','time37')
 
-#function to pull out samples with the following trait info ...
-# stem-level waterperc, xrf, and CN and (small) species-level barkthickness
-datasets<-lapply(timeList, CreateTraitPMRpair, traits.codeStem, traits.mean, pmr.byStem.df.w)
-names(datasets)<-timeList
+# create dataframes
+# stem-level waterperc, xrf, and CN and (small) species-level barkthickness and density
+datasets<-lapply(respVars, function(x) {
+  result<-CreateTraitPMRpair(x, traits.stem, traits.code, pmr_byStem) #analysisDF_fxns.R
+  return(result)
+})
+names(datasets)<-respVars
 
-#fit full models (no barkthick or density because these weren't measured on small stems)
-mod.full.t7<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time7']])
-mod.full.t13<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time13']])
-mod.full.t25<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time25']])
-mod.full.t37<-lm(curr.time ~ size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
-#mod.full.t37.nobark<-lm(curr.time ~ size + waterperc + P + K + Ca + Mn + Fe + Zn + N + C, data=datasets[['time37']])
+#set up full models
+rhs <- "size + waterperc + density_smspp + barkthick_smspp + P + K + Ca + Mn + Fe + Zn + N + C"
+lhs <- "curr.pmr"
+mod.full.list<-lapply(datasets, function(x) {
+  result<-ModelFit_manyYs(y=lhs, rhs=rhs, curr.data=x)
+  return(result)
+})
 
 #do stepwise model selection
-mod.select.t7<-step(mod.full.t7, direction="backward")
-mod.select.t13<-step(mod.full.t13, direction="backward")
-mod.select.t25<-step(mod.full.t25, direction="backward")
-mod.select.t37<-step(mod.full.t37, direction="backward")
-mod.list<-list(mod.select.t7, mod.select.t13, mod.select.t25, mod.select.t37)
-#mod.select.t37.nobark<-step(mod.full.t37.nobark, direction="backward")
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x)) 
+  mod.select<-step(x.updated, direction="backward")
+  return(mod.select)
+  })
 
-#make table that summarizes the best models for each response variable
-respvars<-c("pmr7","pmr13","pmr25","pmr37")
-prettyTab<-MakeSummaryTable_traits(respvars, mod.list, termorder = "stem")
+#summarize the best models
+prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list, termorder="stemTraits") # summaryTable_fxns.R
 prettyTab
-write.csv(prettyTab, "output/traitsummary_stems.csv")
+write.csv(prettyTab, "output/traitsummary_stem.csv")
 
-#save the residuals
-traitResid.t7<- data.frame(codeStem = datasets[['time7']]$codeStem, trait.resid = mod.select.t7$residuals)
-traitResid.t13<- data.frame(codeStem = datasets[['time13']]$codeStem, trait.resid = mod.select.t13$residuals)
-traitResid.t25<- data.frame(codeStem = datasets[['time25']]$codeStem, trait.resid = mod.select.t25$residuals)
-traitResid.t37<- data.frame(codeStem = datasets[['time37']]$codeStem, trait.resid = mod.select.t37$residuals)
+#extract and save the residuals
+traitResiduals.stem<-ExtractResids(mod.list=mod.select.list, dataset.list=datasets, sampleName = "codeStem") # summaryTable_fxns.R
+
+rm(dataset.list, datasets, lhs, rhs, mod.full.list, mod.select.list, respVars, prettyTab)
 
 ```
 
@@ -423,149 +364,144 @@ comm.otu.trimmed <- comm.otu[,dat1>minSamps]
 
 paste("Keep", dim(comm.otu.trimmed)[2], "of", dim(comm.otu)[2], "OTUs")
 
+rm(minSamps, dat1)
+
 ```
 
 ## *Hyp (species+size-level)* Species+size-level (average) initial microbial community composition will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 
 #average OTU abundances by code
-meanOTUabund.trim<-AverageOTUabund_byCode(comm.otu, seqSamples)
-meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
+codeOTUabund<-AverageOTUabund_byCode(comm.otu, seqSamples) #analysisDF_fxns.R
+codeOTUabund.trim<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples) #analysisDF_fxns.R
 
-#get rid of spdf rows for which there is missing community data... this is eusc
-#spdf[!spdf$code %in% row.names(meanOTUabund.trim),]$code
-spdf.trim<-spdf[spdf$code %in% row.names(meanOTUabund.trim2),]
+#get rid of decayfits rows for which there is missing community data... this is eusc
+#decayfits[!decayfits$code %in% row.names(codeOTUabund),]$code
+decayfits.trim<-decayfits[decayfits$code %in% row.names(codeOTUabund),]
 
 #fit models
-fit.r2.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$ne.r2)
-fit.r2 <- WAPLS(meanOTUabund.trim2, spdf.trim$ne.r2)
-fit.k.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$k)
-fit.k <- WAPLS(meanOTUabund.trim2, spdf.trim$k)
-fit.t70.notrim <- WAPLS(meanOTUabund.trim, spdf.trim$t70)
-fit.t70 <- WAPLS(meanOTUabund.trim2, spdf.trim$t70)
-
-#cross-validate models using the leave-one-out method
-fit.r2.cv.notrim <- crossval(fit.r2.notrim, cv.method="loo")
-fit.r2.cv <- crossval(fit.r2, cv.method="loo")
-fit.k.cv.notrim <- crossval(fit.k.notrim, cv.method="loo")
-fit.k.cv <- crossval(fit.k, cv.method="loo")
-fit.t70.cv.notrim <- crossval(fit.t70.notrim, cv.method="loo")
-fit.t70.cv <- crossval(fit.t70, cv.method="loo")
+respVars <- list(t70 = decayfits.trim$t70,
+                 k = decayfits.trim$k,
+                 ne.r2 = decayfits.trim$ne.r2)
+cvfit.notrim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund, curr.respVar = x)}) #analysisDF_fxns.R
+cvfit.trim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund.trim, curr.respVar = x)}) #analysisDF_fxns.R
 
 #perform randomization t-test to test the significance of a cross-validated model
-wapls.out<-list(rand.t.test(fit.t70.cv),
-                rand.t.test(fit.k.cv),
-                rand.t.test(fit.r2.cv))
-wapls.out.notrim<-list(rand.t.test(fit.t70.cv.notrim),
-                       rand.t.test(fit.k.cv.notrim),
-                       rand.t.test(fit.r2.cv.notrim))
-respvars<-c("t70","k","ne.r2")
-prettyTab<-MakeSummaryTable_comcomp(wapls.out, respvars)
-prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars)
-prettyTab$trim<-"no"
-prettyTab.notrim$trim<-"yes"
-prettyTabs.code<-rbind(prettyTab, prettyTab.notrim)
-prettyTabs.code
+wapls.out.notrim<-lapply(cvfit.notrim, rand.t.test)
+wapls.out.trim<-lapply(cvfit.trim, rand.t.test)
+
+#make summary table
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=names(respVars))
+prettyTab.trim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.trim, respvars=names(respVars))
+prettyTab.notrim$trim<-"no"
+prettyTab.trim$trim<-"yes"
+prettyTabs.code<-rbind(prettyTab.trim, prettyTab.notrim)
+
+rm(decayfits.trim, respVars, 
+   cvfit.notrim, cvfit.trim, 
+   wapls.out.notrim, wapls.out.trim, 
+   prettyTab.notrim, prettyTab.trim)
 
 ```
-
 
 ## *Hyp (stem-level)* Stem-level initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
 ```{r, include=FALSE}
 
-timeList<-list('time7','time13','time25','time37')
-datasets<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu.trimmed, pmr.byStem.df.w)
-names(datasets)<-unlist(timeList)
-datasets.nt<-lapply(timeList, CreateCommPMRpair, comm.mat = comm.otu, pmr.byStem.df.w)
-names(datasets.nt)<-unlist(timeList)
+respVars <- list("time7", "time13", "time25", "time37")
+
+# create dataframes
+datasets.notrim<-lapply(respVars, function(x) {CreateCommPMRpair(x, comm.mat=comm.otu, pmr_byStem)} ) #analysisDF_fxns.R
+names(datasets.notrim)<-unlist(respVars)
+datasets.trim<-lapply(respVars, function(x) {CreateCommPMRpair(x, comm.mat=comm.otu.trimmed, pmr_byStem)} ) #analysisDF_fxns.R
+names(datasets.trim)<-unlist(respVars)
 
 #fit models
-fit.t7 <- WAPLS(datasets[['time7']][['comm']], datasets[['time7']][['pmr']]$curr.time, npls=15)
-fit.t13 <- WAPLS(datasets[['time13']][['comm']], datasets[['time13']][['pmr']]$curr.time)
-fit.t25 <- WAPLS(datasets[['time25']][['comm']], datasets[['time25']][['pmr']]$curr.time)
-fit.t37 <- WAPLS(datasets[['time37']][['comm']], datasets[['time37']][['pmr']]$curr.time)
-fit.t7.notrim <- WAPLS(datasets.nt[['time7']][['comm']], datasets.nt[['time7']][['pmr']]$curr.time)
-fit.t13.notrim <- WAPLS(datasets.nt[['time13']][['comm']], datasets.nt[['time13']][['pmr']]$curr.time)
-fit.t25.notrim <- WAPLS(datasets.nt[['time25']][['comm']], datasets.nt[['time25']][['pmr']]$curr.time)
-fit.t37.notrim <- WAPLS(datasets.nt[['time37']][['comm']], datasets.nt[['time37']][['pmr']]$curr.time)
-
-#cross-validate models using the leave-one-out method
-fit.t7.cv <- crossval(fit.t7, cv.method="loo")
-fit.t13.cv <- crossval(fit.t13, cv.method="loo")
-fit.t25.cv <- crossval(fit.t25, cv.method="loo")
-fit.t37.cv <- crossval(fit.t37, cv.method="loo")
-fit.t7.nt.cv <- crossval(fit.t7.notrim, cv.method="loo")
-fit.t13.nt.cv <- crossval(fit.t13.notrim, cv.method="loo")
-fit.t25.nt.cv <- crossval(fit.t25.notrim, cv.method="loo")
-fit.t37.nt.cv <- crossval(fit.t37.notrim, cv.method="loo")
+cvfit.notrim<-lapply(datasets.notrim, function(x) {fitNcrossval_WAPLS(curr.comm = x[['comm']], curr.respVar = x[['pmr']][['curr.time']])})
+cvfit.trim<-lapply(datasets.trim, function(x) {fitNcrossval_WAPLS(curr.comm = x[['comm']], curr.respVar = x[['pmr']][['curr.time']])})
 
 #perform randomization t-test to test the significance of a cross-validated model....
-wapls.out<-list(rand.t.test(fit.t7.cv),
-                rand.t.test(fit.t13.cv),
-                rand.t.test(fit.t25.cv),
-                rand.t.test(fit.t37.cv))
-wapls.out.notrim<-list(rand.t.test(fit.t7.nt.cv),
-                rand.t.test(fit.t13.nt.cv),
-                rand.t.test(fit.t25.nt.cv),
-                rand.t.test(fit.t37.nt.cv))
+wapls.out.notrim<-lapply(cvfit.notrim, rand.t.test)
+wapls.out.trim<-lapply(cvfit.trim, rand.t.test)
 
-respvars<-unlist(timeList)
-prettyTab<-MakeSummaryTable_comcomp(wapls.out, respvars)
-prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars)
-prettyTab$trim<-"no"
-prettyTab.notrim$trim<-"yes"
-prettyTabs.stem<-rbind(prettyTab, prettyTab.notrim)
-prettyTabs.stem
+#make summary table
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=unlist(respVars))
+prettyTab.trim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.trim, respvars=unlist(respVars))
+prettyTab.notrim$trim<-"no"
+prettyTab.trim$trim<-"yes"
+prettyTabs.stem<-rbind(prettyTab.trim, prettyTab.notrim)
 
 # merge code and stem-level summary tables
 tmp<-left_join(prettyTabs.code, prettyTabs.stem)
-commTab<-tmp[,c("trim","stat","t70","k","ne.r2",unlist(timeList))]
-write.csv(commTab, file="commcompsummary.csv")
+commTab<-tmp[,c("trim","stat","t70","k","ne.r2",unlist(respVars))]
+commTab
+write.csv(commTab, file="output/commcompsummary.csv")
+
+rm(datasets.notrim, datasets.trim,
+   respVars, 
+   tmp, commTab,
+   wapls.out.notrim, wapls.out.trim, 
+   prettyTab.notrim, prettyTab.trim,
+   prettyTabs.code, prettyTabs.stem)
 
 ```
-Comp01 (of the trimmed community) is a significant predictor of percent mass remaining at 37 months. This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
+Comp01 (of the non-trimmed community) is a significant predictor of percent mass remaining at 37 months. This is likely an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months.  Check this out by plotting OTU trait-associated coefs (from boral) versus component coef estimate.
 
-Investigate the biology underlying time37-associated coefs for Comp01
+Plot of OTU functional and phylogenetic categories versus signif WA-PLS score.  Remember that higher WA-PLS scores are associated more more mass remaingin after 37 months.
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
-coef.comp<-fit.t37.nt.cv$coefficients[,'Comp01']
-coef.comp.df<-data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
+
+coef.comp <- cvfit.notrim$time37$coefficients[,'Comp01']
+coef.comp.df <- data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
 
 #create df of OTU taxon and guild info matched with coef value
 coef.comp.df %>% left_join(taxAndFunguild) -> coef.comp.ann
-unique(coef.comp.ann$kingdom)
 
-# #define cols
-# colvals<-rainbow_hcl(length(unique(coef.comp.ann$Trophic.Mode)))
-# names(colvals)<-unique(coef.comp.ann$Trophic.Mode)
-# colvals['unclassified']<-"#D3D3D3"
+#shorten x axis labels
+orgNames<-levels(factor(coef.comp.ann$Trophic.Mode))
+newNames<-gsub('troph', '', orgNames)
+coef.comp.ann %>% mutate(Trophic.Mode.short = factor(Trophic.Mode, labels = newNames)) -> coef.comp.ann
 
-p.troph<-ggplot(coef.comp.ann, aes(x=Trophic.Mode, y=coefComp)) + 
-  geom_jitter() + coord_flip() +
+p.troph<-ggplot(coef.comp.ann, aes(x=Trophic.Mode.short, y=coefComp)) + 
+  geom_jitter(alpha=.5, pch=16) +
   xlab("Trophic mode") + ylab("Component coefficient estimate") +
   theme_classic() +
-  geom_hline(yintercept=0, linetype=2)
+  geom_hline(yintercept=0, linetype=2) +
+  theme(axis.text.x = element_text(angle = 70, hjust = 1))
 
 p.king<-ggplot(coef.comp.ann, aes(x=kingdom, y=coefComp)) + 
-  geom_jitter() + coord_flip() +
+  geom_jitter(alpha=.5) + 
   xlab("Kingdom") + ylab("Component coefficient estimate") +
   theme_classic() +
-  geom_hline(yintercept=0, linetype=2)
+  geom_hline(yintercept=0, linetype=2) +
+  theme(axis.text.y = element_blank(), 
+            axis.ticks.y = element_blank(), 
+            axis.title.y = element_blank(),
+            plot.margin = unit(c(0,1,0,0), "lines"),
+            plot.background = element_blank(),
+        axis.text.x = element_text(angle = 70, hjust = 1))
 
 p.phylum<-ggplot(coef.comp.ann, aes(x=phylum, y=coefComp)) + 
-  geom_jitter() + coord_flip() +
+  geom_jitter(alpha=.5) + 
   xlab("Phylum") + ylab("Component coefficient estimate") +
   theme_classic() +
-  geom_hline(yintercept=0, linetype=2)
+  geom_hline(yintercept=0, linetype=2) +
+  theme(axis.text.y = element_blank(), 
+            axis.ticks.y = element_blank(), 
+            axis.title.y = element_blank(),
+            plot.margin = unit(c(0,1,0,0), "lines"),
+            plot.background = element_blank(),
+        axis.text.x = element_text(angle = 70, hjust = 1))
 
-grid.arrange(p.troph, p.king, p.phylum)
+pdf("output/signif_wapls_otuCats.pdf", width=10, height=6)
+grid.newpage()
+grid.draw(cbind(ggplotGrob(p.troph), ggplotGrob(p.king), ggplotGrob(p.phylum), size = "last"))
+dev.off()
 
-
-#plot these OTU decay coef versus waterperc coef from boral model
+rm(coef.comp.df, coef.comp, newNames, orgNames, p.king, p.phylum, p.troph)
 
 ```
 
-Look at the relationship between OTU wood trait coefs and the WA-PLS component scores
-```{r}
+Plot OTU wood trait estimates (from boral) versus signif WA-PLS score.
+```{r, echo=FALSE}
 
 xVar.df<-read.csv("data/xVar_OTUcoefs.csv", row.names=1) #import wood trait coefs estimated by boral in the wooddecay repo
 
@@ -574,33 +510,30 @@ xVar.df %>%
   filter(runNum=="runNum1") -> tmp.df #just look at the first model run estimates
 
 # look at the wood traits included in the best model to explain pmr at 37 months
-# larger size stems, less water content, less thick bark, (more P and Mn -- small effect sizes), and more C leads to more mass remaining after 37 months
+read.csv("output/traitsummary_stem.csv")
+# larger size stems, less water content, less thick bark, more C, more P, more Mn
 # size was included as a roweffect in the boral model, so there are no OTU-specific estimates
 
 tmp.df %>%
-  select(OTUId, phylum, Trophic.Mode, coefComp, waterperc, barkthick, C) %>%
+  select(OTUId, phylum, Trophic.Mode, coefComp, waterperc, barkthick, P) %>%
   gather(key="trait", value="coefEst", -(1:4)) %>%
   arrange(-coefComp) -> tmp.df1
 
-#check out outliers
-#tmp.df1[1:20,] #very few of the top ranking OTUs are taxon ID'd
-
-p<-ggplot(tmp.df1, aes(x=coefEst, y=coefComp)) + 
+p<-ggplot(tmp.df1, aes(x=coefComp, y=coefEst)) + 
   geom_point() + theme_bw() +
   ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
   xlab("Wood trait response (boral coef estimate)") +
-  facet_wrap(phylum~ trait)
+  facet_grid(phylum~ trait)
+
+pdf("output/signif_wapls_otuBoral.pdf", width=6, height=6)
 p
+dev.off()
 
-tmp.df1 %>%
-  filter(phylum=="Ascomycota") %>%
-  filter(trait=="barkthick") -> tmp
+rm(xVar.df, tmp.df, tmp.df1, p,
+   cvfit.notrim, cvfit.trim)
 
-mod<-lm(coefComp ~ coefEst, data=tmp)
-summary(mod) 
-# signif relationship w/in ascos+barkthick (not on whole community)
 ```
-When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...The asco response to barkthickness is driving the WA-PLS association. It also seems like there are some asco and basidio outliers that are associated with low water content and carry decay information.
+When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...The asco response to barkthickness seems to be driving the WA-PLS association. 
 
 
 
@@ -608,83 +541,115 @@ When looking at these barkthickness OTU coefs, remember that the boral model was
 
 # Community+traits as a predictor
 
-## *Hyp1 (stem-level)* After accounting for variation in decay due to wood traits (no models with density, includes small-species level bark thickness), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
-
+## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 #run rioja::WAPLS on wood trait residuals
 
-dataset.t7<-CreateCommTraitResidpair(timePoint="time7", comm.mat = comm.otu.trimmed, 
-                                      traitResid = traitResid.t7)
-dataset.t13<-CreateCommTraitResidpair(timePoint="time13", comm.mat = comm.otu.trimmed, 
-                                      traitResid = traitResid.t13)
-dataset.t25<-CreateCommTraitResidpair(timePoint="time25", comm.mat = comm.otu.trimmed, 
-                                      traitResid = traitResid.t25)
-dataset.t37<-CreateCommTraitResidpair(timePoint="time37", comm.mat = comm.otu.trimmed, 
-                                      traitResid = traitResid.t37)
+#average OTU abundances by code
+#codeOTUabund
+#codeOTUabund.trim
 
-dataset.t7.notrim<-CreateCommTraitResidpair(timePoint="time7", comm.mat = comm.otu, 
-                                      traitResid = traitResid.t7)
-dataset.t13.notrim<-CreateCommTraitResidpair(timePoint="time13", comm.mat = comm.otu, 
-                                      traitResid = traitResid.t13)
-dataset.t25.notrim<-CreateCommTraitResidpair(timePoint="time25", comm.mat = comm.otu, 
-                                      traitResid = traitResid.t25)
-dataset.t37.notrim<-CreateCommTraitResidpair(timePoint="time37", comm.mat = comm.otu, 
-                                      traitResid = traitResid.t37)
+#unique(traitResiduals.code$resp)
+respVars <- list("k","t70","ne.r2")
 
+# create dataframes
+datasets.notrim<-lapply(respVars, function(x) {
+  CreateCommTraitResidpair(respVar=x, 
+                           comm.mat=codeOTUabund, 
+                           traitResiduals = traitResiduals.code,
+                           sampleName = "code")} ) #analysisDF_fxns.R
+names(datasets.notrim)<-unlist(respVars)
+datasets.trim<-lapply(respVars, function(x) {
+  CreateCommTraitResidpair(respVar=x, 
+                           comm.mat=codeOTUabund.trim, 
+                           traitResiduals = traitResiduals.code,
+                           sampleName = "code")} ) #analysisDF_fxns.R
+names(datasets.trim)<-unlist(respVars)
 
 #fit models
-fit.tr.t7 <- WAPLS(dataset.t7[['comm']], dataset.t7[['traitresid']]$trait.resid)
-fit.tr.t13 <- WAPLS(dataset.t13[['comm']], dataset.t13[['traitresid']]$trait.resid)
-fit.tr.t25 <- WAPLS(dataset.t25[['comm']], dataset.t25[['traitresid']]$trait.resid)
-fit.tr.t37 <- WAPLS(dataset.t37[['comm']], dataset.t37[['traitresid']]$trait.resid)
-fit.tr.t7.nt <- WAPLS(dataset.t7.notrim[['comm']], dataset.t7.notrim[['traitresid']]$trait.resid)
-fit.tr.t13.nt <- WAPLS(dataset.t13.notrim[['comm']], dataset.t13.notrim[['traitresid']]$trait.resid)
-fit.tr.t25.nt <- WAPLS(dataset.t25.notrim[['comm']], dataset.t25.notrim[['traitresid']]$trait.resid)
-fit.tr.t37.nt <- WAPLS(dataset.t37.notrim[['comm']], dataset.t37.notrim[['traitresid']]$trait.resid) #look at more components with the argument npls=20
+cvfit.notrim<-lapply(datasets.notrim, function(x) {
+  fitNcrossval_WAPLS(curr.comm = x[['comm']], 
+                     curr.respVar = x[['traitresid']][['resid']])
+  })
+cvfit.trim<-lapply(datasets.trim, function(x) {
+  fitNcrossval_WAPLS(curr.comm = x[['comm']], 
+                     curr.respVar = x[['traitresid']][['resid']])
+  })
 
-#cross-validate models using the leave-one-out method
-fit.tr.t7.cv <- crossval(fit.tr.t7, cv.method="loo")
-fit.tr.t13.cv <- crossval(fit.tr.t13, cv.method="loo")
-fit.tr.t25.cv <- crossval(fit.tr.t25, cv.method="loo")
-fit.tr.t37.cv <- crossval(fit.tr.t37, cv.method="loo")
-fit.tr.t7.cv.nt <- crossval(fit.tr.t7.nt, cv.method="loo")
-fit.tr.t13.cv.nt <- crossval(fit.tr.t13.nt, cv.method="loo")
-fit.tr.t25.cv.nt <- crossval(fit.tr.t25.nt, cv.method="loo")
-fit.tr.t37.cv.nt <- crossval(fit.tr.t37.nt, cv.method="loo")
+#perform randomization t-test to test the significance of a cross-validated model....
+wapls.out.notrim<-lapply(cvfit.notrim, rand.t.test)
+wapls.out.trim<-lapply(cvfit.trim, rand.t.test)
 
-#perform randomization t-test to test the significance of a cross-validated model
-#rand.t.test(fit.tr.t7.cv) 
-#rand.t.test(fit.tr.t7.cv.nt)
-#rand.t.test(fit.tr.t13.cv) 
-#rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
-#screeplot(fit.tr.t13.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
+#make summary table
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=unlist(respVars))
+prettyTab.trim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.trim, respvars=unlist(respVars))
+prettyTab.notrim$trim<-"no"
+prettyTab.trim$trim<-"yes"
+prettyTabs.code<-rbind(prettyTab.trim, prettyTab.notrim)
 
-#rand.t.test(fit.tr.t25.cv) 
-#rand.t.test(fit.tr.t25.cv.nt)
-#rand.t.test(fit.tr.t37.cv) 
-#rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but...
-#screeplot(fit.tr.t37.cv.nt) # again, the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
-
+rm(respVars, datasets.notrim, datasets.trim, cvfit.notrim, cvfit.trim, wapls.out.notrim, wapls.out.trim, 
+   prettyTab.notrim, prettyTab.trim)
 
 ```
 
-### time 7, 13, 25, 37
+## *Hyp (stem-level)* After accounting for variation in decay due to wood traits (no models with density, includes small-species level bark thickness), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
+```{r, include=FALSE, results=FALSE, message=FALSE}
+#run rioja::WAPLS on wood trait residuals
 
-**none of the community components are significant predictors**
+respVars <- list("time7", "time13", "time25", "time37")
 
-Closer look at time13 findings...  
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
-screeplot(fit.tr.t13.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
-```  
+# create dataframes
+datasets.notrim<-lapply(respVars, function(x) {
+  CreateCommTraitResidpair(respVar=x, 
+                           comm.mat=comm.otu, 
+                           traitResiduals = traitResiduals.stem,
+                           sampleName = "codeStem")} ) #analysisDF_fxns.R
+names(datasets.notrim)<-unlist(respVars)
+datasets.trim<-lapply(respVars, function(x) {
+  CreateCommTraitResidpair(respVar=x, 
+                           comm.mat=comm.otu.trimmed, 
+                           traitResiduals = traitResiduals.stem,
+                           sampleName = "codeStem")} ) #analysisDF_fxns.R
+names(datasets.trim)<-unlist(respVars)
 
-Closer look at time37 findings...  
-```{r, echo=FALSE}
-rand.t.test(fit.tr.t37.cv.nt) # comp2 has a signif pval, but...
-screeplot(fit.tr.t37.cv.nt)# the cross-validated RMSE is way higher than the model RMSE, suggesting that even the first component doesn't perform well on the leave-one-out validation dataset, plus the R2 just decreases with more components
-```  
+#fit models
+cvfit.notrim<-lapply(datasets.notrim, function(x) {
+  fitNcrossval_WAPLS(curr.comm = x[['comm']], 
+                     curr.respVar = x[['traitresid']][['resid']])
+  })
+cvfit.trim<-lapply(datasets.trim, function(x) {
+  fitNcrossval_WAPLS(curr.comm = x[['comm']], 
+                     curr.respVar = x[['traitresid']][['resid']])
+  })
 
-There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset.  Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1.  If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
+#perform randomization t-test to test the significance of a cross-validated model....
+wapls.out.notrim<-lapply(cvfit.notrim, rand.t.test)
+wapls.out.trim<-lapply(cvfit.trim, rand.t.test)
+
+#make summary table
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=unlist(respVars))
+prettyTab.trim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.trim, respvars=unlist(respVars))
+prettyTab.notrim$trim<-"no"
+prettyTab.trim$trim<-"yes"
+prettyTabs.stem<-rbind(prettyTab.trim, prettyTab.notrim)
+
+#Notes about how to interpret WA-PLS...
+#rand.t.test(fit.tr.t13.cv.nt) # comp2 has a signif pval, but...
+#screeplot(fit.tr.t13.cv.nt)
+#There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset.  Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1.  If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
+
+# merge code and stem-level summary tables
+tmp<-left_join(prettyTabs.code, prettyTabs.stem)
+commTab<-tmp[,c("trim","stat","t70","k","ne.r2",unlist(respVars))]
+commTab
+write.csv(commTab, file="output/commcompsummary_traitresid.csv")
+
+rm(respVars, datasets.notrim, datasets.trim, cvfit.notrim, cvfit.trim, wapls.out.notrim, wapls.out.trim, 
+   prettyTab.notrim, prettyTab.trim,
+   prettyTabs.code, prettyTabs.stem,
+   tmp, commTab)
+
+```
 
 
 
@@ -694,145 +659,199 @@ There are two cases where there's a large % decrease in model RMSE from Componen
 
 **Note that the full community matrix was used for these analyses**
 
-## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay.  
-Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
-
-```{r}
+## *Hyp-a (species+size-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
+Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
+## *Hyp-b (species+size-level)* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
+## *Hyp-c (species+size-level)* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+```{r, echo=FALSE}
 
 # summarize the diversity in each sample
-rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #these have codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu)
 H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu) # have to do this with the full community matrix because there are so few of these guys
+richList<-list(rich.df, H.df, sapro.df, basidio.df, path.df, oomy.df)
+richNames<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
+
+#create a set of richness and decay dataframes
+rich.decayfits<-lapply(richList, function(x) {CreateRichDecayfits_df(otutype.df=x, decayfits=decayfits)})
+
+# fit models
+rhs <- "size + mean"
+lhs <- list("t70","k","ne.r2")
+
+richType.list<-list()
+for(i in 1:length(rich.decayfits)){
+  resp.list<-list()
+  for(k in 1:length(lhs)){
+    resp.list[[k]]<-ModelFit_manyYs(y = lhs[[k]], rhs = rhs, curr.data = rich.decayfits[[i]]) 
+  }
+  names(resp.list)<-lhs
+  richType.list[[i]]<-resp.list
+}
+names(richType.list)<-richNames
+
+#summarize
+pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
+summ<-lapply(pretty.list, function(x){
+  selectrows<-c("mean","numdf","dendf","r.squared")
+  x.df<-x[x$term %in% selectrows & !is.na(x$term),]
+  x.df$term<-c("estim.se","numdf","dendf","r.squared")
+  colnames(x.df)[1]<-"valueType"
+  return(x.df)
+} )
+summ.df<-bind_rows(summ, .id="variable")
+summ.df
+
+write.csv(summ.df, file="output/diversitysummary_code.csv")
+
+rm()
+
+
+```
+
+
+## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay.  
+Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
+## *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
+Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
+## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
+```{r, echo=FALSE, include=FALSE}
+
+# summarize the diversity in each sample
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
+H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
+sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
+basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
+patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
+oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
 
 # create a merged df with pmr
 rich.pmr<-left_join(pmr.byStem.df.w, rich.df) %>% filter(!is.na(seq_sampName))
 H.pmr<-left_join(pmr.byStem.df.w, H.df) %>% filter(!is.na(seq_sampName))
+sapro.pmr<-left_join(pmr.byStem.df.w, sapro.df) %>% filter(!is.na(seq_sampName))
+basidio.pmr<-left_join(pmr.byStem.df.w, basidio.df) %>% filter(!is.na(seq_sampName))
+patho.pmr<-left_join(pmr.byStem.df.w, patho.df) %>% filter(!is.na(seq_sampName))
+oomy.pmr<-left_join(pmr.byStem.df.w, oomy.df) %>% filter(!is.na(seq_sampName))
 
 # fit models
 mod1<-lm(time7~size+sub_rich, data=rich.pmr)
 mod2<-lm(time13~size+sub_rich, data=rich.pmr)
 mod3<-lm(time25~size+sub_rich, data=rich.pmr)
 mod4<-lm(time37~size+sub_rich, data=rich.pmr)
-mod.rich.list<-list(mod1, mod2, mod3, mod4)
+mod.rich<-list(mod1, mod2, mod3, mod4)
 
 mod1<-lm(time7~size+sub_rich, data=H.pmr)
 mod2<-lm(time13~size+sub_rich, data=H.pmr)
 mod3<-lm(time25~size+sub_rich, data=H.pmr)
 mod4<-lm(time37~size+sub_rich, data=H.pmr)
-mod.H.list<-list(mod1, mod2, mod3, mod4)
+mod.H<-list(mod1, mod2, mod3, mod4)
 
-#summary
-#lapply(mod.rich.list, summary)
-#lapply(mod.H.list, summary)
-
-#example plots
-#ggplot(rich.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
-#  ylab("Mass remaining after 7 months (%)") + xlab("OTU richness")
-#ggplot(H.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
-#  ylab("Mass remaining after 7 months (%)") + xlab("OTU diversity (H)")
-
-```
-
-### Richness, Shannon's H
-
-**No pattern**
-
-
-## *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
-
-```{r}
-
-# summarize the presence of ... in each sample
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
-
-# create a merged df wtih spdf
-sapro.pmr<-left_join(pmr.byStem.df.w, sapro.df) %>% filter(!is.na(seq_sampName))
-basidio.pmr<-left_join(pmr.byStem.df.w, basidio.df) %>% filter(!is.na(seq_sampName))
-
-# fit models
 mod1<-lm(time7~size+sub_rich, data=sapro.pmr)
 mod2<-lm(time13~size+sub_rich, data=sapro.pmr)
 mod3<-lm(time25~size+sub_rich, data=sapro.pmr)
 mod4<-lm(time37~size+sub_rich, data=sapro.pmr)
-mod.sapro.list<-list(mod1, mod2, mod3, mod4)
+mod.sapro<-list(mod1, mod2, mod3, mod4)
 
 mod1<-lm(time7~size+sub_rich, data=basidio.pmr)
 mod2<-lm(time13~size+sub_rich, data=basidio.pmr)
 mod3<-lm(time25~size+sub_rich, data=basidio.pmr)
 mod4<-lm(time37~size+sub_rich, data=basidio.pmr)
-mod.basidio.list<-list(mod1, mod2, mod3, mod4)
+mod.basidio<-list(mod1, mod2, mod3, mod4)
 
-#summary
-#lapply(mod.sapro.list, summary)
-#lapply(mod.basidio.list, summary)
-
-#example plots
-ggplot(sapro.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
-  ylab("Mass remaining after 7 months (%)") + xlab("Saprotroph richness")
-#ggplot(basidio.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
-#  ylab("Mass remaining after 7 months (%)") + xlab("Basidio richness")
-
-
-```
-
-### Saprotroph richness, Basidio richness
-
-**No pattern**
-
-
-## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
-
-```{r}
-
-# summarize the presence of ... in each sample
-patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
-
-# create a merged df with pmr
-patho.pmr<-left_join(pmr.byStem.df.w, patho.df) %>% filter(!is.na(seq_sampName))
-oomy.pmr<-left_join(pmr.byStem.df.w, oomy.df) %>% filter(!is.na(seq_sampName))
-
-# fit models
 mod1<-lm(time7~size+sub_rich, data=patho.pmr)
 mod2<-lm(time13~size+sub_rich, data=patho.pmr)
 mod3<-lm(time25~size+sub_rich, data=patho.pmr)
 mod4<-lm(time37~size+sub_rich, data=patho.pmr)
-mod.patho.list<-list(mod1, mod2, mod3, mod4)
+mod.patho<-list(mod1, mod2, mod3, mod4)
 
 mod1<-lm(time7~size+sub_rich, data=oomy.pmr)
 mod2<-lm(time13~size+sub_rich, data=oomy.pmr)
 mod3<-lm(time25~size+sub_rich, data=oomy.pmr)
 mod4<-lm(time37~size+sub_rich, data=oomy.pmr)
-mod.oomy.list<-list(mod1, mod2, mod3, mod4)
+mod.oomy<-list(mod1, mod2, mod3, mod4)
 
-#summary
-#lapply(mod.patho.list, summary)
-#lapply(mod.oomy.list, summary)
+#summarize
+xVars<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
+respvars<-unlist(timeList)
+mod.list<-list(mod.rich, 
+               mod.H,
+               mod.sapro,
+               mod.basidio,
+               mod.patho,
+               mod.oomy)
+pretty.list<-lapply(mod.list, MakeSummaryTable_diversity, respvars=respvars)
+names(pretty.list)<-xVars
+summ<-lapply(pretty.list, function(x){
+  selectrows<-c("sub_rich","numdf","dendf","r.squared")
+  x.df<-x[x$term %in% selectrows & !is.na(x$term),]
+  x.df$term<-c("estim.se","numdf","dendf","r.squared")
+  colnames(x.df)[1]<-"valueType"
+  return(x.df)
+} )
+names(summ)<-xVars
+summ.df<-bind_rows(summ, .id="variable")
+summ.df
 
-#example plots
-#ggplot(patho.pmr, aes(y=time7, x=sub_rich)) + geom_point() + 
-#  ylab("Mass remaining after 7 months (%)") + xlab("Pathogen richness")
-#ggplot(oomy.pmr, aes(x=time7, y=sub_rich)) + geom_point() +
-#  ylab("Mass remaining after 7 months (%)") + xlab("Oomycete richness")
-
+write.csv(summ.df, file="output/diversitysummary_stems.csv")
 
 ```
-
-### Pathogen richness, oomycete richness
-
-**No pattern**
-
-
-
 
 
 ##############################################
 
 # Diversity plus traits as a predictor
 
-## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
+## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+```{r, echo=FALSE}
 
+#run lm mods on wood trait residuals
+mod.rich<-FitResid_diversity(rich.spdf=rich.spdf, trait.residuals)
+mod.H<-FitResid_diversity(rich.spdf=H.spdf, trait.residuals)
+mod.sapro<-FitResid_diversity(rich.spdf=saprorich.spdf, trait.residuals)
+mod.basid<-FitResid_diversity(rich.spdf=basidrich.spdf, trait.residuals)
+mod.path<-FitResid_diversity(rich.spdf=pathrich.spdf, trait.residuals)
+mod.oomy<-FitResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals)
+
+
+lapply(mod.rich, anova)
+#lapply(mod.H, anova)
+#lapply(mod.sapro, anova) #marginally signif alpha
+#lapply(mod.basid, anova)
+#lapply(mod.path, anova) #marginally signif for alpha
+#lapply(mod.oomy, anova)
+
+# summarize
+xVars<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
+respvars<-c("r2","k","t70")
+mod.list<-list(mod.rich, 
+               mod.H,
+               mod.sapro,
+               mod.basidio,
+               mod.patho,
+               mod.oomy)
+mod.list
+pretty.list<-lapply(mod.list, MakeSummaryTable_diversity, respvars=respvars)
+names(pretty.list)<-xVars
+summ<-lapply(pretty.list, function(x){
+  selectrows<-c("sub_rich","dendf","r.squared")
+  x.df<-x[x$term %in% selectrows & !is.na(x$term),]
+  x.df$term<-c("estim.se","dendf","r.squared")
+  colnames(x.df)[1]<-"valueType"
+  return(x.df)
+} )
+names(summ)<-xVars
+summ.df.traitresid<-bind_rows(summ, .id="variable")
+summ.df.traitresid
+
+write.csv(summ.df.traitresid, file="output/diversitysummary_stems_traitresid.csv")
+
+```
+
+## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
 ```{r}
 
 # summarize the presence of ... in each sample (same as chunks above)
@@ -865,34 +884,38 @@ mod.basidio<-FitResid_diversity_byStem(basidio.tr.list)
 mod.patho<-FitResid_diversity_byStem(patho.tr.list)
 mod.oomy<-FitResid_diversity_byStem(oomy.tr.list)
 
-# summary
-#lapply(mod.rich, summary)
-#lapply(mod.H, summary)
-#lapply(mod.sapro, summary)
-#lapply(mod.basidio, summary)
-#lapply(mod.patho, summary)
-#lapply(mod.oomy, summary)
+# summarize
+xVars<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
+respvars<-unlist(timeList)
+mod.list<-list(mod.rich, 
+               mod.H,
+               mod.sapro,
+               mod.basidio,
+               mod.patho,
+               mod.oomy)
+pretty.list<-lapply(mod.list, MakeSummaryTable_diversity, respvars=respvars)
+names(pretty.list)<-xVars
+summ<-lapply(pretty.list, function(x){
+  selectrows<-c("sub_rich","dendf","r.squared")
+  x.df<-x[x$term %in% selectrows & !is.na(x$term),]
+  x.df$term<-c("estim.se","dendf","r.squared")
+  colnames(x.df)[1]<-"valueType"
+  return(x.df)
+} )
+names(summ)<-xVars
+summ.df.traitresid<-bind_rows(summ, .id="variable")
+summ.df.traitresid
 
-
-#example plots
-ggplot(rich.tr.list[['t7']], aes(y=trait.resid, x=sub_rich)) + geom_point() + 
-  ylab("Trait residuals at 7 months") + xlab("OTU richness")
+write.csv(summ.df.traitresid, file="output/diversitysummary_stems_traitresid.csv")
 
 ```
-
-### Richness, Shannon's H, Saprotroph richness, Basidio richness, Pathogen richness, Oomycete richness
-
-**No pattern**
-
-
 
 
 ##############################################
 
 # Relationship between wood traits and community
 
-## *Hyp (stem-level)* Initial microbial communitiy compositions will covary with initial wood traits
-
+## *Hyp (species+size-level)* Initial microbial communitiy compositions will covary with initial wood traits
 ```{r}
 
 #stem-level trait set
@@ -923,6 +946,31 @@ anova(fit.cca)
 
 ```
 
+## *Hyp (code-level)* Average initial microbial communitiy compositions will covary with initial wood traits
+```{r, echo=FALSE}
+
+#average OTU abundances by code
+meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
+
+#get rid of missing data from traits.mean
+traits.mean %>%
+  filter(!is.na(waterperc)) %>% #get NaN row
+  filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
+
+#make sure dimensions of the community matrix match
+meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
+
+#make a envVars matrix for model fitting
+envVars<-as.matrix(traits.mean.trim[,-(1:3)])
+
+#fit models
+fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
+#fit.cca
+#plot(fit.cca)
+#anova(fit.cca)
+
+
+```
 
 
 
@@ -939,20 +987,5 @@ anova(fit.cca)
 4. *code/withinInitialDist_vs_decayR2.Rmd* -- No apparent relationship between initial microbial diversity WITHIN species+size and decay model R2
 
 5. *code/unexpectedTaxa.Rmd* -- Mycorrhizal fungi and animal-associated fungi that somehow made it into our OTU table
-
-6. *code/code_level_analyses.Rmd* -- Aggregated data to the code level, taking trait means, community means, and estimating the fit params for each code's decay trajectory in neg.exp and weibold models...   
-
-### **Code-level findings**  
-
-- Traits explain ~ 60-70% of variation in decay over 37 months (r2, k, t70)  
-
-    a. Greater water content and greater Zn and N leads to better-fitting decay models
-    b. Small size stems, greater water content, thinner bark, less Ca, more Zn, and more N lead to faster decay  
-    c. Small stem sizes, less water content, thicker bark, more Ca, less Zn, and less N lead to longer wood “70%”-lives
-    
-- Neither community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70  
-
-- After accounting for variation in decay due to wood traits, neither the community components, overall diversity, nor clade-based diversity metrics are significant predictors of r2, k, t70
-
 
 

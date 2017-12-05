@@ -156,9 +156,9 @@ FitResid_diversity<-function(rich.spdf, trait.residuals){
   mod.r2<-lm(ne.r2~size+mean, data=rich.spdf.tr)
   mod.k<-lm(k~size+mean, data=rich.spdf.tr)
   mod.t70<-lm(t70~size+mean, data=rich.spdf.tr)
-  mod.alpha<-lm(alpha~size+mean, data=rich.spdf.tr)
+  #mod.alpha<-lm(alpha~size+mean, data=rich.spdf.tr)
   
-  mod.list<-list(r2=mod.r2, k=mod.k, t70=mod.t70, alpha=mod.alpha)
+  mod.list<-list(r2=mod.r2, k=mod.k, t70=mod.t70)
   
   return(mod.list)
   
@@ -401,6 +401,45 @@ CreateCommTraitResidpair<-function(timePoint, comm.mat, traitResid){
   
   modelDat.list<-list(traitresid=curr.traitResid, comm=curr.comm.reform)
   
+  return(modelDat.list)
+  
+}
+
+CreateCommTraitResidpair_code<-function(comm.mat, trait.residuals){
+  
+  trait.residuals
+  comm.mat<-meanOTUabund.trim
+  
+  #code code as a character
+  trait.residuals$code<-as.character(trait.residuals$code)
+  
+  #look for missing codes in comm.mat that exist in tr
+  trait.residuals[!trait.residuals$code %in% row.names(comm.mat),"code"] #none missing
+  
+  #look for missing codes in tr that exist in comm.mat
+  row.names(comm.mat)[!row.names(comm.mat) %in% trait.residuals$code] #missing olst from trait.residuals
+  
+  #trim tr
+  trait.residuals.trim<-trait.residuals[trait.residuals$code %in% row.names(comm.mat),] #trim
+  
+  #trim comm.mat
+  comm.mat.trim<-comm.mat[row.names(comm.mat) %in% trait.residuals.trim$code,] #trim
+  
+  #align rows
+  ord<-match(row.names(comm.mat.trim), trait.residuals.trim$code)
+  trait.residuals.trim.o<-trait.residuals.trim[ord,]
+  rowOrderWarn<-sum(trait.residuals.trim.o$code != row.names(comm.mat.trim)) #this needs to by 0
+  rowOrderWarn
+  
+  #make sure there are no empty OTU cols
+  comm.mat.trim<-comm.mat.trim[,colSums(comm.mat.trim)!=0]
+  
+  if(rowOrderWarn !=0){
+    modelDat.list<-"rows are out of order"
+  }else{
+    modelDat.list<-list(traitresid=trait.residuals.trim.o, comm=comm.mat.trim)
+  }
+
   return(modelDat.list)
   
 }
