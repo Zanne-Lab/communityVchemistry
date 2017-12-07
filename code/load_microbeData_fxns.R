@@ -4,24 +4,25 @@ load_stemSamples<-function(){
   deployment <- read_csv("data/deployment.csv")
   deployment<-rename(deployment, "code"="species") #Code column
   
-  #summarize by code
+  #summarize by stem
   deployment %>%
-    group_by(code) %>%
-    summarize(nStems=length(unique(unique))) %>%
-    mutate(species=tolower(code)) -> deploy.new
-  
-  #add size
-  deploy.new$size<-"large"
-  deploy.new[tolower(deploy.new$code) == deploy.new$code, "size"]<-"small"
+    group_by(code, Stem) %>%
+    summarize(num.unique=length(unique(unique))) %>%
+    mutate(codeStem=paste(code, Stem, sep="")) %>%
+    mutate(species=tolower(code)) %>%
+    mutate(size=ifelse(code == tolower(code), 'small','large')) -> deploy.new
   
   #add species info
   species <- read_csv("data/species.csv")
   species %>%
     mutate(species=tolower(Code)) %>%
-    select(-Code)-> species.new
-  stemSamples<-left_join(deploy.new, species.new)
+    rename("site"="Collection site") %>%
+    select(species, Family, Binomial, site) -> species.new
+  deploy.new %>%
+    left_join(species.new) -> stemSamples
   
-  return(stemSamples)
+  return(stemSamples)  
+
 }
 
 #OTU table
@@ -101,17 +102,21 @@ add_oomycetes<-function(fung.otu){
 #create sequence sample meta data table
 load_seqSamples<-function(mat.otu, stemSamples){
   
-  stemSamples %>% select(code, species, size) -> codeindx
-  seq_sampName<-row.names(mat.otu)
-  seq_indx<-data.frame(seq_sampName=seq_sampName, code=substr(seq_sampName, 1, 4))
-  seqSamples<-left_join(seq_indx, codeindx)
+  #identify sequence sampleIDs
+  seq_indx<-data.frame(seq_sampName=row.names(mat.otu))
   
-  #identify stem ids
-  seqSamples %>%
-    separate(col = seq_sampName, into=c("drop","Stem"), 4, remove=FALSE) %>%
-    select(-drop) -> seqSamples
-  seqSamples$codeStem<-paste(seqSamples$code, seqSamples$Stem, sep="")
-  seqSamples[grepl("NA", seqSamples$codeStem),"codeStem"]<-NA
+  #merge by codeStem
+  stem.indx<-stemSamples[,c("codeStem","code","Stem")]
+  left_join(seq_indx, stem.indx, by=c("seq_sampName"="codeStem")) %>%
+    mutate(codeStem = ifelse(!is.na(Stem), paste(code, Stem, sep=""), NA)) %>%
+    select(seq_sampName, codeStem) -> seqSamples.tmp
+  
+  #add back in code-level information for seq_samples that have been pooled by code
+  code.indx <- unique(stemSamples[,c("code","species","size")])
+  seqSamples.tmp %>%
+    separate(seq_sampName, into=c("code","extra"), 4, remove=FALSE) %>%
+    left_join(code.indx) %>%
+    select(-extra) -> seqSamples
   
   return(seqSamples)
 }

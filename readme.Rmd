@@ -27,6 +27,9 @@ library(rioja) #WA-PLS
 #library(gridExtra)
 
 #fxns
+source("code/load_microbeData_fxns.R")
+source("code/load_traitData_fxns.R")
+source("code/load_decayData_fxns.R")
 source("code/summaryTable_fxns.R")
 source("code/analysisDF_fxns.R")
 
@@ -37,9 +40,7 @@ source("code/analysisDF_fxns.R")
 
 ### Load microbial community data
 ```{r, echo=FALSE}
-source("code/load_microbeData_fxns.R")
-
-#stem sample meta data
+#sample meta data
 #stemSamples<-load_stemSamples() #uncomment if the data changes
 #write_csv(stemSamples, "derived_data/stemSamples.csv")
 stemSamples<-read_csv("derived_data/stemSamples.csv")
@@ -65,7 +66,6 @@ taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
 
 ### Load wood trait data
 ```{r, echo=FALSE}
-source("code/load_traitData_fxns.R")
 
 # species+size-level trait data
 #traits.mean<-mergeTraitData() #uncomment if the data changes
@@ -76,11 +76,11 @@ traits.code<-read_csv("derived_data/traits_code.csv")
 #traits.codeStem<-mergeTraitData_byStem() #uncomment if the data changes
 #write_csv(traits.codeStem, "derived_data/traits_stem.csv")
 traits.stem<-read_csv("derived_data/traits_stem.csv")
+
 ```
 
 ### Load decay data
 ```{r}
-source("code/load_decayData_fxns.R")
 
 # load mass loss data and calculate percent mass remaining (pmr)
 #initial_mass <- read_in_initial_mass() #uncomment if the data changes
@@ -103,9 +103,27 @@ decayfits <- read_csv("derived_data/decayfits.csv")
 #        y="Time to 30% mass loss (Weibull)")+
 #   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 
-rm(pmr_df)
+rm(pmr)
 
 ```
+
+Check for missing stem-level data
+```{r}
+
+traits.stem %>%
+  filter(!codeStem %in% stemSamples$codeStem) #there are 2 stems that are in the traits df but are missing from the stem lookup table...
+
+seqSamples %>%
+  filter(!codeStem %in% stemSamples$codeStem) %>%
+  separate(seq_sampName, into=c("drop","seq.stem"), 4, remove=FALSE) %>%
+  filter(grepl("[1-9]", seq.stem)) #these same 2 stems are in the sequence samples but are missing from the stem lookup table...
+
+pmr_byStem %>%
+  filter(!codeStem %in% stemSamples$codeStem) # no stem samples are missing from the decay data
+
+```
+For some reason there are 2 unique codeStem ids that are found in the trait data (xrf sample names) and the sequence data, but not in the stemSamples data (deployment sample names).  These codeStem ids are not found in the percent mass loss data.  Because the main goal is to analyze decay responses, I'm going to continue to leave these codeStems out of the stemSamples dataframe. Is it possible that stem id numbers got switched? Something to follow-up on.
+
 
 Figure 1. Wood species x decay params
 ```{r}
@@ -372,27 +390,35 @@ rm(minSamps, dat1)
 ```{r, include=FALSE, results=FALSE, message=FALSE}
 
 #average OTU abundances by code
-codeOTUabund<-AverageOTUabund_byCode(comm.otu, seqSamples) #analysisDF_fxns.R
-codeOTUabund.trim<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples) #analysisDF_fxns.R
+#codeOTUabund<-AverageOTUabund_byCode(comm.otu=comm.otu, seqSamples=seqSamples) #analysisDF_fxns.R... this take a while
+#write.csv(codeOTUabund, file="derived_data/codeOTUabund.csv")
+codeOTUabund<-read.csv("derived_data/codeOTUabund.csv", row.names=1)
+#codeOTUabund.trim<-AverageOTUabund_byCode(comm.otu=comm.otu.trimmed, seqSamples=seqSamples) #analysisDF_fxns.R
+#write.csv(codeOTUabund.trim, file="derived_data/codeOTUabund_trim.csv")
+codeOTUabund.trim<-read.csv("derived_data/codeOTUabund_trim.csv", row.names=1)
 
-#get rid of decayfits rows for which there is missing community data... this is eusc
+#get rid of decayfits rows for which there is missing community data... this is eusc...
 #decayfits[!decayfits$code %in% row.names(codeOTUabund),]$code
 decayfits.trim<-decayfits[decayfits$code %in% row.names(codeOTUabund),]
 
+#order the rows of decayfits.trim so that they line up with the community mats
+sum(row.names(codeOTUabund) != row.names(codeOTUabund.trim)) #this needs to be 0
+ord<-match(row.names(codeOTUabund), decayfits.trim$code)
+decayfits.trim.o<-decayfits.trim[ord,]
+sum(row.names(codeOTUabund) != decayfits.trim.o$code) #this needs to be 0
+
 #fit models
-respVars <- list(t70 = decayfits.trim$t70,
-                 k = decayfits.trim$k,
-                 ne.r2 = decayfits.trim$ne.r2)
-cvfit.notrim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund, curr.respVar = x)}) #analysisDF_fxns.R
-cvfit.trim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund.trim, curr.respVar = x)}) #analysisDF_fxns.R
+respVars <- list("k","t70","ne.r2")
+cvfit.notrim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund, curr.respVar = decayfits.trim.o[[x]])}) #analysisDF_fxns.R
+cvfit.trim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund.trim, curr.respVar = decayfits.trim.o[[x]])}) #analysisDF_fxns.R
 
 #perform randomization t-test to test the significance of a cross-validated model
 wapls.out.notrim<-lapply(cvfit.notrim, rand.t.test)
 wapls.out.trim<-lapply(cvfit.trim, rand.t.test)
 
 #make summary table
-prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=names(respVars))
-prettyTab.trim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.trim, respvars=names(respVars))
+prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=unlist(respVars))
+prettyTab.trim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.trim, respvars=unlist(respVars))
 prettyTab.notrim$trim<-"no"
 prettyTab.trim$trim<-"yes"
 prettyTabs.code<-rbind(prettyTab.trim, prettyTab.notrim)
@@ -400,7 +426,7 @@ prettyTabs.code<-rbind(prettyTab.trim, prettyTab.notrim)
 rm(decayfits.trim, respVars, 
    cvfit.notrim, cvfit.trim, 
    wapls.out.notrim, wapls.out.trim, 
-   prettyTab.notrim, prettyTab.trim)
+   prettyTab.notrim, prettyTab.trim, decayfits.trim.o, ord)
 
 ```
 
@@ -530,7 +556,8 @@ p
 dev.off()
 
 rm(xVar.df, tmp.df, tmp.df1, p,
-   cvfit.notrim, cvfit.trim)
+   cvfit.notrim, cvfit.trim,
+   coef.comp.ann)
 
 ```
 When looking at these barkthickness OTU coefs, remember that the boral model was fit based on small species-level bark thickness data...The asco response to barkthickness seems to be driving the WA-PLS association. 
@@ -708,8 +735,13 @@ summ.df
 
 write.csv(summ.df, file="output/diversitysummary_code.csv")
 
-rm()
+#save the richness dataframes for use with trait residuals
+richList.code <- richList
+names(richList.code)<-richNames
 
+rm(rich.df, H.df, sapro.df, basidio.df, path.df, oomy.df, 
+   richList, richNames, rhs, lhs, richType.list, pretty.list, summ, summ.df,
+   rich.decayfits, resp.list, i, k)
 
 ```
 
@@ -722,69 +754,43 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass re
 ```{r, echo=FALSE, include=FALSE}
 
 # summarize the diversity in each sample
-rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #codeStem rows that need to be excluded because it just used the seq_sampName information....this will get fixed in the next step
+rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #codeStems that need to be excluded because it just used the seq_sampName information.... will get fixed in the next step
 H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
 sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
 basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
-patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
+path.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
 oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
+richList<-list(rich.df, H.df, sapro.df, basidio.df, path.df, oomy.df)
+richNames<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
+names(richList)<-richNames
 
-# create a merged df with pmr
-rich.pmr<-left_join(pmr.byStem.df.w, rich.df) %>% filter(!is.na(seq_sampName))
-H.pmr<-left_join(pmr.byStem.df.w, H.df) %>% filter(!is.na(seq_sampName))
-sapro.pmr<-left_join(pmr.byStem.df.w, sapro.df) %>% filter(!is.na(seq_sampName))
-basidio.pmr<-left_join(pmr.byStem.df.w, basidio.df) %>% filter(!is.na(seq_sampName))
-patho.pmr<-left_join(pmr.byStem.df.w, patho.df) %>% filter(!is.na(seq_sampName))
-oomy.pmr<-left_join(pmr.byStem.df.w, oomy.df) %>% filter(!is.na(seq_sampName))
+#create a set of richness and decay dataframes
+rich.decayfits<-lapply(richList, function(x) {
+  
+  left_join(pmr_byStem, x) %>% 
+    filter(!is.na(seq_sampName)) -> result
+  
+  return(result)
+  
+  })
 
 # fit models
-mod1<-lm(time7~size+sub_rich, data=rich.pmr)
-mod2<-lm(time13~size+sub_rich, data=rich.pmr)
-mod3<-lm(time25~size+sub_rich, data=rich.pmr)
-mod4<-lm(time37~size+sub_rich, data=rich.pmr)
-mod.rich<-list(mod1, mod2, mod3, mod4)
+rhs <- "size + sub_rich"
+lhs <- list("time7", "time13", "time25", "time37")
 
-mod1<-lm(time7~size+sub_rich, data=H.pmr)
-mod2<-lm(time13~size+sub_rich, data=H.pmr)
-mod3<-lm(time25~size+sub_rich, data=H.pmr)
-mod4<-lm(time37~size+sub_rich, data=H.pmr)
-mod.H<-list(mod1, mod2, mod3, mod4)
-
-mod1<-lm(time7~size+sub_rich, data=sapro.pmr)
-mod2<-lm(time13~size+sub_rich, data=sapro.pmr)
-mod3<-lm(time25~size+sub_rich, data=sapro.pmr)
-mod4<-lm(time37~size+sub_rich, data=sapro.pmr)
-mod.sapro<-list(mod1, mod2, mod3, mod4)
-
-mod1<-lm(time7~size+sub_rich, data=basidio.pmr)
-mod2<-lm(time13~size+sub_rich, data=basidio.pmr)
-mod3<-lm(time25~size+sub_rich, data=basidio.pmr)
-mod4<-lm(time37~size+sub_rich, data=basidio.pmr)
-mod.basidio<-list(mod1, mod2, mod3, mod4)
-
-mod1<-lm(time7~size+sub_rich, data=patho.pmr)
-mod2<-lm(time13~size+sub_rich, data=patho.pmr)
-mod3<-lm(time25~size+sub_rich, data=patho.pmr)
-mod4<-lm(time37~size+sub_rich, data=patho.pmr)
-mod.patho<-list(mod1, mod2, mod3, mod4)
-
-mod1<-lm(time7~size+sub_rich, data=oomy.pmr)
-mod2<-lm(time13~size+sub_rich, data=oomy.pmr)
-mod3<-lm(time25~size+sub_rich, data=oomy.pmr)
-mod4<-lm(time37~size+sub_rich, data=oomy.pmr)
-mod.oomy<-list(mod1, mod2, mod3, mod4)
+richType.list<-list()
+for(i in 1:length(rich.decayfits)){
+  resp.list<-list()
+  for(k in 1:length(lhs)){
+    resp.list[[k]]<-ModelFit_manyYs(y = lhs[[k]], rhs = rhs, curr.data = rich.decayfits[[i]]) 
+  }
+  names(resp.list)<-lhs
+  richType.list[[i]]<-resp.list
+}
+names(richType.list)<-richNames
 
 #summarize
-xVars<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
-respvars<-unlist(timeList)
-mod.list<-list(mod.rich, 
-               mod.H,
-               mod.sapro,
-               mod.basidio,
-               mod.patho,
-               mod.oomy)
-pretty.list<-lapply(mod.list, MakeSummaryTable_diversity, respvars=respvars)
-names(pretty.list)<-xVars
+pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
 summ<-lapply(pretty.list, function(x){
   selectrows<-c("sub_rich","numdf","dendf","r.squared")
   x.df<-x[x$term %in% selectrows & !is.na(x$term),]
@@ -792,11 +798,19 @@ summ<-lapply(pretty.list, function(x){
   colnames(x.df)[1]<-"valueType"
   return(x.df)
 } )
-names(summ)<-xVars
 summ.df<-bind_rows(summ, .id="variable")
 summ.df
 
-write.csv(summ.df, file="output/diversitysummary_stems.csv")
+write.csv(summ.df, file="output/diversitysummary_stem.csv")
+
+#save the richness dataframes for use with trait residuals
+richList.stem <- richList
+names(richList.stem)<-richNames
+
+rm(rich.df, H.df, sapro.df, basidio.df, path.df, oomy.df, 
+   richList, richNames, rhs, lhs, richType.list, pretty.list, summ, summ.df,
+   rich.decayfits, resp.list, i, k)
+
 
 ```
 
@@ -808,105 +822,80 @@ write.csv(summ.df, file="output/diversitysummary_stems.csv")
 ## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 ```{r, echo=FALSE}
 
-#run lm mods on wood trait residuals
-mod.rich<-FitResid_diversity(rich.spdf=rich.spdf, trait.residuals)
-mod.H<-FitResid_diversity(rich.spdf=H.spdf, trait.residuals)
-mod.sapro<-FitResid_diversity(rich.spdf=saprorich.spdf, trait.residuals)
-mod.basid<-FitResid_diversity(rich.spdf=basidrich.spdf, trait.residuals)
-mod.path<-FitResid_diversity(rich.spdf=pathrich.spdf, trait.residuals)
-mod.oomy<-FitResid_diversity(rich.spdf=oomyrich.spdf, trait.residuals)
+#merge the diversity and trait residuals data
+rich.traitresid.list<-lapply(richList.code, function(x) {CreateRichTraitResid_df(otutype.df = x, trait.residuals = traitResiduals.code)})
 
+#fit models
+rhs <- "size + mean"
+lhs <- list("t70","k","ne.r2")
 
-lapply(mod.rich, anova)
-#lapply(mod.H, anova)
-#lapply(mod.sapro, anova) #marginally signif alpha
-#lapply(mod.basid, anova)
-#lapply(mod.path, anova) #marginally signif for alpha
-#lapply(mod.oomy, anova)
+richType.list<-list()
+for(i in 1:length(rich.traitresid.list)){
+  resp.list<-list()
+  for(k in 1:length(lhs)){
+    df.sub<-subset(rich.traitresid.list[[i]], resp == lhs[[k]]) #subset the dataset based on the current resp var
+    resp.list[[k]]<-ModelFit_manyYs(y = "resid", rhs = rhs, curr.data = df.sub) #run models
+  }
+  names(resp.list)<-lhs
+  richType.list[[i]]<-resp.list
+}
+names(richType.list)<-names(richList.code)
 
-# summarize
-xVars<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
-respvars<-c("r2","k","t70")
-mod.list<-list(mod.rich, 
-               mod.H,
-               mod.sapro,
-               mod.basidio,
-               mod.patho,
-               mod.oomy)
-mod.list
-pretty.list<-lapply(mod.list, MakeSummaryTable_diversity, respvars=respvars)
-names(pretty.list)<-xVars
+#summarize
+pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
 summ<-lapply(pretty.list, function(x){
-  selectrows<-c("sub_rich","dendf","r.squared")
+  selectrows<-c("mean","numdf","dendf","r.squared")
   x.df<-x[x$term %in% selectrows & !is.na(x$term),]
-  x.df$term<-c("estim.se","dendf","r.squared")
+  x.df$term<-c("estim.se","numdf","dendf","r.squared")
   colnames(x.df)[1]<-"valueType"
   return(x.df)
 } )
-names(summ)<-xVars
-summ.df.traitresid<-bind_rows(summ, .id="variable")
-summ.df.traitresid
+summ.df<-bind_rows(summ, .id="variable")
+summ.df
 
-write.csv(summ.df.traitresid, file="output/diversitysummary_stems_traitresid.csv")
+write.csv(summ.df, file="output/diversitysummary_code_traitresid.csv")
+
+rm(richList.code, rich.traitresid.list, rhs, lhs, richType.list, resp.list, pretty.list, summ, summ.df, i, k)
 
 ```
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
 ```{r}
 
-# summarize the presence of ... in each sample (same as chunks above)
-rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) 
-H.df<-Calc_H.OTU(taxAndFunguild, comm.otu)
-sapro.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Sapro", taxAndFunguild, comm.otu=comm.otu)  
-basidio.df<-Calc_richOTUtype(colNam="phylum", grepTerm="Basid", taxAndFunguild, comm.otu=comm.otu)
-patho.df<-Calc_richOTUtype(colNam="Trophic.Mode", grepTerm="Patho", taxAndFunguild, comm.otu=comm.otu)  
-oomy.df<-Calc_richOTUtype(colNam="kingdom", grepTerm="Protist", taxAndFunguild, comm.otu=comm.otu)
+#merge the diversity and trait residuals data
+rich.traitresid.list<-lapply(richList.stem, function(x) {traitResiduals.stem %>% left_join(x)})
 
-# create a merged df with trait residuals
-trait.residuals.list<-list(t7=traitResid.t7, 
-                           t13=traitResid.t13, 
-                           t25=traitResid.t25, 
-                           t37=traitResid.t37)
+#fit models
+rhs <- "size + sub_rich"
+lhs <- list("time7", "time13", "time25", "time37")
 
-#merge the trait residuals and diversity dataframe
-rich.tr.list<-Create_rich_tr_DF(trait.residuals.list, rich.df)
-H.tr.list<-Create_rich_tr_DF(trait.residuals.list, H.df)
-sapro.tr.list<-Create_rich_tr_DF(trait.residuals.list, sapro.df)
-basidio.tr.list<-Create_rich_tr_DF(trait.residuals.list, basidio.df)
-patho.tr.list<-Create_rich_tr_DF(trait.residuals.list, patho.df)
-oomy.tr.list<-Create_rich_tr_DF(trait.residuals.list, oomy.df)
+richType.list<-list()
+for(i in 1:length(rich.traitresid.list)){
+  resp.list<-list()
+  for(k in 1:length(lhs)){
+    df.sub<-subset(rich.traitresid.list[[i]], resp == lhs[[k]]) #subset the dataset based on the current resp var
+    resp.list[[k]]<-ModelFit_manyYs(y = "resid", rhs = rhs, curr.data = df.sub) #run models
+  }
+  names(resp.list)<-lhs
+  richType.list[[i]]<-resp.list
+}
+names(richType.list)<-names(richList.stem)
 
-# fit models
-mod.rich<-FitResid_diversity_byStem(rich.tr.list)
-mod.H<-FitResid_diversity_byStem(H.tr.list)
-mod.sapro<-FitResid_diversity_byStem(sapro.tr.list)
-mod.basidio<-FitResid_diversity_byStem(basidio.tr.list)
-mod.patho<-FitResid_diversity_byStem(patho.tr.list)
-mod.oomy<-FitResid_diversity_byStem(oomy.tr.list)
-
-# summarize
-xVars<-c("Richness","ShannonsH","Sapro.rich","Basidio.rich","Patho.rich","Oomy.rich")
-respvars<-unlist(timeList)
-mod.list<-list(mod.rich, 
-               mod.H,
-               mod.sapro,
-               mod.basidio,
-               mod.patho,
-               mod.oomy)
-pretty.list<-lapply(mod.list, MakeSummaryTable_diversity, respvars=respvars)
-names(pretty.list)<-xVars
+#summarize
+pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
 summ<-lapply(pretty.list, function(x){
-  selectrows<-c("sub_rich","dendf","r.squared")
+  selectrows<-c("sub_rich","numdf","dendf","r.squared")
   x.df<-x[x$term %in% selectrows & !is.na(x$term),]
-  x.df$term<-c("estim.se","dendf","r.squared")
+  x.df$term<-c("estim.se","numdf","dendf","r.squared")
   colnames(x.df)[1]<-"valueType"
   return(x.df)
 } )
-names(summ)<-xVars
-summ.df.traitresid<-bind_rows(summ, .id="variable")
-summ.df.traitresid
+summ.df<-bind_rows(summ, .id="variable")
+summ.df
 
-write.csv(summ.df.traitresid, file="output/diversitysummary_stems_traitresid.csv")
+write.csv(summ.df, file="output/diversitysummary_stem_traitresid.csv")
+
+rm(richList.stem, rich.traitresid.list, rhs, lhs, richType.list, resp.list, pretty.list, summ, summ.df, df.sub, i, k)
 
 ```
 
@@ -918,56 +907,81 @@ write.csv(summ.df.traitresid, file="output/diversitysummary_stems_traitresid.csv
 ## *Hyp (species+size-level)* Initial microbial communitiy compositions will covary with initial wood traits
 ```{r}
 
-#stem-level trait set
-traits.codeStem %>%
-    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & 
-             !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
-  
-#add species-level traits, get rid of rows for which there is missing community data
-  traits.mean %>%
-    select(code, barkthick) %>%
-    rename('barkthick_smspp'='barkthick')-> select.traits.mean
-  curr.traits %>%
-    left_join(select.traits.mean) %>%
-    filter(codeStem %in% row.names(comm.otu)) %>%
-    select(codeStem, size, waterperc, barkthick_smspp, P, K, Ca, Mn, Fe, Zn, N, C) -> curr.traits
+# remove trait NAs
+traits.code %>% 
+  filter(!is.na(waterperc) & !is.na(P)) -> traits.noNAs
 
-#make sure dimensions of the community matrix match
-comm.otu1<-comm.otu[row.names(comm.otu) %in% curr.traits$codeStem,]
+# make pair of matching datasets with the community mat and the trait mat
+datasets.notrim<-CreateCommTraitpair(comm.otu = codeOTUabund, traits=traits.noNAs, sampleName = "code")
+datasets.trim<-CreateCommTraitpair(comm.otu = codeOTUabund.trim, traits=traits.noNAs, sampleName = "code")
 
-#make a envVars matrix for model fitting
-envVars<-as.matrix(curr.traits[,-(1:2)])
+# choose a model by permutation tests in a constrained ordination
+
+cap.env <- capscale(datasets.notrim[['comm']] ~ ., data = datasets.notrim[['traits']], distance='bray') # full model
+mod0.env <- capscale(datasets.notrim[['comm']] ~ 1, data = datasets.notrim[['traits']], distance='bray') # set up the null cases with no predictors
+step.env <- ordistep(mod0.env, scope=formula(cap.env)) # model selection
+
+
+
+
 
 #fit models
-fit.cca <- cca(comm.otu1 ~ envVars)
-#fit.cca
-#plot(fit.cca)
-anova(fit.cca)
+dbrda.notrim.code<-capscale(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
+dbrda.trim.code<-capscale(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
+adonis.notrim.code<-adonis(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
+adonis.trim.code<-adonis(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
+
+#signif terms
+dbrdaTerms.notrim.code<-anova(dbrda.notrim.code, by = "terms")
+dbrdaTerms.trim.code<-anova(dbrda.trim.code, by="terms")
+#adonis.notrim.code
+#adonis.trim.code
+
+#plot
+#plot(dbrda.trim)
+
+#save summary tables
+str(dbrdaTerms.notrim.code)
+
+data.frame(term=row.names(dbrdaTerms.notrim.code), 
+           df=dbrdaTerms.notrim.code$Df,
+           Fval=round(dbrdaTerms.notrim.code$F, digits=2),
+           pval=dbrdaTerms.notrim.code$`Pr(>F)`)
+adonis.notrim.code
+
 
 ```
 
-## *Hyp (code-level)* Average initial microbial communitiy compositions will covary with initial wood traits
+## *Hyp (stem-level)* Average initial microbial communitiy compositions will covary with initial wood traits
 ```{r, echo=FALSE}
 
-#average OTU abundances by code
-meanOTUabund.trim2<-AverageOTUabund_byCode(comm.otu.trimmed, seqSamples)
+# put together best stem-level trait matrix, remove NAs
+traits.code %>%
+  select(code, barkthick, density) %>%
+  rename('barkthick_smspp'='barkthick',
+         'density_smspp'='density')-> select.traits.code
 
-#get rid of missing data from traits.mean
-traits.mean %>%
-  filter(!is.na(waterperc)) %>% #get NaN row
-  filter(code %in% row.names(meanOTUabund.trim2)) -> traits.mean.trim #get rid of rows for which there is missing community data... this is eusc
+traits.stem %>%
+  left_join(select.traits.code) %>%
+  select(-density) %>%
+  select(-barkthick) %>%
+  filter(!is.na(waterperc) & !is.na(P)) -> traits.stem.plus
 
-#make sure dimensions of the community matrix match
-meanOTUabund.trim3<-meanOTUabund.trim2[row.names(meanOTUabund.trim2) %in% traits.mean.trim$code,]
-
-#make a envVars matrix for model fitting
-envVars<-as.matrix(traits.mean.trim[,-(1:3)])
+# make pair of matching datasets with the community mat and the trait mat
+datasets.notrim<-CreateCommTraitpair(comm.otu = comm.otu, traits = traits.stem.plus, sampleName = "codeStem")
+datasets.trim<-CreateCommTraitpair(comm.otu = comm.otu.trimmed, traits = traits.stem.plus, sampleName = "codeStem")
 
 #fit models
-fit.cca <- cca(meanOTUabund.trim3 ~ envVars)
-#fit.cca
-#plot(fit.cca)
-#anova(fit.cca)
+dbrda.notrim.stem<-capscale(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
+dbrda.trim.stem<-capscale(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
+adonis.notrim.stem<-adonis(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
+adonis.trim.stem<-adonis(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
+
+#signif terms
+dbrdaTerms.notrim.stem<-anova(dbrda.notrim.stem, by = "terms")
+dbrdaTerms.trim.stem<-anova(dbrda.trim.stem, by="terms")
+adonis.notrim.stem
+adonis.trim.stem
 
 
 ```

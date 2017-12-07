@@ -1,16 +1,6 @@
 
-ModelFit_manyYs<-function(y, rhs, curr.data){
-  
-  #create model formula
-  string<-paste(y, " ~ ", rhs)
-  fmla<-as.formula(string)
-  
-  #fit full model
-  mod.full<-lm(formula=fmla, data=curr.data)
-  
-  #return a list with the best model for each response var
-  return(mod.full)
-}
+#########
+# LM summary stats
 
 PullLmCoefs<-function(sum.list, respvars){
   
@@ -86,47 +76,6 @@ MakeLmSummaryTable<-function(respvars, mod.list, termorder){
   
 }
 
-ExtractResids<-function(mod.list, dataset.list, sampleName){
-  
-  resid.dfs<-list()
-  for(i in 1:length(mod.list)){
-    mod <- mod.list[[i]]
-    dataset <- dataset.list[[i]]
-    resid.dfs[[i]]<-data.frame(resid=mod$resid, sampleName=dataset[,sampleName])
-  }
-  names(resid.dfs)<-names(mod.list)
-  resid.df<-bind_rows(resid.dfs, .id="resp")
-  
-  return(resid.df)
-}
-
-Do_coxTests<-function(mod.stem.list, mod.code.list, respvars){
-  cox.sum.list<-list()
-  for(i in 1:length(mod.stem.list)){
-    curr.mod.stem<-mod.stem.list[[i]]
-    curr.mod.code<-mod.code.list[[i]]
-    cox.sum.list[[i]]<-coxtest(curr.mod.stem, curr.mod.code)
-  }
-  names(cox.sum.list)<-respvars
-  return(cox.sum.list)
-}
-
-Do_compareR2<-function(mod.stem.list, mod.code.list, respvars){
-  stem.r2s<-unlist(lapply(mod.stem.list, function(x) round(summary(x)$r.squared, digits=2)))
-  code.r2s<-unlist(lapply(mod.code.list, function(x) round(summary(x)$r.squared, digits=2)))
-  summ.r2s<-data.frame(respvars, code.r2s, stem.r2s)
-  return(summ.r2s)
-}
-
-MakeSummaryTable_comcomp<-function(wapls.out, respvars){
-  
-  tmp<-lapply(wapls.out, function(x) x["Comp01",])
-  tmp<-do.call(cbind,lapply(tmp,data.frame))
-  colnames(tmp)<-respvars
-  prettyTab<-data.frame(stat=row.names(tmp), round(tmp, digits=2))
-  return(prettyTab)
-}
-
 MakeSummaryTable_diversity<-function(respvars, mod.list){
   
   #summarize
@@ -146,4 +95,59 @@ MakeSummaryTable_diversity<-function(respvars, mod.list){
   
   return(prettyTab)
   
+} #make this work in fxn above....
+
+
+#########
+# LM residuals (for use in other analyses)
+
+ExtractResids<-function(mod.list, dataset.list, sampleName){
+  
+  resid.dfs<-list()
+  for(i in 1:length(mod.list)){
+    mod <- mod.list[[i]]
+    dataset <- dataset.list[[i]]
+    resid.dfs[[i]]<-data.frame(resid=mod$resid, sampleName=dataset[,sampleName])
+  }
+  names(resid.dfs)<-names(mod.list)
+  resid.df<-bind_rows(resid.dfs, .id="resp")
+  
+  return(resid.df)
 }
+
+
+#########
+# LM fit comparisons
+
+Do_coxTests<-function(mod.stem.list, mod.code.list, respvars){
+  cox.sum.list<-list()
+  for(i in 1:length(mod.stem.list)){
+    curr.mod.stem<-mod.stem.list[[i]]
+    curr.mod.code<-mod.code.list[[i]]
+    cox.sum.list[[i]]<-coxtest(curr.mod.stem, curr.mod.code)
+  }
+  names(cox.sum.list)<-respvars
+  return(cox.sum.list)
+}
+
+Do_compareR2<-function(mod.stem.list, mod.code.list, respvars){
+  stem.r2s<-unlist(lapply(mod.stem.list, function(x) round(summary(x)$r.squared, digits=2)))
+  code.r2s<-unlist(lapply(mod.code.list, function(x) round(summary(x)$r.squared, digits=2)))
+  summ.r2s<-data.frame(respvars, code.r2s, stem.r2s)
+  return(summ.r2s)
+}
+
+
+#########
+# WAPLS summary stats
+
+MakeSummaryTable_comcomp<-function(wapls.out, respvars){
+  
+  tmp<-lapply(wapls.out, function(x) x["Comp01",])
+  tmp<-do.call(cbind,lapply(tmp,data.frame))
+  colnames(tmp)<-respvars
+  prettyTab<-data.frame(stat=row.names(tmp), round(tmp, digits=2))
+  return(prettyTab)
+}
+
+
