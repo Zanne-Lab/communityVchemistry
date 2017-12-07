@@ -1,4 +1,6 @@
 
+# calculate distances
+
 extract_uniquePairDists<-function(dist.mat){
   x<-dist.mat
   rowCol <- expand.grid(rownames(x), colnames(x))
@@ -9,6 +11,9 @@ extract_uniquePairDists<-function(dist.mat){
 }
 
 Calc_commDists<-function(seqSamples, comm.otu, distType){
+  
+  require(vegan)
+  require(dplyr)
   
   # calc dist
   if(distType=="bray"){
@@ -57,38 +62,6 @@ Calc_commDists<-function(seqSamples, comm.otu, distType){
   
 }
 
-Calc_decayParamDiffs<-function(valueCol, spdf, stemSamples){
-  
-  # do difference calculations
-  spdf<-rename_(spdf, "select.decayParam"=valueCol)
-  v <- spdf$select.decayParam
-  z <- outer(v,v,'-') # sp1 - sp2 = dist
-  colnames(z)<-spdf$code
-  row.names(z)<-spdf$code
-  z<-abs(z)
-  
-  #make it long formate
-  dist.df<-extract_uniquePairDists(z) #make the distance matrix long and add metadata
-  dist.df<-rename(dist.df, "code1"="sp1", "code2"="sp2")
-  
-  # add back species + size identifiers
-  stemSamples %>%
-    select(code, size) -> indx
-  left_join(dist.df, indx, by=c("code1" = "code")) %>%
-    rename("size1"="size") %>%
-    left_join(indx, by=c("code2" = "code")) %>%
-    rename("size2"="size") -> dist.df # use the index to add info for the 2nd sample
-
-  # remove distances between size classes, keep just one of the size columns, since they are now the same
-  dist.df %>%
-    filter(size1 == size2) %>%
-    select(-size2) %>%
-    rename("size"="size1") -> decayparam.dist
-  
-  return(decayparam.dist)
-  
-}
-
 Calc_woodTraitDist <- function(traits.mean){
   
   # identify rows with no missing values
@@ -126,6 +99,41 @@ Calc_woodTraitDist <- function(traits.mean){
   return(traitDist.l)
 }
 
+Calc_decayParamDiffs<-function(valueCol, spdf, stemSamples){
+  
+  # do difference calculations
+  spdf<-rename_(spdf, "select.decayParam"=valueCol)
+  v <- spdf$select.decayParam
+  z <- outer(v,v,'-') # sp1 - sp2 = dist
+  colnames(z)<-spdf$code
+  row.names(z)<-spdf$code
+  z<-abs(z)
+  
+  #make it long formate
+  dist.df<-extract_uniquePairDists(z) #make the distance matrix long and add metadata
+  dist.df<-rename(dist.df, "code1"="sp1", "code2"="sp2")
+  
+  # add back species + size identifiers
+  stemSamples %>%
+    select(code, size) -> indx
+  left_join(dist.df, indx, by=c("code1" = "code")) %>%
+    rename("size1"="size") %>%
+    left_join(indx, by=c("code2" = "code")) %>%
+    rename("size2"="size") -> dist.df # use the index to add info for the 2nd sample
+  
+  # remove distances between size classes, keep just one of the size columns, since they are now the same
+  dist.df %>%
+    filter(size1 == size2) %>%
+    select(-size2) %>%
+    rename("size"="size1") -> decayparam.dist
+  
+  return(decayparam.dist)
+  
+}
+
+
+# summarize distances
+
 SummarizeCommDist_byCodePair<-function(comm.dist){
   
   comm.dist %>%
@@ -143,6 +151,9 @@ SummarizeCommDist_byCodePair<-function(comm.dist){
   
   return(summ.comm_dist)
 }
+
+
+# create analysis dataframes
 
 PrepDecayDistForMerge<-function(decayparam.dist){
   
@@ -166,6 +177,7 @@ PrepDecayDistForMerge<-function(decayparam.dist){
   return(dfs)
 }
 
+#uses PrepDecayDistForMerge()
 MergeCommNDecaydists_byCodePair<-function(decayparam.dist, summ.comm_dist){
   
   #prep decay dist df for merging by repeating forward and reverse codePairs and adding distance = 0 rows
@@ -203,6 +215,7 @@ MergeCommNDecaydists_byCodePair<-function(decayparam.dist, summ.comm_dist){
   
 }
 
+#uses PrepDecayDistForMerge()
 MergeWoodNDecaydists_byCodePair<-function(decayparam.dist, traits.dist){
   
   #make a codePairs column for traits.dist
@@ -239,58 +252,12 @@ MergeWoodNDecaydists_byCodePair<-function(decayparam.dist, traits.dist){
   #select columns
   join.dist %>%
     select(codePair, size, woodTraitDist, decayparam_dist) -> join.dist
-
-  return(join.dist)
-  
-}
-
-MergeCommNWoodTraitdists_byCodePair<-function(traits.dist, summ.comm_dist){
-  
-  #prep trait dist df for merging by repeating forward and reverse codePairs and adding distance = 0 rows
-  # elongate decayparm.dist by adding the forward and reverse combinations of codePair
-  traits.dist %>%
-    mutate(codePair=paste(code1, code2, sep="_")) %>%
-    mutate(codePair_rev=paste(code2, code1, sep="_")) %>%
-    select(codePair, codePair_rev, woodTraitDist) -> traits.dist.el
-  
-  # make forward and reverse dataframes
-  df_forward<-select(traits.dist.el, codePair, woodTraitDist)
-  df_reverse<-select(traits.dist.el, codePair_rev, woodTraitDist) %>%
-    rename("codePair"="codePair_rev")
-  
-  # add codePairs where the codes match and have a decayparm distance of 0
-  same_codePair<-paste(stemSamples$code, stemSamples$code, sep="_")
-  df_same<-data.frame(codePair=same_codePair, woodTraitDist=0, stringsAsFactors = FALSE)
-
-  dfs<-list(df_forward=df_forward, df_reverse=df_reverse, df_same=df_same)
-  
-  #join community distances with forward and reverse decay distance dataframes
-  summ.comm_dist %>%
-    left_join(dfs[['df_forward']]) %>% 
-    rename("woodTraitDist_forward"="woodTraitDist") %>%
-    left_join(dfs[['df_reverse']]) %>%
-    rename("woodTraitDist_reverse"="woodTraitDist") %>%
-    left_join(dfs[['df_same']]) -> join.dist
-  
-  #find the values that matched the forward, reverse, and same codePairs and put it all together
-  filter(join.dist, is.na(woodTraitDist_forward) & !is.na(woodTraitDist_reverse)) %>%
-    mutate(woodTraitDist=woodTraitDist_reverse) -> reverse.rows
-  filter(join.dist, !is.na(woodTraitDist_forward) & is.na(woodTraitDist_reverse)) %>%
-    mutate(woodTraitDist=woodTraitDist_forward) -> forward.rows
-  filter(join.dist, !is.na(woodTraitDist)) -> same.rows
-  join.dist<-bind_rows(reverse.rows, forward.rows, same.rows)
-  
-  #select columns and rename
-  join.dist %>%
-    select(codePair, size, mean, lower, upper, woodTraitDist) %>%
-    rename("mean_comm_dist"="mean",
-           "lower_comm_dist"="lower",
-           "upper_comm_dist"="upper") -> join.dist
   
   return(join.dist)
   
 }
 
+# create plots
 
 Plot_DistvDist<-function(comm_decay.distList, distType, xCol){
   
@@ -327,6 +294,7 @@ Plot_DistvDist<-function(comm_decay.distList, distType, xCol){
   return(pList)
 }
 
+#uses Calc_commDists(), SummarizeCommDist_byCodePair(), Calc_decayParamDiffs(), MergeCommNDecaydists_byCodePair(), Plot_DistvDist()
 Make_commDistvDist_Fig<-function(distType, valueCol_vec, seqSamples, stemSamples, comm.otu, spdf){
   
   #calculate pairwise community distances
@@ -351,6 +319,7 @@ Make_commDistvDist_Fig<-function(distType, valueCol_vec, seqSamples, stemSamples
   return(pList)
 }
 
+#uses Calc_woodTraitDist(), Calc_decayParamDiffs(), MergeWoodNDecaydists_byCodePair(), Plot_DistvDist()
 Make_woodTraitDistvDist_Fig<-function(valueCol_vec, seqSamples, stemSamples, traits.mean, spdf){
   
   #calculate pairwise wood trait distances
@@ -373,4 +342,6 @@ Make_woodTraitDistvDist_Fig<-function(valueCol_vec, seqSamples, stemSamples, tra
   
   return(pList)
 }
+
+
 

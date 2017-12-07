@@ -23,18 +23,12 @@ library(lmtest) # for coxtest()
 library(vegan) #diversity metrics
 library(rioja) #WA-PLS
 
-#library(colorspace)
-#library(gridExtra)
-
 #fxns
 source("code/load_microbeData_fxns.R")
 source("code/load_traitData_fxns.R")
 source("code/load_decayData_fxns.R")
 source("code/summaryTable_fxns.R")
 source("code/analysisDF_fxns.R")
-
-#source("code/distance_fxns.R")
-#source("code/otuIDs_fxns.R")
 
 ```
 
@@ -860,7 +854,7 @@ rm(richList.code, rich.traitresid.list, rhs, lhs, richType.list, resp.list, pret
 ```
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
-```{r}
+```{r, echo=FALSE}
 
 #merge the diversity and trait residuals data
 rich.traitresid.list<-lapply(richList.stem, function(x) {traitResiduals.stem %>% left_join(x)})
@@ -905,55 +899,51 @@ rm(richList.stem, rich.traitresid.list, rhs, lhs, richType.list, resp.list, pret
 # Relationship between wood traits and community
 
 ## *Hyp (species+size-level)* Initial microbial communitiy compositions will covary with initial wood traits
-```{r}
+```{r, include=FALSE}
 
 # remove trait NAs
 traits.code %>% 
   filter(!is.na(waterperc) & !is.na(P)) -> traits.noNAs
 
 # make pair of matching datasets with the community mat and the trait mat
-datasets.notrim<-CreateCommTraitpair(comm.otu = codeOTUabund, traits=traits.noNAs, sampleName = "code")
-datasets.trim<-CreateCommTraitpair(comm.otu = codeOTUabund.trim, traits=traits.noNAs, sampleName = "code")
+datasets.notrim.code<-CreateCommTraitpair(comm.otu = codeOTUabund, traits=traits.noNAs, sampleName = "code")
+datasets.trim.code<-CreateCommTraitpair(comm.otu = codeOTUabund.trim, traits=traits.noNAs, sampleName = "code")
 
 # choose a model by permutation tests in a constrained ordination
+mod.nt.code<-ordistep_wrapper(datasets=datasets.notrim.code) #this can take a while
+mod.t.code<-ordistep_wrapper(datasets=datasets.trim.code)
 
-cap.env <- capscale(datasets.notrim[['comm']] ~ ., data = datasets.notrim[['traits']], distance='bray') # full model
-mod0.env <- capscale(datasets.notrim[['comm']] ~ 1, data = datasets.notrim[['traits']], distance='bray') # set up the null cases with no predictors
-step.env <- ordistep(mod0.env, scope=formula(cap.env)) # model selection
+#variance inflation factor (VIF) which is 1 for completely independent variables, and values above 10 or 20 (depending on your taste) are regarded as highly multicollinear (dependent on others)
+#vif.cca(mod.nt.code) # none are highly multicollinear
+#vif.cca(mod.t.code)
 
+# proportion of constrained variance (inertia)
+prop.constr.nt.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.code), digits=2))
+prop.constr.t.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.code), digits=2))
 
-
-
-
-#fit models
-dbrda.notrim.code<-capscale(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
-dbrda.trim.code<-capscale(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
-adonis.notrim.code<-adonis(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
-adonis.trim.code<-adonis(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
-
-#signif terms
-dbrdaTerms.notrim.code<-anova(dbrda.notrim.code, by = "terms")
-dbrdaTerms.trim.code<-anova(dbrda.trim.code, by="terms")
-#adonis.notrim.code
-#adonis.trim.code
-
-#plot
-#plot(dbrda.trim)
+# plot
+pdf("output/dbRDA_code.pdf", width=12, height=6)
+par(mfrow=c(1,2))
+plot(mod.nt.code, display = c("wa","bp")) # constrained with best model
+mtext(prop.constr.nt.code, side=3, adj=0.9, line=-1.5, col=4)
+title('Full community')
+plot(mod.t.code, display = c("wa","bp")) # constrained with best model
+mtext(prop.constr.t.code, side=3, adj=0.9, line=-1.5, col=4)
+title('Trimmed community')
+dev.off()
 
 #save summary tables
-str(dbrdaTerms.notrim.code)
+an.nt.code<-anova.margin.table(dbrda.obj=mod.nt.code)
+write.csv(an.nt.code, file="output/dbRDAanova_nt_code.csv")
 
-data.frame(term=row.names(dbrdaTerms.notrim.code), 
-           df=dbrdaTerms.notrim.code$Df,
-           Fval=round(dbrdaTerms.notrim.code$F, digits=2),
-           pval=dbrdaTerms.notrim.code$`Pr(>F)`)
-adonis.notrim.code
+an.t.code<-anova.margin.table(dbrda.obj=mod.t.code)
+write.csv(an.t.code, file="output/dbRDAanova_t_code.csv")
 
 
 ```
 
 ## *Hyp (stem-level)* Average initial microbial communitiy compositions will covary with initial wood traits
-```{r, echo=FALSE}
+```{r, include=FALSE}
 
 # put together best stem-level trait matrix, remove NAs
 traits.code %>%
@@ -968,21 +958,40 @@ traits.stem %>%
   filter(!is.na(waterperc) & !is.na(P)) -> traits.stem.plus
 
 # make pair of matching datasets with the community mat and the trait mat
-datasets.notrim<-CreateCommTraitpair(comm.otu = comm.otu, traits = traits.stem.plus, sampleName = "codeStem")
-datasets.trim<-CreateCommTraitpair(comm.otu = comm.otu.trimmed, traits = traits.stem.plus, sampleName = "codeStem")
+datasets.notrim.stem<-CreateCommTraitpair(comm.otu = comm.otu, traits = traits.stem.plus, sampleName = "codeStem")
+datasets.trim.stem<-CreateCommTraitpair(comm.otu = comm.otu.trimmed, traits = traits.stem.plus, sampleName = "codeStem")
 
-#fit models
-dbrda.notrim.stem<-capscale(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
-dbrda.trim.stem<-capscale(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
-adonis.notrim.stem<-adonis(datasets.notrim[['comm']] ~ ., data=datasets.notrim[['traits']], distance = "bray")
-adonis.trim.stem<-adonis(datasets.trim[['comm']] ~ ., data=datasets.trim[['traits']], distance = "bray")
+# choose a model by permutation tests in a constrained ordination
+mod.nt.stem<-ordistep_wrapper(datasets=datasets.notrim.stem) #this can take a while
+mod.t.stem<-ordistep_wrapper(datasets=datasets.trim.stem)
 
-#signif terms
-dbrdaTerms.notrim.stem<-anova(dbrda.notrim.stem, by = "terms")
-dbrdaTerms.trim.stem<-anova(dbrda.trim.stem, by="terms")
-adonis.notrim.stem
-adonis.trim.stem
+#variance inflation factor (VIF) which is 1 for completely independent variables, and values above 10 or 20 (depending on your taste) are regarded as highly multicollinear (dependent on others)
+vif.cca(mod.nt.stem) # none are highly multicollinear
+vif.cca(mod.t.stem)
 
+# proportion of constrained variance (inertia)
+prop.constr.nt.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.stem), digits=2))
+prop.constr.t.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.stem), digits=2))
+
+# plot
+pdf("output/dbRDA_stem.pdf", width=12, height=6)
+par(mfrow=c(1,2))
+plot(mod.nt.stem, display = c("wa","bp")) # constrained with best model
+mtext(prop.constr.nt.stem, side=3, adj=0.9, line=-1.5, col=4)
+title('Full community')
+plot(mod.t.stem, display = c("wa","bp")) # constrained with best model
+mtext(prop.constr.t.stem, side=3, adj=0.9, line=-1.5, col=4)
+title('Trimmed community')
+dev.off()
+
+#save summary tables
+an.nt.stem<-anova.margin.table(dbrda.obj=mod.nt.stem)
+an.nt.stem
+write.csv(an.nt.stem, file="output/dbRDAanova_nt_stem.csv")
+
+an.t.stem<-anova.margin.table(dbrda.obj=mod.t.stem)
+an.t.stem
+write.csv(an.t.stem, file="output/dbRDAanova_t_stem.csv")
 
 ```
 

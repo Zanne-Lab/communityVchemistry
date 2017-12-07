@@ -151,3 +151,38 @@ MakeSummaryTable_comcomp<-function(wapls.out, respvars){
 }
 
 
+#########
+# db-RDA summary stats
+
+extract_constrainedInertia_proport<-function(dbrda.obj){
+  constrained.eig<-dbrda.obj$CCA$tot.chi
+  unconstrained.eig<-dbrda.obj$CA$tot.chi
+  constrained.inert.prop<-constrained.eig/(constrained.eig+unconstrained.eig)
+  
+  return(constrained.inert.prop)
+}
+
+anova.margin.table<-function(dbrda.obj){
+  
+  # anova table by margin
+  an.obj<-anova(dbrda.obj, by="margin")
+  an.df<-data.frame(term=row.names(an.obj), 
+                    df=an.obj$Df,
+                    Fval=round(an.obj$F, digits=2),
+                    pval=an.obj$`Pr(>F)`)
+  
+  # inertia
+  constr.inertia<-dbrda.obj$CCA$tot.chi
+  unconstr.inertia<-dbrda.obj$CA$tot.chi
+  inertia.df<-data.frame(term=c("Constrained inertia","Unconstrained inertia"),
+                         df=c(round(constr.inertia, digits=2),
+                              round(unconstr.inertia, digits=2)),
+                         Fval=c(NA, NA),
+                         pval=c(NA, NA))
+  
+  prettyTab<-rbind(an.df, rep(NA, length(colnames(an.df))), inertia.df)
+  prettyTab
+  
+  return(prettyTab)
+}
+

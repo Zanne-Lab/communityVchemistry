@@ -4,13 +4,72 @@ date: "11/7/2017"
 output: github_document
 ---
 
-```{r}
+```{r, echo=FALSE}
+#chunk options
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
+#libraries
+library(knitr) #r markdown
+library(readr) #read/write
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(gridExtra) #plotting
 
+#fxns
+Plot_signifCor<-function(sign, valueCol_vec, pairsPresent.df, spdf, seqSamples){
+  
+  # 1. select the correlation sign you'd like to look at
+  if(sign=='pos'){
+    pairsPresent.df %>%
+      select(seq_sampName, percPairs_posCorr) %>%
+      rename('percPairs'='percPairs_posCorr') -> pairsPresent.sel.df
+  }
+  if(sign=='neg'){
+    pairsPresent.df %>%
+      select(seq_sampName, percPairs_negCorr) %>%
+      rename('percPairs'='percPairs_negCorr') -> pairsPresent.sel.df
+  }
+  
+  # 2. summarize by Code
+  pairsPresent.sel.df %>%
+    left_join(seqSamples) %>%
+    group_by(code) %>%
+    summarize(mean=mean(percPairs),
+              se=sd(percPairs)/sqrt(length(percPairs)),
+              upper=mean+se,
+              lower=mean-se) -> summ.pairsPresent.sel.df
+  
+  # 3. join with decay trajectory data
+  tmp<-left_join(spdf, summ.pairsPresent.sel.df)
+  
+  # 4. create xlab
+  if(sign=='pos'){
+    xlab<-"Positively correlated OTU pairs (%)"
+  }
+  if(sign=='neg'){
+    xlab<-"Negatively correlated OTU pairs (%)"
+  }
+  
+  # 5. create plots
+  pList<-list()
+  for(i in 1:length(valueCol_vec)){
+    curr.tmp<-tmp
+    colnames(curr.tmp)[colnames(curr.tmp) == valueCol_vec[i]]<-"yCol"
+    pList[[i]]<-
+      ggplot(curr.tmp, aes(x=mean, y=yCol, color=species, shape=size)) + 
+      geom_point() + 
+      geom_errorbarh(aes(xmin=lower, xmax=upper)) +
+      xlab(xlab) + ylab(valueCol_vec[i])
+  }
+  names(pList)<-valueCol_vec
+  
+  return(pList)
+}
 
-spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
-seqSamples<-read_csv("../derived_data/seqSamples.csv")
+#load data
+spdf <- read_csv("derived_data/decayfits.csv")
+seqSamples<-read_csv("derived_data/seqSamples.csv")
 
 ```
 
@@ -20,31 +79,28 @@ Hyp: A higher frequency of postively-correlated OTUs (after controlling for wood
 Hyp: A higher frequency of negatively-correlated OTUs (after controlling for wood trait environmental influences) in a sample community will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha). This could be because the occurance of negatively-correlated OTUs in the same sample indicates that there are negative biotic interactions among members of the initial community, thereby making it easier for later-colonizing OTUs that specialize in decay to establish.
 **No pattern apparent**
 
-```{r}
+```{r, echo=FALSE}
 
 #identify the negative and positive residually-correlated OTU pairs in a given community
 #this takes forever.... just read in the derived-data file unless input data changes
 #IDcorrelatedOTUsinEachSampl(taxaAndFunguild, comm.otu)
 pairsPresent.df<-read.csv(file="derived_data/pairsPresent.csv", row.names=1)
 
-
 #merge the pairsPresent dataframes with the decay params data and plot
 posList<-Plot_signifCor(sign='pos', 
-                        valueCol_vec=c("ne.r2", "k", "alpha"), 
+                        valueCol_vec=c("ne.r2", "k"), 
                         pairsPresent.df, spdf, seqSamples)
 negList<-Plot_signifCor(sign='neg', 
-                        valueCol_vec=c("ne.r2", "k", "alpha"), 
+                        valueCol_vec=c("ne.r2", "k"), 
                         pairsPresent.df, spdf, seqSamples)
 
 grid.arrange(posList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             posList[['k']] + guides(color=FALSE, shape=FALSE), 
-             posList[['alpha']] + guides(color=FALSE, shape=FALSE),
+             posList[['k']] + guides(color=FALSE, shape=FALSE),
              
              negList[['ne.r2']] + guides(color=FALSE, shape=FALSE), 
-             negList[['k']] + guides(color=FALSE, shape=FALSE), 
-             negList[['alpha']] + guides(color=FALSE, shape=FALSE),
+             negList[['k']] + guides(color=FALSE, shape=FALSE),
              
-             ncol=3)
+             ncol=2)
 
 ```
 

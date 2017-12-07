@@ -8,13 +8,19 @@ output: github_document
 ## Testing effects of t=0 points
 replotting the last example without the t=0 points
 ```{r}
+#chunk options
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
+#libraries
 devtools::install_github("cornwell-lab-unsw/litterfitter")
 library(dplyr)
 library(litterfitter)
 library(magrittr)
 library(ggplot2)
-plotting_df<-read.csv("../derived_data/plotting_df.csv")
+
+#load data
+plotting_df<-read.csv("derived_data/pmr.csv")
+
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small",time>0) ->out
 
@@ -48,8 +54,6 @@ fit_litter(time = time/12,
         mass.remaining = pmr, model = c("weibull"), iters = 1000) ->plot_1
 print(plot_1)
 plot(plot_1)
-
-#why filtering for ripi small?
 
 plotting_df %>%
   filter(SpeciesCode=="ripi",size=="small") ->out

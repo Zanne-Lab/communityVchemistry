@@ -1,7 +1,7 @@
 
 
 #########
-# Process the community matrix somehow
+# Process the community matrix
 
 AverageOTUabund_byCode<-function(comm.otu, seqSamples){
   
@@ -293,6 +293,17 @@ fitNcrossval_WAPLS<-function(curr.comm, curr.respVar){
   fit.cv<-crossval(fit, cv.method="loo")
   return(fit.cv)
 }
+
+ordistep_wrapper<-function(datasets){
+  
+  cap.env <- capscale(datasets[['comm']] ~ ., data = datasets[['traits']], distance='bray') # full model
+  mod0.env <- capscale(datasets[['comm']] ~ 1, data = datasets[['traits']], distance='bray') # set up the null cases with no predictors
+  step.env <- ordistep(mod0.env, scope=formula(cap.env)) # model selection -- this take a while
+  
+  return(step.env)
+  
+}
+
 
 
 

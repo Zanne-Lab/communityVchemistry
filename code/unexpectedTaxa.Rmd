@@ -9,14 +9,30 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 #libraries
-library(dplyr)
-library(ggplot2)
-library(knitr)
-library(magrittr)
-library(tidyr)
+library(knitr) #r markdown
+library(readr) #read/write
+library(magrittr) #data formatting
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
 
 #fxns
-source("../code/otuIDs_fxns.R")
+HowManyOfThese<-function(otuIDs, taxAndFunguild, comm.otu){
+  
+  #subset the OTU table
+  curr.mat.otu<-comm.otu[,colnames(comm.otu) %in% otuIDs]
+  
+  #get rid of cols and rows without reads
+  tmp<-curr.mat.otu[,colSums(curr.mat.otu)!=0] 
+  curr.mat.otu.sel<-tmp[rowSums(tmp)!=0,]
+  
+  #save the mini OTU table and taxon look up table
+  results<-list(otu=curr.mat.otu.sel,
+                tax=taxAndFunguild[taxAndFunguild$OTUId %in% colnames(curr.mat.otu.sel),c("OTUId","phylum","genus","species")])
+  
+  return(results)
+}
+
 ```
 
 ## LOAD DATA 
@@ -25,10 +41,10 @@ source("../code/otuIDs_fxns.R")
 ```{r, echo=FALSE}
 
 #OTU table
-comm.otu<-read.csv("../derived_data/comm_otu.csv", row.names=1)
+comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1)
 
 #taxon lookup info
-taxAndFunguild<-read_csv("../derived_data/taxaAndFunguild.csv")
+taxAndFunguild<-read.csv("derived_data/taxaAndFunguild.csv")
 
 ```
 

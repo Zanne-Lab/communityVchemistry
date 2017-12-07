@@ -5,32 +5,34 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
+#chunk options
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
 #libraries
-library(dplyr)
-library(ggplot2)
-library(readr)
-library(vegan)
-library(knitr)
-library(tidyr)
-library(gridExtra)
+library(knitr) #r markdown
+library(readr) #read/write
+library(vegan) #ordination stuff
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(gridExtra) #plotting
 
 #fxns
-source("distance_fxns.R")
+source("code/distance_fxns.R")
 
 #load sample info
-stemSamples<-read.csv("../derived_data/stemSamples.csv", row.names=1)
+stemSamples<-read.csv("derived_data/stemSamples.csv")
 
 #load microbial community
-comm.otu<-read.csv("../derived_data/comm_otu.csv", row.names=1, stringsAsFactors = FALSE)
-seqSamples<-read.csv("../derived_data/seqSamples.csv", row.names=1, stringsAsFactors = FALSE)
+comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1, stringsAsFactors = FALSE)
+
+seqSamples<-read.csv("derived_data/seqSamples.csv", stringsAsFactors = FALSE)
 
 #load wood trait data
-traits.mean<-read.csv("../derived_data/traits_mean.csv", row.names=1, stringsAsFactors = FALSE)
+traits.mean<-read.csv("derived_data/traits_code.csv", stringsAsFactors = FALSE)
 
 #load decay trajectories
-spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
+spdf <- read_csv("derived_data/decayfits.csv")
 
 ```
 
@@ -38,20 +40,20 @@ spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
 
 Community composition, bray
 ```{r}
-pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
+pList<-Make_commDistvDist_Fig(distType="bray", valueCol_vec=c("ne.r2","k"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']])
 ```
 
 Community composition, jaccard
 ```{r}
-pList<-Make_commDistvDist_Fig(distType="jaccard", valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
+pList<-Make_commDistvDist_Fig(distType="jaccard", valueCol_vec=c("ne.r2","k"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']])
 ```
 
 Richness
 ```{r}
-pList<-Make_commDistvDist_Fig(distType="richness", valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, comm.otu, spdf)
-grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
+pList<-Make_commDistvDist_Fig(distType="richness", valueCol_vec=c("ne.r2","k"), seqSamples, stemSamples, comm.otu, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']])
 ```
 
 Not a lot of information in initial mean microbial composition distance (bray or jaccard) about differences in species+size decay trajectories (communities are all really dissimilar). Likewise, richness is not useful.
@@ -60,8 +62,8 @@ Not a lot of information in initial mean microbial composition distance (bray or
 
 ### Plot wood trait distances vs decay param distances between species+size
 ```{r}
-pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("ne.r2","k","alpha"), seqSamples, stemSamples, traits.mean, spdf)
-grid.arrange(pList[['ne.r2']], pList[['k']], pList[['alpha']])
+pList<-Make_woodTraitDistvDist_Fig(valueCol_vec=c("ne.r2","k"), seqSamples, stemSamples, traits.mean, spdf)
+grid.arrange(pList[['ne.r2']], pList[['k']])
 ```
 
 Seems like there is more information in inital wood trait distance about species+size decay trajectories than there is in the initial community composition/richness

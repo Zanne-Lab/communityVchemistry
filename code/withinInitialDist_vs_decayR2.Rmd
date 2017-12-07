@@ -5,13 +5,25 @@ output: github_document
 ---
 
 ```{r}
+#chunk options
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 
+#libraries
+library(knitr) #r markdown
+library(readr) #read/write
+library(vegan) #ordination stuff
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(gridExtra) #plotting
 
+#fxns
+source("code/distance_fxns.R")
 
-seqSamples<-read_csv("../derived_data/seqSamples.csv")
-comm.otu<-read.csv("../derived_data/comm_otu.csv", row.names=1)
-spdf <- read_csv("../derived_data/mass_loss_parameters.csv")
+#load data
+seqSamples<-read_csv("derived_data/seqSamples.csv")
+comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1)
+spdf <- read.csv("derived_data/decayfits.csv")
 
 ```
 
@@ -22,7 +34,8 @@ Hyp: Expect that samples with similar initial microbial communities will have be
 
 #calculate pairwise community distances WITHIN code
 comm.dist<-Calc_commDists(seqSamples, comm.otu, distType="bray") #2. calc the distances
-filter(comm.dist, code1==code2) %>% #3. isolate just the distances within species+size
+comm.dist %>%
+  filter(code1==code2) %>% #3. isolate just the distances within species+size
   select(sampID1, sampID2, code1, size, dist) %>%
   rename("code"="code1") %>% #rename the cols
   group_by(code) %>%
@@ -40,22 +53,15 @@ p.ne.r2<-ggplot(comm.dist.wth, aes(x=mean, y=ne.r2, color=species, shape=size)) 
   xlab("Microbial community distance within Code") + 
   ylab("Negative exponential R2") 
 
-p.w.r2<-ggplot(comm.dist.wth, aes(x=mean, y=w.r2, color=species, shape=size)) + 
-  geom_point() +
-  geom_errorbarh(aes(xmin=lower, xmax=upper)) +
-  xlab("Microbial community distance within Code") + 
-  ylab("Weibull model R2") 
-
 p.k<-ggplot(comm.dist.wth, aes(x=mean, y=k, color=species, shape=size)) + 
   geom_point() +
   geom_errorbarh(aes(xmin=lower, xmax=upper)) +
   xlab("Microbial community distance within Code") + 
   ylab("k") 
-p.k
 
 #pdf('output/commDist_decayparam_withinCode.pdf', width=8, height=6)
 grid.arrange(p.ne.r2 + guides(color=FALSE, shape=FALSE), 
-             p.w.r2 + guides(color=FALSE, shape=FALSE))
+             p.k + guides(color=FALSE, shape=FALSE))
 #dev.off()
 
 ```
