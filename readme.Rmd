@@ -171,6 +171,7 @@ rm(p.t70, p.k, p.r2)
 
 ```
 
+
 Figure 2. Time x percent mass remaining by wood species
 ```{r}
 
@@ -409,6 +410,9 @@ cvfit.trim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTU
 #perform randomization t-test to test the significance of a cross-validated model
 wapls.out.notrim<-lapply(cvfit.notrim, rand.t.test)
 wapls.out.trim<-lapply(cvfit.trim, rand.t.test)
+
+wapls.out.notrim
+
 
 #make summary table
 prettyTab.notrim<-MakeSummaryTable_comcomp(wapls.out=wapls.out.notrim, respvars=unlist(respVars))

@@ -298,7 +298,7 @@ Calc_R2<-function(ne_fits_df){
 fit_all_curves<-function(df_in, stemSamples){
   
   df_in %>%
-    unite(SpeciesCode,col=sp_size,size,sep="_") -> df
+    unite(SpeciesCode, col=sp_size, size, sep="_") -> df
   
   #negative expon fit
   ne_fits <- lapply(split(df,factor(df$sp_size)),function(x){
@@ -307,27 +307,27 @@ fit_all_curves<-function(df_in, stemSamples){
   })
   
   #weibold fit
-  w.fits <- lapply(split(df,factor(df$sp_size)),function(x){
+  w.fits <- lapply(split(df, factor(df$sp_size)), function(x){
     fit_litter(time = x$time/12, 
                mass.remaining = x$pmr, model = c("weibull"), iters = 500)
   })
   
   #create bootstrap distrib of k and get the 95% CI
-  bootk<-lapply(ne_fits, function(x){
-    
-    bootmat<-bootstrap_parameters(x, nboot=500) #1st column are iteration of the param, right, but what is in the second col?
-    meanboot<-mean(bootmat[,1])
-    sdboot<-sd(bootmat[,1])
-    seboot<-sdboot/sqrt(length(bootmat[,1]))
-    upperboot<-meanboot+(1.96*seboot)
-    lowerboot<-meanboot-(1.96*seboot)
-    
-    result<-list(upper=upperboot, lower=lowerboot)
-    return(result)
-  })
-  tmp<-lapply(bootk, function(x) data.frame(upper=x[[1]], lower=x[[2]]))
-  k.upper<-unlist(lapply(tmp, function(x) x[['upper']]))
-  k.lower<-unlist(lapply(tmp, function(x) x[['lower']]))
+  # bootk<-lapply(ne_fits, function(x){
+  #   
+  #   bootmat<-bootstrap_parameters(x, nboot=500) #1st column are iteration of the param, right, but what is in the second col?
+  #   meanboot<-mean(bootmat[,1])
+  #   sdboot<-sd(bootmat[,1])
+  #   seboot<-sdboot/sqrt(length(bootmat[,1]))
+  #   upperboot<-meanboot+(1.96*seboot)
+  #   lowerboot<-meanboot-(1.96*seboot)
+  #   
+  #   result<-list(upper=upperboot, lower=lowerboot)
+  #   return(result)
+  # })
+  # tmp<-lapply(bootk, function(x) data.frame(upper=x[[1]], lower=x[[2]]))
+  # k.upper<-unlist(lapply(tmp, function(x) x[['upper']]))
+  # k.lower<-unlist(lapply(tmp, function(x) x[['lower']]))
   
   #create a 95% CI bootstrap distribution of t70
   #not sure how to do this...
@@ -342,18 +342,24 @@ fit_all_curves<-function(df_in, stemSamples){
   alpha<-unlist(lapply(w.fits, function(x) x$optimFit$par[[2]]))
   w.r2<-unlist(lapply(w.fits, function(x) Calc_R2(x)))
   spdf<-data.frame(k=k,
-                   k.upper=k.upper,
-                   k.lower=k.lower,
+                   #k.upper=k.upper,
+                   #k.lower=k.lower,
                    t70=t70,
+                   w.t70 = w.t70,
                    ne.r2 = ne.r2,
+                   ne.aic = neg.exp.aic,
+                   w.aic = w.aic,
                    alpha = alpha)
   spdf$sp_size<-rownames(spdf)
   
   #annotate df with species, size, code
+  stemSamples %>%
+    select(code, species, size) -> indx
+  indx <- unique(indx)
+  
   spdf %>%
-    separate(sp_size,sep="_",into = c("species","size"))->spdf
-  indx<-select(stemSamples, code, species, size)
-  spdf<-left_join(spdf, indx) #add code
+    separate(sp_size, sep="_", into = c("species","size")) %>%
+    left_join(indx) -> spdf
   
   return(spdf)
 }

@@ -64,6 +64,9 @@ grid.arrange(p.ne.r2 + guides(color=FALSE, shape=FALSE),
              p.k + guides(color=FALSE, shape=FALSE))
 #dev.off()
 
+p.ne.r2
+ggsave(file = "output/intraEndoVar_decayr2.pdf", width = 5, height = 5)
+
 ```
 
 

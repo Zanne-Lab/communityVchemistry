@@ -14,6 +14,7 @@ load_stemSamples<-function(){
   
   #add species info
   species <- read_csv("data/species.csv")
+  species[species$Binomial == "Ricinocarpus pinifolius", "Binomial"] <- "Ricinocarpos pinifolius" # fix a misspelled name
   species %>%
     mutate(species=tolower(Code)) %>%
     rename("site"="Collection site") %>%
@@ -110,13 +111,15 @@ load_seqSamples<-function(mat.otu, stemSamples){
   left_join(seq_indx, stem.indx, by=c("seq_sampName"="codeStem")) %>%
     mutate(codeStem = ifelse(!is.na(Stem), paste(code, Stem, sep=""), NA)) %>%
     select(seq_sampName, codeStem) -> seqSamples.tmp
+  #unique(seqSamples.tmp$codeStem) no stem-specific ripi
+  seqSamples.tmp %>%
+    separate(seq_sampName, into=c("code","extra"), 4, remove=FALSE) %>%
+    select(-extra) -> seqSamples.tmp
   
   #add back in code-level information for seq_samples that have been pooled by code
   code.indx <- unique(stemSamples[,c("code","species","size")])
-  seqSamples.tmp %>%
-    separate(seq_sampName, into=c("code","extra"), 4, remove=FALSE) %>%
-    left_join(code.indx) %>%
-    select(-extra) -> seqSamples
+  code.indx %>%
+    left_join(seqSamples.tmp) -> seqSamples
   
   return(seqSamples)
 }

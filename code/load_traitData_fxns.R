@@ -1,410 +1,382 @@
 
-# species+size-level trait data
+# load wood phylogentic data
+
+fix_problem_species<-function(tree, prob_species, dontchoose = wood_names){
+  
+  require(taxonlookup)
+  
+  for(i in 1:length(prob_species)){
+    genus<-taxonlookup:::split_genus(prob_species[i])
+    replace<-sample(tree$tip.label[grepl(genus,tree$tip.label)],1)
+    while (replace%in%dontchoose) replace<-sample(tree$tip.label[grepl(genus,tree$tip.label)],1)
+    tree$tip.label[tree$tip.label==replace]<-prob_species[i]
+  }
+  return(tree)
+}
+
+load_zanne_tree<-function(){
+  
+  require(phytools)
+  require(diversitree)
+  
+  zae <- read.tree("data/zanne1.1.tre")
+  stemSamples <- load_stemSamples()
+  wood_names<-sub(" ", "_", unique(stemSamples$Binomial))
+  set.seed(42)
+  zae_mod<-fix_problem_species(zae, 
+                               prob_species = c("Melaleuca_decora","Petrophile_pulchella","Persoonia_nutans","Callistemon_linearis","Eucalyptus_sclerophylla","Isopogon_anemonifolius","Hakea_sericea","Olax_stricta","Jacksonia_scoparia"), 
+                               dontchoose = wood_names)
+  zanneTree<-diversitree:::drop.tip.fixed(phy = zae_mod,zae_mod$tip.label[!zae_mod$tip.label%in%wood_names])
+  
+  return(zanneTree)
+  
+}
+
+# raw trait datasets
 
 load_waterPercent.perGwetmass<-function(){
+  
   require(dplyr)
   
   # read in initial covariate data
   covar.big <-read.csv('data/covariates_bigStems.csv', stringsAsFactor = F)
   covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
   
+  # clean the column names
+  covar.big %>%
+    rename('Diameter.cm'='Diameter..cm.',
+           'Fresh.mass.g'='Fresh.mass..g.',
+           'Dry.mass.g'='Dry.mass..g.') -> covar.big
+  
+  covar.small %>%
+    rename('Diameter.wbark.mm'='Diameter.wbark..mm.',
+           'Fresh.mass.g'='Fresh.mass..g.',
+           'Diameter.nobark.mm'='Diameter.nobark..mm.',
+           'Volume.g'='Volume..g.',
+           'Dry.mass.wood.g'='Dry.mass.wood..g.',
+           'Dry.mass.bark.g'='Dry.mass.bark..g.',
+           'Dry.mass.total.g'='Dry.mass.total..g.') -> covar.small
+  
   # (1) calculate water content for each species, size class
   # g water per g dry mass
-  water.percent <- c(with(covar.big, ((Fresh.mass..g. - Dry.mass..g.) / Fresh.mass..g.) * 100),
-                     with(covar.small, ((Fresh.mass..g. - Dry.mass.total..g.) / Fresh.mass..g.)*100))
-  water.percent <- data.frame(code=c(covar.big$Species, covar.small$Species),
-                              StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
-                              water.percent, stringsAsFactors=F)
   
-  ## aggregate by code
-  group_by(water.percent, code) %>%
-    summarize(meanWaterPerc = mean(water.percent, na.rm=TRUE),
-              sdWaterPerc = sd(water.percent, na.rm=TRUE)) -> waterPercent
+  covar.big %>%
+    mutate(waterperc = ((Fresh.mass.g - Dry.mass.g) / Fresh.mass.g) * 100) %>%
+    filter(!is.na(waterperc)) %>%
+    select(Species, Stem, unique, waterperc) %>%
+    mutate(size = "large") -> big.waterperc
   
-  #remove sd cols
-  waterPercent<-waterPercent[,c("code","meanWaterPerc")]
-  colnames(waterPercent)<-c("code","waterperc")
-  length(unique(waterPercent$code)) #34
+  covar.small %>%
+    mutate(Dry.mass.total.g = Dry.mass.wood.g + Dry.mass.bark.g) %>% # add Dry.mass.wood.g and Dry.mass.bark.g to get Dry.mass.total.g
+    mutate(waterperc = ((Fresh.mass.g - Dry.mass.total.g) / Fresh.mass.g) * 100) %>%
+    filter(!is.na(waterperc)) %>%
+    select(Species, Stem, unique, waterperc) %>%
+    mutate(size = "small") -> small.waterperc
   
-  return(waterPercent)
+  water.perc <- rbind(big.waterperc, small.waterperc)
+  water.perc %>%
+    rename('code'='Species') %>%
+    select(unique, code, size, Stem, waterperc) -> water.perc
   
+  #unique(water.perc$Stem) #all numeric
+  #length(unique(water.perc$code)) #34
+  
+  return(water.perc)
 }
 
 load_densityNbarkthick<-function(){
+  
   require(dplyr)
   
   # read in initial covariate data
   covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
+  # only measured on small diameter samples
+  
+  # clean the column names
+  covar.small %>%
+    rename('Diameter.wbark.mm'='Diameter.wbark..mm.',
+           'Fresh.mass.g'='Fresh.mass..g.',
+           'Diameter.nobark.mm'='Diameter.nobark..mm.',
+           'Volume.g'='Volume..g.',
+           'Dry.mass.wood.g'='Dry.mass.wood..g.',
+           'Dry.mass.bark.g'='Dry.mass.bark..g.',
+           'Dry.mass.total.g'='Dry.mass.total..g.') -> covar.small
   
   # calculate wood density and bark thickness for each species
-  #only have these values measured on small stems
+  covar.small %>%
+    mutate(density = Dry.mass.wood.g / Volume.g) %>%
+    mutate(barkthick = Diameter.wbark.mm - Diameter.nobark.mm) %>%
+    filter(!is.na(density) | !is.na(barkthick))%>%
+    rename('code'='Species') %>%
+    mutate(size = ifelse(code == tolower(code), "small","large")) %>%
+    select(unique, code, size, Stem, density, barkthick) -> densityBarkthick
   
-  covar.small$density.gpercm3 <- with(covar.small, Dry.mass.wood..g. / Volume..g.)
-  covar.small$barkthickness.mm <- with(covar.small, Diameter.wbark..mm. - Diameter.nobark..mm.)
+  #unique(densityBarkthick$Stem) # all numeric
+  #length(unique(densityBarkthick$code)) #22
   
-  ## aggregate by species (all small size)
-  group_by(covar.small, Species) %>%
-    summarize(meanDensity = mean(density.gpercm3, na.rm=TRUE),
-              sdDensity = sd(density.gpercm3, na.rm=TRUE),
-              meanBarkthick = mean(barkthickness.mm, na.rm=TRUE),
-              sdBarkthick = sd(barkthickness.mm, na.rm=TRUE)) -> densityNbarkthick
-  colnames(densityNbarkthick)[1]<-"code"
-  
-  #remove sd cols
-  densityNbarkthick<-densityNbarkthick[,c("code","meanDensity","meanBarkthick")]
-  colnames(densityNbarkthick)<-c("code","density","barkthick")
-  length(unique(densityNbarkthick$code)) #22
-  
-  return(densityNbarkthick)
+  return(densityBarkthick)
   
 }
 
-load_XRF<-function(){
+load_XRF_meta <- function(){
+  
+  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
+  data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
+  
+  # create dataframe containing metadata for initial sequencing and XRF data
+  #if there is a number or letter on the back of the SampleCode, then it was composited
+  data %>%
+    select(SampleCode, StemSize, mgSample, NucleicAcidConc, ExtractionDate) %>%
+    separate(SampleCode, into = c("code","Stem_maybe"), sep = 4, remove = FALSE) %>%
+    mutate(compositeSample = ifelse(grepl('[0-9A-Z]$', SampleCode), FALSE, TRUE)) -> meta #stem assignment are only numbers
+  meta %>%
+    select(SampleCode, code, StemSize, Stem_maybe, compositeSample) -> meta.indx
+  
+  return(meta.indx)
+}
+
+load_XRF <- function(){
+  
   require(dplyr)
   
   data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
   data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
   
   # create dataframe containing metadata for initial sequencing and XRF data
-  meta <- data[, c('SampleCode', 'StemSize', 'mgSample', 'NucleicAcidConc', 'ExtractionDate')]
-  meta$code <- substr(meta$SampleCode, 1, 4)
-  # add column to 'meta' indicating whether data obtained from independent/composite sample
-  meta$compositeSample <- T
-  meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
+  #if there is a number or letter on the back of the SampleCode, then it was composited
+  meta.indx <- load_XRF_meta()
   
   #isolate XRF cols
-  df.xrf<-data.frame(SampleCode=data$SampleCode, data[, 26:ncol(data)])
-  indx<-meta[,c("SampleCode","StemSize","code","compositeSample")]
-  df.xrf1<-left_join(indx,df.xrf)
+  data %>%
+    select(SampleCode, StemSize, P, K, Ca, Mn, Fe, Zn) %>%
+    left_join(meta.indx) %>%
+    rename('unique'='SampleCode',
+           'size'='StemSize') %>%
+    mutate(Stem = ifelse(grepl('[0-9]$', Stem_maybe), Stem_maybe, NA)) %>%
+    filter(!is.na(P)) %>%
+    select(unique, code, size, Stem, compositeSample, P, K, Ca, Mn, Fe, Zn) -> xrf
   
-  group_by(df.xrf1, code) %>%
-    summarize(compos=paste(unique(compositeSample), collapse="_")) -> summ
-  #why are there some species+size that are composited == TRUE and FALSE?
-  
-  ## aggregate by code
-  group_by(df.xrf1, code) %>%
-    summarize(meanP = mean(P, na.rm=TRUE),
-              sdP = sd(P, na.rm=TRUE),
-              
-              meanK = mean(K, na.rm=TRUE),
-              sdK = sd(K, na.rm=TRUE),
-              
-              meanCa = mean(Ca, na.rm=TRUE),
-              sdCa = sd(Ca, na.rm=TRUE),
-              
-              meanMn = mean(Mn, na.rm=TRUE),
-              sdMn = sd(Mn, na.rm=TRUE),
-              
-              meanFe = mean(Fe, na.rm=TRUE),
-              sdFe = sd(Fe, na.rm=TRUE),
-              
-              meanZn = mean(Zn, na.rm=TRUE),
-              sdZn = sd(Zn, na.rm=TRUE)
-              
-    ) -> xrf
-  
-  xrf<-xrf[,c("code","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
-  colnames(xrf)<-c("code","P","K","Ca","Mn","Fe","Zn")
+  # length(unique(xrf$code)) #33
   
   return(xrf)
 }
 
 load_CN<-function(){
+  
   require(dplyr)
   
   # read in CN data
   cndata <- read.csv('data/CN/JEFF_POWELL_CN_DATA_DIVERSITY_ROT_AUG_2013.csv', stringsAsFactors=F)
-  colnames(cndata)<-c("sampleID","comments","mass","n.perc","c.perc")
+  colnames(cndata)<-c("SampleID","comments","mass","N","C")
   
   #create meta from XRF meta data
-  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
-  data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  meta <- data[, c('SampleCode', 'StemSize', 'StemCode', 'mgSample', 'NucleicAcidConc', 'ExtractionDate')]
-  meta$code <- substr(meta$SampleCode, 1, 4)
-  meta$Stem<-as.numeric(substr(meta$SampleCode, 5, 6)) # these numbers correspond to Stem, right? NAs are because character missing or character was a capital letter (not number)
+  meta.indx <- load_XRF_meta()
   
-  # add column to 'meta' indicating whether data obtained from independent/composite sample
-  meta$compositeSample <- T
-  meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
+  # add meta to cndata
+  cndata %>%
+    separate(SampleID, into = c("code","Stem_maybe"), sep = 4, remove = F) %>%
+    mutate(Stem_maybe = ifelse(grepl("pooled", Stem_maybe), NA, Stem_maybe)) %>%
+    mutate(code = ifelse(code == "Cali", "cali", code)) %>% #this species is only represented by small diams
+    mutate(code = ifelse(code == "Olst", "olst", code)) %>% #this species is only represented by small diams
+    mutate(code = ifelse(code == "Basp", "basp", code)) %>% #this species is only represented by small diams
+    mutate(SampleCode = ifelse(is.na(Stem_maybe), code, paste0(code, Stem_maybe))) %>%
+    select(SampleID, code, SampleCode, N, C) %>%
+    left_join(meta.indx) %>%
+    rename('size'='StemSize',
+           'unique'='SampleCode') %>%
+    mutate(Stem = ifelse(grepl('[0-9]$', Stem_maybe), Stem_maybe, NA)) %>%
+    select(unique, code, size, Stem, N, C, compositeSample) -> cndata.clean
   
-  ## fix code for composited samples
-  indx<-meta[,c("SampleCode","StemSize","Stem","code","compositeSample")]
-  temp<-merge(cndata, indx, by.x="sampleID",by.y="SampleCode", all.x=TRUE)
-  temp[is.na(temp$compositeSample),"compositeSample"]<-TRUE
-  x<-temp[temp$compositeSample==TRUE,"sampleID"]
-  xx<-unlist(strsplit(x,"pooled"))
-  xx<-tolower(xx)
-  xx[xx=="cali "]<-"cali"
-  xx[xx=="acelextra"]<-"acel"
-  temp[temp$compositeSample==TRUE,"code"]<-substr(xx, 1,4)
-  temp[temp$compositeSample==TRUE,"StemSize"]<-"small"
+  #length(unique(cndata.clean$code)) #33
+  #all.codes <-unique(stemSamples$code)
+  #all.codes[!all.codes %in% unique(cndata.clean$code)] #missing eusc
   
-  ## make codeStem col
-  temp$codeStem<-paste(temp$code, temp$Stem, sep="")
-  
-  # aggregate values by code
-  group_by(temp, code) %>%
-    summarize(meanN = mean(n.perc, na.rm=TRUE),
-              sdN = sd(n.perc, na.rm=TRUE),
-              
-              meanC = mean(c.perc, na.rm=TRUE),
-              sdC = sd(c.perc, na.rm=TRUE)
-              
-    ) -> temp.agg
-  aggSamps<-temp.agg[,c("code","meanN","meanC")]
-  colnames(aggSamps)<-c("code","n.perc","c.perc")
-  cn<-data.frame(aggSamps)
-  length(unique(cn$code)) #33
-  
-  return(cn)
+  return(cndata.clean)
   
 }
 
 mergeTraitData<-function(){
   
-  #load code-aggregated trait data
-  waterPercent<-load_waterPercent.perGwetmass() ##### this is in units of g water per g of wet mass x 100
-  densityNbarkthick<-load_densityNbarkthick()
-  xrf<-load_XRF()
-  cn<-load_CN()
+  #load raw trait datasets
+  waterperc <- load_waterPercent.perGwetmass() ##### this is in units of g water per g of wet mass x 100
+  densityNbarkthick <- load_densityNbarkthick()
+  xrf <- load_XRF()
+  cn <- load_CN()
   
-  # merge together water percent, traits, and xrf.mean by 'code'
-  tmp<-left_join(waterPercent, densityNbarkthick)
-  tmp<-left_join(tmp, xrf)
-  traits<-left_join(tmp, cn)
+  #make long
+  waterperc %>%
+    mutate(trait = "waterperc") %>%
+    rename('trait.val'='waterperc') %>%
+    mutate(compositeSample = FALSE) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> waterperc.l
+  densityNbarkthick %>%
+    gather(key = "trait", value = "trait.val", c(density, barkthick)) %>%
+    mutate(compositeSample = FALSE) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> densityNbarkthick.l
+  xrf %>%
+    gather(key = "trait", value = "trait.val", c(P, K, Ca, Mn, Fe, Zn)) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> xrf.l
+  cn %>%
+    gather(key = "trait", value = "trait.val", c(C, N)) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cn.l
   
-  # rename columns
-  traits<-rename(traits, "N"="n.perc", "C"="c.perc")
+  trait.data.l <- rbind(waterperc.l, densityNbarkthick.l, xrf.l, cn.l)
   
-  # use species-level small-stem estimates of density and barkthick for large-stem samples
-  traits$species<-tolower(traits$code)
-  traits$size<-"small"
-  traits[tolower(traits$code)!=traits$code,"size"]<-"large"
-  largeCodes<-as.data.frame(traits[traits$size=="large","code"])[,1]
-  for(i in 1:length(largeCodes)){
-    curr.code<-largeCodes[i]
-    curr.species<-tolower(curr.code)
-    filter(traits, species==curr.species) %>%
-      filter(size=="small") -> curr.row
-    curr.data<-data.frame(curr.row[,c("density","barkthick")])
-    traits[traits$code == curr.code, c("density","barkthick")]<-curr.data
+  return(trait.data.l)
+  
+}
+
+# code-level traits
+
+#if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+trait.means_byCode <- function(stemSamples, fill.densitybark){
+  
+  #load trait data
+  trait.data.l <- mergeTraitData()
+  
+  #summarize
+  trait.data.l %>%
+    group_by(code, trait) %>%
+    summarize(val = mean(trait.val, na.rm=T)) %>%
+    spread(key = trait, value = val) -> traitmeans.code
+  
+  #add species and size
+  samp.indx <- unique(stemSamples[,c("code","species","size")])
+  traitmeans.code %>%
+    left_join(samp.indx) -> traitmeans.code
+  
+  if(fill.densitybark == TRUE){
+    # use species-level small-stem estimates of density and barkthick for large-stem samples
+    
+    #pull out the small-stem estimates
+    traitmeans.code %>%
+      filter(size == "small") %>%
+      select(code, density, barkthick) %>%
+      mutate(species = code) %>%
+      mutate(size = "large") -> filler.data
+    tmp <- data.frame(filler.data)
+    tmp %>%
+      select(-code) %>%
+      mutate(code = toupper(species)) -> filler.data
+    
+    #identify which species overlap in the large size class
+    fillcodes <- unique(filler.data$code)
+    allcodes <- unique(traitmeans.code$code)
+    
+    #loop through the large samples that can be filled in
+    CODE <- allcodes[allcodes %in% fillcodes]
+    for(i in 1:length(CODE)){
+      fill.vals <- filler.data[filler.data$code == CODE[i], c("density","barkthick")]
+      traitmeans.code[traitmeans.code$code == CODE[i], c("density","barkthick")] <- fill.vals
+    }
+    
   }
   
-  traits<-traits[,c("code", "species","size",
-                    "waterperc","density","barkthick","P" ,"K" ,"Ca" ,"Mn","Fe","Zn" ,"N","C")]
-  
-  # #summarize trait ranges
-  # traits.long<-as.data.frame(gather(traits, key=trait, value=value, -(1:3)))
-  # group_by(traits.long, trait) %>%
-  #   summarize(max=range(value, na.rm=TRUE)[1],
-  #             min=range(value, na.rm=TRUE)[2])
-  
-  return(traits)
+  return(traitmeans.code)
   
 }
 
+trait.sds_byCode <- function(stemSamples){
+  
+  #load trait data
+  trait.data.l <- mergeTraitData()
+  
+  #summarize
+  trait.data.l %>%
+    group_by(code, trait) %>%
+    summarize(val = sd(trait.val, na.rm=T)) %>%
+    spread(key = trait, value = val) -> traitsds.code
+  
+  #add species and size
 
-# stem-level trait data
-
-load_waterPercent.perGwetmass_byStem<-function(){
-  require(dplyr)
-  
-  # read in initial covariate data
-  covar.big <-read.csv('data/covariates_bigStems.csv', stringsAsFactor = F)
-  covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
-  
-  # (1) calculate water content for each species, size class
-  # g water per g dry mass
-  water.percent <- c(with(covar.big, ((Fresh.mass..g. - Dry.mass..g.) / Fresh.mass..g.) * 100),
-                     with(covar.small, ((Fresh.mass..g. - Dry.mass.total..g.) / Fresh.mass..g.)*100))
-  water.percent <- data.frame(code=c(covar.big$Species, covar.small$Species),
-                              Stem=c(covar.big$Stem, covar.small$Stem),
-                              StemSize=factor(c(rep('large', nrow(covar.big)), rep('small', nrow(covar.small)))),
-                              water.percent, stringsAsFactors=F)
-  water.percent$codeStem<-paste(water.percent$code, water.percent$Stem, sep="")
-  
-  ## aggregate by code+stem
-  group_by(water.percent, codeStem) %>%
-    summarize(meanWaterPerc = mean(water.percent, na.rm=TRUE),
-              sdWaterPerc = sd(water.percent, na.rm=TRUE)) -> waterPercent
-  
-  #remove sd cols
-  waterPercent<-waterPercent[,c("codeStem","meanWaterPerc")]
-  colnames(waterPercent)<-c("codeStem","waterperc")
-  length(unique(waterPercent$codeStem)) #117
-  
-  return(waterPercent)
+  return(traitsds.code)
   
 }
 
-load_densityNbarkthick_byStem<-function(){
-  require(dplyr)
+trait.n_byCode <- function(stemSamples){
   
-  # read in initial covariate data
-  covar.small <-read.csv('data/covariates_smallStems.csv', stringsAsFactor = F)
+  #load trait data
+  trait.data.l <- mergeTraitData()
   
-  # calculate wood density and bark thickness for each species
-  #only have these values measured on small stems
+  #summarize
+  trait.data.l %>%
+    group_by(code, trait) %>%
+    summarize(val = summ(!is.na(trait.val))) %>%
+    spread(key = trait, value = val) -> traitn.code
   
-  covar.small$density.gpercm3 <- with(covar.small, Dry.mass.wood..g. / Volume..g.)
-  covar.small$barkthickness.mm <- with(covar.small, Diameter.wbark..mm. - Diameter.nobark..mm.)
+  #add species and size
   
-  ## aggregate by code+Stem (all small size)
-  covar.small$codeStem<-paste(as.character(covar.small$Species), covar.small$Stem, sep="")
-  group_by(covar.small, codeStem) %>%
-    summarize(meanDensity = mean(density.gpercm3, na.rm=TRUE),
-              sdDensity = sd(density.gpercm3, na.rm=TRUE),
-              meanBarkthick = mean(barkthickness.mm, na.rm=TRUE),
-              sdBarkthick = sd(barkthickness.mm, na.rm=TRUE)) -> densityNbarkthick
-  
-  #remove sd cols
-  densityNbarkthick<-densityNbarkthick[,c("codeStem","meanDensity","meanBarkthick")]
-  colnames(densityNbarkthick)<-c("codeStem","density","barkthick")
-  length(unique(densityNbarkthick$codeStem)) #80
-  
-  return(densityNbarkthick)
+  return(traitn.code)
   
 }
 
-load_XRF_byStem<-function(){
-  require(dplyr)
-  
-  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
-  data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  
-  # create dataframe containing metadata for initial sequencing and XRF data
-  meta <- data[, c('SampleCode', 'StemSize', 'mgSample', 'NucleicAcidConc', 'ExtractionDate')]
-  meta$code <- substr(meta$SampleCode, 1, 4)
-  meta$Stem<-as.numeric(substr(meta$SampleCode, 5, 6)) # these numbers correspond to Stem, right? NAs are because character missing or character was a capital letter (not number)
-  
-  # add column to 'meta' indicating whether data obtained from independent/composite sample
-  meta$compositeSample <- T
-  meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
-  
-  #isolate XRF cols
-  df.xrf<-data.frame(SampleCode=data$SampleCode, data[, 26:ncol(data)])
-  indx<-meta[,c("SampleCode","StemSize","code","Stem","compositeSample")]
-  df.xrf1<-left_join(indx,df.xrf)
-  
-  #make a codeStem column
-  df.xrf1$codeStem<-paste(df.xrf1$code, df.xrf1$Stem, sep="")
-  group_by(df.xrf1, codeStem) %>%
-    summarize(compos=paste(unique(compositeSample), collapse="_")) -> summ
-  #why are there some species+size that are composited == TRUE and FALSE?
-  
-  ## aggregate by code
-  group_by(df.xrf1, codeStem) %>%
-    summarize(meanP = mean(P, na.rm=TRUE),
-              sdP = sd(P, na.rm=TRUE),
-              
-              meanK = mean(K, na.rm=TRUE),
-              sdK = sd(K, na.rm=TRUE),
-              
-              meanCa = mean(Ca, na.rm=TRUE),
-              sdCa = sd(Ca, na.rm=TRUE),
-              
-              meanMn = mean(Mn, na.rm=TRUE),
-              sdMn = sd(Mn, na.rm=TRUE),
-              
-              meanFe = mean(Fe, na.rm=TRUE),
-              sdFe = sd(Fe, na.rm=TRUE),
-              
-              meanZn = mean(Zn, na.rm=TRUE),
-              sdZn = sd(Zn, na.rm=TRUE)
-              
-    ) -> xrf
-  
-  xrf<-xrf[,c("codeStem","meanP","meanK","meanCa","meanMn","meanFe","meanZn")]
-  colnames(xrf)<-c("codeStem","P","K","Ca","Mn","Fe","Zn")
-  
-  return(xrf)
-}
+# stem-level traits
 
-load_CN_byStem<-function(){
-  require(dplyr)
+trait.means_byStem <- function(stemSamples){
   
-  # read in CN data
-  cndata <- read.csv('data/CN/JEFF_POWELL_CN_DATA_DIVERSITY_ROT_AUG_2013.csv', stringsAsFactors=F)
-  colnames(cndata)<-c("sampleID","comments","mass","n.perc","c.perc")
+  #load trait data
+  trait.data.l <- mergeTraitData()
   
-  #create meta from XRF meta data
-  data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
-  data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  meta <- data[, c('SampleCode', 'StemSize', 'mgSample', 'NucleicAcidConc', 'ExtractionDate')]
-  meta$code <- substr(meta$SampleCode, 1, 4)
-  meta$Stem<-as.numeric(substr(meta$SampleCode, 5, 6)) # these numbers correspond to Stem, right? NAs are because character missing or character was a capital letter (not number)
+  #summarize
+  trait.data.l %>%
+    filter(!is.na(Stem)) %>%
+    mutate(codeStem = paste0(code, Stem)) %>%
+    group_by(codeStem, trait) %>%
+    summarize(val = mean(trait.val, na.rm=T)) %>%
+    spread(key = trait, value = val) -> traitmeans.stem
   
-  # add column to 'meta' indicating whether data obtained from independent/composite sample
-  meta$compositeSample <- T
-  meta$compositeSample[grep('[0-9A-Z]$', meta$SampleCode)] <- F #if there is a number on the back of the code, then it was composited
+  #add species and size
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size")])
+  traitmeans.stem %>%
+    left_join(samp.indx) -> traitmeans.stem
   
-  ## fix code for composited samples
-  indx<-meta[,c("SampleCode","StemSize","Stem","code","compositeSample")]
-  temp<-merge(cndata, indx, by.x="sampleID",by.y="SampleCode", all.x=TRUE)
-  temp[is.na(temp$compositeSample),"compositeSample"]<-TRUE
-  x<-temp[temp$compositeSample==TRUE,"sampleID"]
-  xx<-unlist(strsplit(x,"pooled"))
-  xx<-tolower(xx)
-  xx[xx=="cali "]<-"cali"
-  xx[xx=="acelextra"]<-"acel"
-  temp[temp$compositeSample==TRUE,"code"]<-substr(xx, 1,4)
-  temp[temp$compositeSample==TRUE,"StemSize"]<-"small"
+  return(traitmeans.stem)
   
-  ## make codeStem col
-  temp$codeStem<-paste(temp$code, temp$Stem, sep="")
+  }
+
+trait.sds_byStem <- function(stemSamples){
   
-  # aggregate values by code
-  group_by(temp, codeStem) %>%
-    summarize(meanN = mean(n.perc, na.rm=TRUE),
-              sdN = sd(n.perc, na.rm=TRUE),
-              
-              meanC = mean(c.perc, na.rm=TRUE),
-              sdC = sd(c.perc, na.rm=TRUE)
-              
-    ) -> temp.agg
-  aggSamps<-temp.agg[,c("codeStem","meanN","meanC")]
-  colnames(aggSamps)<-c("codeStem","n.perc","c.perc")
-  cn<-data.frame(aggSamps)
-  length(unique(cn$codeStem)) #80
+  #load trait data
+  trait.data.l <- mergeTraitData()
   
-  return(cn)
+  #summarize
+  trait.data.l %>%
+    filter(!is.na(Stem)) %>%
+    mutate(codeStem = paste0(code, Stem)) %>%
+    group_by(codeStem, trait) %>%
+    summarize(val = sd(trait.val, na.rm=T)) %>%
+    spread(key = trait, value = val) -> traitsds.stem
+  
+  #add species and size
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size")])
+  traitsds.stem %>%
+    left_join(samp.indx) -> traitsds.stem
+  
+  return(traitsds.stem)
   
 }
 
-mergeTraitData_byStem<-function(){
+trait.n_byStem <- function(stemSamples){
   
-  #load code-aggregated trait data
-  waterPercent<-load_waterPercent.perGwetmass_byStem() ##### this is in units of g water per g of wet mass x 100
-  densityNbarkthick<-load_densityNbarkthick_byStem()
-  xrf<-load_XRF_byStem()
-  cn<-load_CN_byStem()
+  #load trait data
+  trait.data.l <- mergeTraitData()
   
-  # merge together water percent, traits, and xrf.mean by 'codeStem'
-  tmp<-full_join(waterPercent, densityNbarkthick)
-  tmp<-full_join(tmp, xrf)
-  traits<-full_join(tmp, cn)
-  traits[is.nan(traits$waterperc),"waterperc"]<-NA
-  traits[is.nan(traits$density),"density"]<-NA
-  traits[is.nan(traits$barkthick),"barkthick"]<-NA
+  #summarize
+  trait.data.l %>%
+    filter(!is.na(Stem)) %>%
+    mutate(codeStem = paste0(code, Stem)) %>%
+    group_by(codeStem, trait) %>%
+    summarize(val = sum(!is.na(trait.val))) %>%
+    spread(key = trait, value = val) -> traitn.stem
   
-  # rename columns
-  traits<-rename(traits, "N"="n.perc", "C"="c.perc")
+  #add species and size
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size")])
+  traitn.stem %>%
+    left_join(samp.indx) -> traitn.stem
   
-  #most complete codeStem trait dataset
-  traits.codeStem<-traits[!grepl("NA", traits$codeStem),]
-  
-  #add code and size
-  traits.codeStem$code <- substr(traits.codeStem$codeStem, 1, 4)
-  traits.codeStem$size<-"small"
-  traits.codeStem[traits.codeStem$code!=tolower(traits.codeStem$code),"size"]<-"large"
-  
-  traits.codeStem<-traits.codeStem[,c("codeStem", "code","size",
-                                      "waterperc","density","barkthick","P" ,"K" ,"Ca" ,"Mn","Fe","Zn" ,"N","C")]
-  
-  return(traits.codeStem)
+  return(traitn.stem)
   
 }
-
 
 
 
