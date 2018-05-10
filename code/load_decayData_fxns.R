@@ -235,9 +235,47 @@ Calc_massRemaining<-function(initial_mass, harvest_mass){
     mutate(pmr=totalSampleDryMass/timeZeroMass) %>%
     mutate(SpeciesCode=tolower(species)) -> plotting_df
   
-  plotting_df %>% filter(!is.na(pmr)) -> plotting_df
+  plotting_df %>% 
+    filter(!is.na(pmr)) %>%
+    select(unique, species, SpeciesCode, size, time, pmr) %>%
+    rename(code=species) %>%
+    rename(species=SpeciesCode) -> tmp
   
-  return(plotting_df)
+  #add codeStem based on deployment lookup table that links codeStem to unique
+  deployment <- read_csv("data/deployment.csv")
+  deployment %>%
+    rename("code"="species") %>%
+    mutate(codeStem=paste0(code, Stem)) %>%
+    select(codeStem, unique) -> deploy.indx
+  tmp %>%
+    left_join(deploy.indx) -> pause
+  
+  # can the Stem values be double digits?
+  # deployment %>%
+  #   rename("code"="species") %>%
+  #   mutate(codeStem=paste0(code, Stem)) %>%
+  #   filter(Stem > 9)
+  # yes, but only leer have Stem == 10 in this dataset
+  
+  #some of these unique ids are not in the deployment lookup table because they are time0 samples
+  pause %>%
+    filter(is.na(codeStem)) %>%
+    separate(unique, into = c("codePart","Stem","leftover"), sep = c(4,5), remove = F) %>%
+    mutate(codeStem = paste0(code, Stem)) -> test
+  #sum(test$codePart != test$code) #all match
+  #look for potential stem '10's that got split
+  #test %>% filter(Stem == "1") -> test.sub
+  #unique(test.sub$leftover) #there aren't any leading 0s, so it looks like there weren't any hidden 10's that got split
+  t0.indx <- test[,c("codeStem","unique")]
+  UNIQ <- unique(test$unique)
+  for(i in 1:length(UNIQ)){
+    fill <- t0.indx[t0.indx$unique == UNIQ[i],"codeStem"]
+    pause[pause$unique == UNIQ[i],"codeStem"] <- fill$codeStem
+  }
+  sum(is.na(pause$codeStem)) # if 0, then all samples have an assigned codeStem
+  return_df <- pause
+  
+  return(return_df)
 }
 
 
@@ -245,38 +283,50 @@ Calc_massRemaining<-function(initial_mass, harvest_mass){
 
 AvgPMR_byStem<-function(plotting_df){
   
-  #add codeStem and transform
-  plotting_df %>%
-    select(unique, size, time, pmr) %>%
-    separate(unique, into=c("code","StemNposition"), sep=4, extra='merge', remove=FALSE) %>%
-    separate(StemNposition, into=c("Stem","position"), sep=1, extra='merge', remove=TRUE) %>%
-    mutate(codeStem=paste(code, Stem, sep="")) %>%
-    select(codeStem, position, time, pmr) -> pmr.df
-  
   #average pmr by codeStem and time
-  pmr.df %>%
+  plotting_df %>%
+    select(codeStem, time, pmr) %>%
     group_by(codeStem, time) %>%
     summarize(mean.pmr=mean(pmr, na.rm=TRUE),
               sd.pmr=sd(pmr, na.rm=TRUE),
               n.pmr=length(pmr)) -> pmr.byStem.df
   
-  pmr.byStem.df$code<-substr(pmr.byStem.df$codeStem, 1, 4)
-  pmr.byStem.df$species<-tolower(pmr.byStem.df$code)
-  pmr.byStem.df$size<-"large"
-  pmr.byStem.df[pmr.byStem.df$code == tolower(pmr.byStem.df$code),"size"]<-"small"
+  #check out the number of stemSamples per timestep here before I remove that information again...
   
-  #make it wide
+  #make wide amd add back code, species, size
+  indx <- unique(plotting_df[,c("codeStem","code","species","size")])
   pmr.byStem.df %>%
-    select(codeStem, time, mean.pmr) %>%
+    select(-c(sd.pmr, n.pmr)) %>%
     spread(key=time, value=mean.pmr) %>%
+    left_join(indx) %>%
     rename('time0'=`0`,
            'time7'=`7`,
            'time13'=`13`,
            'time25'=`25`,
-           'time37'=`37`) %>%
-    separate(codeStem, into=c("code","Stem"), sep=4, extra='merge', remove=FALSE) -> pmr.byStem.df.w
+           'time37'=`37`) -> pmr.byStem.df.w
   
   return(pmr.byStem.df.w)
+  
+}
+
+n.PMR_byStem<-function(plotting_df){
+  
+  indx <- unique(plotting_df[,c("codeStem","code","species","size")])
+  
+  #number of pmr samples by codeStem and time
+  plotting_df %>%
+    select(codeStem, time, pmr) %>%
+    group_by(codeStem, time) %>%
+    summarize(n.pmr=length(pmr)) %>%
+    spread(key=time, value=n.pmr) %>%
+    left_join(indx) %>%
+    rename('time0'=`0`,
+           'time7'=`7`,
+           'time13'=`13`,
+           'time25'=`25`,
+           'time37'=`37`) -> n.pmr.byStem.df.w
+  
+  return(n.pmr.byStem.df.w)
   
 }
 
@@ -297,17 +347,14 @@ Calc_R2<-function(ne_fits_df){
 
 fit_all_curves<-function(df_in, stemSamples){
   
-  df_in %>%
-    unite(SpeciesCode, col=sp_size, size, sep="_") -> df
-  
   #negative expon fit
-  ne_fits <- lapply(split(df,factor(df$sp_size)),function(x){
+  ne_fits <- lapply(split(df_in, factor(df_in$code)),function(x){
     fit_litter(time = x$time/12, 
                mass.remaining = x$pmr, model = c("neg.exp"), iters = 500)
   })
   
-  #weibold fit
-  w.fits <- lapply(split(df, factor(df$sp_size)), function(x){
+  #weibull fit
+  w.fits <- lapply(split(df_in, factor(df_in$code)), function(x){
     fit_litter(time = x$time/12, 
                mass.remaining = x$pmr, model = c("weibull"), iters = 500)
   })
@@ -350,18 +397,31 @@ fit_all_curves<-function(df_in, stemSamples){
                    ne.aic = neg.exp.aic,
                    w.aic = w.aic,
                    alpha = alpha)
-  spdf$sp_size<-rownames(spdf)
+  spdf$code<-rownames(spdf)
   
-  #annotate df with species, size, code
+  #annotate df with species, size
   stemSamples %>%
     select(code, species, size) -> indx
   indx <- unique(indx)
-  
   spdf %>%
-    separate(sp_size, sep="_", into = c("species","size")) %>%
     left_join(indx) -> spdf
   
   return(spdf)
+}
+
+
+# compare estimated t70 based on the negative exponential vs weibull model
+
+comparePlot_ne_weibull <- function(decayfits){
+  
+  p <- ggplot(decayfits, aes(x=t70,y=w.t70, col=size))+
+   geom_point()+
+   labs(x="Time to 30% mass loss (negative exponential)",
+        y="Time to 30% mass loss (Weibull)")+
+   geom_abline(slope=1,intercept=0,linetype="dashed") + theme_bw()
+
+  return(p)
+
 }
 
 

@@ -288,6 +288,9 @@ trait.sds_byCode <- function(stemSamples){
     spread(key = trait, value = val) -> traitsds.code
   
   #add species and size
+  samp.indx <- unique(stemSamples[,c("code","species","size")])
+  traitsds.code %>%
+    left_join(samp.indx) -> traitsds.code
 
   return(traitsds.code)
   
@@ -301,10 +304,13 @@ trait.n_byCode <- function(stemSamples){
   #summarize
   trait.data.l %>%
     group_by(code, trait) %>%
-    summarize(val = summ(!is.na(trait.val))) %>%
+    summarize(val = sum(!is.na(trait.val))) %>%
     spread(key = trait, value = val) -> traitn.code
   
   #add species and size
+  samp.indx <- unique(stemSamples[,c("code","species","size")])
+  traitn.code %>%
+    left_join(samp.indx) -> traitn.code
   
   return(traitn.code)
   
@@ -326,9 +332,18 @@ trait.means_byStem <- function(stemSamples){
     spread(key = trait, value = val) -> traitmeans.stem
   
   #add species and size
-  samp.indx <- unique(stemSamples[,c("codeStem","species","size")])
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
   traitmeans.stem %>%
     left_join(samp.indx) -> traitmeans.stem
+  
+  #note
+  #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+  # acpa2 and lepa4
+  # manually fill in the species and size column for these samples
+  tmp <- traitmeans.stem
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  traitmeans.stem <- tmp
   
   return(traitmeans.stem)
   
@@ -348,9 +363,18 @@ trait.sds_byStem <- function(stemSamples){
     spread(key = trait, value = val) -> traitsds.stem
   
   #add species and size
-  samp.indx <- unique(stemSamples[,c("codeStem","species","size")])
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
   traitsds.stem %>%
     left_join(samp.indx) -> traitsds.stem
+  
+  #note
+  #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+  # acpa2 and lepa4
+  # manually fill in the species and size column for these samples
+  tmp <- traitsds.stem
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  traitsds.stem <- tmp
   
   return(traitsds.stem)
   
@@ -370,9 +394,18 @@ trait.n_byStem <- function(stemSamples){
     spread(key = trait, value = val) -> traitn.stem
   
   #add species and size
-  samp.indx <- unique(stemSamples[,c("codeStem","species","size")])
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
   traitn.stem %>%
     left_join(samp.indx) -> traitn.stem
+  
+  #note
+  #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+  # acpa2 and lepa4
+  # manually fill in the species and size column for these samples
+  tmp <- traitn.stem
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  traitn.stem <- tmp
   
   return(traitn.stem)
   

@@ -1,0 +1,262 @@
+---
+title: "Samples for cell wall carb fractions"
+author: "Marissa Lee"
+date: "5/9/2018"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+Load libraries and functions
+```{r, echo=FALSE, message=FALSE}
+#chunk options
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+#libraries
+library(knitr) #r markdown
+library(readr) #read/write
+library(magrittr) #data formatting
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(grid) #plotting
+devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
+library(litterfitter) #fit decay models to timeseries
+library(lmtest) # for coxtest()
+library(vegan) #diversity metrics
+library(rioja) #WA-PLS
+library(ggtree) #plotting wood phylo
+library(viridis) #plotting colors
+require(gridExtra) #plotting
+
+#fxns
+source("code/load_microbeData_fxns.R")
+source("code/load_traitData_fxns.R")
+source("code/load_decayData_fxns.R")
+source("code/distance_fxns.R") #calculate within code endophyte distances
+source("code/summaryTable_fxns.R")
+source("code/analysisDF_fxns.R")
+```
+
+Load wood trait data
+```{r}
+
+#sample meta data
+stemSamples <- load_stemSamples() #uncomment if the data changes
+
+
+### Load wood trait data
+# code-level
+traitmeans.code <- trait.means_byCode(stemSamples, fill.densitybark = F) # if fill.densitybark == T, then will use small size density and barkthickness estimates for large size too
+traitsds.code <- trait.sds_byCode(stemSamples)
+traitn.code <- trait.n_byCode(stemSamples)
+
+# stem-level trait data
+traitmeans.stem <- trait.means_byStem(stemSamples)
+traitsds.stem <- trait.sds_byStem(stemSamples)
+traitn.stem <- trait.n_byStem(stemSamples)
+
+```
+
+Load mass loss data
+```{r}
+### Load decay data
+
+# load mass loss data and calculate percent mass remaining (pmr)
+initial_mass <- read_in_initial_mass() #uncomment if the data changes
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass)
+
+# average pmr for each stem and timepoint
+pmr_byStem <- AvgPMR_byStem(pmr)
+
+# calculate decay trajectory fits for each species+size
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
+```
+
+Load time 0 sawdust inventory
+```{r}
+# saw dust sample inventory
+sawdust <- read.csv("data/approxSampleMass_forCfract.csv")
+sawdust %>%
+  separate(sampleID, into = c("code","Stem_maybe"), sep = 4, remove = F) %>%
+  mutate(Stem = ifelse(grepl('[0-9]$', Stem_maybe), Stem_maybe, NA)) %>% #stem assignment are only numbers
+  mutate(codeStem = paste0(code, Stem)) %>%
+  mutate(codeStem = ifelse(is.na(Stem), code, codeStem)) %>%
+  select(sampleID, code, codeStem) -> sawdustSamps 
+
+### Notes about stem-level data
+#there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+# acpa2 and lepa4
+# traitmeans.stem %>% filter(!codeStem %in% stemSamples$codeStem) 
+# seqSamples %>%
+#   filter(!codeStem %in% stemSamples$codeStem) %>%
+#   separate(seq_sampName, into=c("drop","Stem"), 4, remove=FALSE) %>%
+#   filter(grepl("[1-9]", Stem))
+
+```
+
+
+-----------------------------------------
+## Create a time 0 sample list for wood C fraction analyses
+
+# Make sample list with basic metadata
+```{r}
+# isolate time0 samples to be analyzed for wood C fractions
+sawdustSamps %>%
+  left_join(stemSamples) %>%
+  filter(size == "large") %>%
+  select(sampleID, code, Stem, species, size, Binomial) %>%
+  mutate(time = 0) %>%
+  arrange(sampleID) -> timezero.samps
+# note: sequencing ids are the same as the sawdust tube sample id (i.e. sampleID == seq_sampName)
+write.csv(timezero.samps, file = "output/timezeroCsamps.csv")
+
+```
+
+# Make a trait table that corresponds to individual stems represented
+- Barkthick and density were only measured on small stems
+- Elemental concentrations were measured from the same sawdust used to extract microbial DNA (n = 1) and provided for cell wall C fractions
+- Waterperc was measured on segments of the same stem that were set out in the rotplot (n from 1 to 10)
+```{r}
+traitmeans.stem %>%
+  filter(codeStem %in% unique(timezero.samps$sampleID)) %>%
+  select(-c(species, size, code)) %>%
+  gather(key = "trait", value = "mean", -codeStem, na.rm = FALSE) -> tmp.means
+
+traitsds.stem %>%
+  filter(codeStem %in% unique(timezero.samps$sampleID)) %>%
+  select(-c(species, size, code)) %>%
+  gather(key = "trait", value = "sd", -codeStem, na.rm = FALSE) -> tmp.sd
+
+traitn.stem  %>%
+  filter(codeStem %in% unique(timezero.samps$sampleID)) %>%
+  select(-c(species, size, code)) %>%
+  gather(key = "trait", value = "n", -codeStem, na.rm = FALSE) -> tmp.n
+
+tmp.means %>%
+  left_join(tmp.sd) %>%
+  left_join(tmp.n) %>%
+  filter(!trait %in% c("barkthick","density")) %>%
+  arrange(codeStem, trait) %>%
+  rename('sampleID' = codeStem) -> timezero.stemTraits
+
+```
+
+# Make a trait table for barkthick and density of small stems of the same species
+```{r}
+traitmeans.code %>%
+  filter(code %in% unique(timezero.samps$species)) %>%
+  select(-c(species, size)) %>%
+  gather(key = "trait", value = "mean", -code, na.rm = FALSE) -> tmp.means
+
+traitsds.code %>%
+  filter(code %in% unique(timezero.samps$species)) %>%
+  select(-c(species, size)) %>%
+  gather(key = "trait", value = "sd", -code, na.rm = FALSE) -> tmp.sd
+
+traitn.code %>%
+  filter(code %in% unique(timezero.samps$species)) %>%
+  select(-c(species, size)) %>%
+  gather(key = "trait", value = "n", -code, na.rm = FALSE) -> tmp.n
+
+tmp.means %>%
+  left_join(tmp.sd) %>%
+  left_join(tmp.n) %>%
+  filter(trait %in% c("barkthick","density")) %>%
+  arrange(code, trait) -> timezero.barkdensity
+
+```
+
+# Plot trait values
+- Error bars are 1 standard deviation
+```{r}
+timezero.stemTraits %>%
+  left_join(timezero.samps) -> plot.df
+plot.df$trait <- recode(plot.df$trait, C = "C (%)", Ca = "Ca (ppm)", Fe = "Fe (ppm)", K = "K (ppm)", Mn = "Mn (ppm)", N = "N (%)", P = "P (ppm)", waterperc = "waterperc (%)", Zn = "Zn (ppm)")
+ggplot(data = plot.df, aes(y = code, x = mean)) +
+  geom_point(pch = 1) +
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) +
+  facet_wrap(~trait, scales = "free_x") +
+  theme_bw() + xlab("Trait value") + ylab("Wood species (code)")
+ggsave(file = "output/timezeroCsamps_traits.pdf", width = 6, height = 6)
+
+timezero.barkdensity$trait <- recode(timezero.barkdensity$trait, barkthick = "barkthick (mm)", density = "density (g/cm3)")
+ggplot(data = timezero.barkdensity, aes(y = code, x = mean)) +
+  geom_point(pch = 1) +
+  geom_errorbarh(aes(xmin = mean - sd, xmax = mean + sd)) +
+  facet_wrap(~trait, scales = "free_x") +
+  theme_bw() + xlab("Trait value") + ylab("Wood species (code)")
+ggsave(file = "output/timezeroCsamps_barkthickdensity.pdf", width = 4, height = 3)
+
+```
+
+# Plot mass loss for each codeStem
+```{r}
+pmr_byStem %>%
+  filter(codeStem %in% unique(timezero.samps$sampleID)) %>%
+  gather(key = "time", value = "pmr", -c(codeStem, code, species, size)) %>%
+  separate(time, into = c("drop","time"), "time") %>%
+  transform(time = as.numeric(time)) %>%
+  select(-drop, -species) -> timezero.pmr
+
+ggplot(data = timezero.pmr, aes(x = time/12, y = pmr)) +
+  geom_point() +
+  geom_line(aes(group = codeStem)) +
+  facet_wrap(~ code) + 
+  xlab("Time (years)") + ylab("Mass remaining (%)") +
+  theme_bw()
+ggsave(file = "output/timezeroCsamps_pmr.pdf", width = 6, height = 6)
+
+```
+
+
+-----------------------------------------
+## Create a time X sample list for wood C fraction analyses
+
+# Make sample list with basic metadata
+```{r}
+
+timex.codes <- c("EUTE","MEDE","ACPA","JASC","BAAE","PEPU")
+
+# identify segment samples that match these codes
+deployment <- read.csv("data/deployment.csv")
+deployment %>%
+  rename("code"="species") %>%
+  mutate(codeStem = paste0(code, Stem)) %>%
+  filter(code %in% timex.codes) %>%
+  arrange(codeStem, ID) -> deploy.codes
+
+# how many segments per code?
+deploy.codes %>%
+  group_by(code) %>%
+  summarize(n = sum(!is.na(rand)))
+
+# pull out the segments within the first 4 harvests
+harvest_mass %>%
+  rename("code"="species") %>%
+  filter(unique %in% deploy.codes$unique) %>%
+  left_join(deploy.codes) %>%
+  select(-rand, -order) %>%
+  select(time, code, codeStem, unique, totalSampleDryMass, total_density, fruiting, insects, drill, notes) %>%
+  arrange(code, time) -> tmp
+
+View(tmp)
+tmp %>%
+  group_by(code, time) %>%
+  summarize(n = sum(!is.na(totalSampleDryMass)))
+
+
+
+
+
+
+
+
+
+#write.csv(timezero.samps, file = "output/timezeroCsamps.csv")
+
+```
+

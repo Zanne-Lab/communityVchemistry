@@ -2,7 +2,7 @@
 load_stemSamples<-function(){
   
   deployment <- read_csv("data/deployment.csv")
-  deployment<-rename(deployment, "code"="species") #Code column
+  deployment <- rename(deployment, "code"="species") #Code column
   
   #summarize by stem
   deployment %>%

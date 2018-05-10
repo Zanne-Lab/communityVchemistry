@@ -37,77 +37,84 @@ source("code/analysisDF_fxns.R")
 
 ### Load microbial community data
 #sample meta data
-#stemSamples<-load_stemSamples() #uncomment if the data changes
-#write_csv(stemSamples, "derived_data/stemSamples.csv")
-stemSamples<-read_csv("derived_data/stemSamples.csv")
+stemSamples <- load_stemSamples() #uncomment if the data changes
 
 #OTU table
 #fung.otu<-load_matotu() #uncomment if the data changes
 #comm.otu<-add_oomycetes(fung.otu) #add the oomycetes #uncomment if the data changes
 #write.csv(comm.otu, "derived_data/comm_otu.csv")
-comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1)
+comm.otu <- read.csv("derived_data/comm_otu.csv", row.names=1)
 #plot_sampleEffortCurves(comm.otu) #this takes a while... uncomment if the data changes
 
 #create sequence sample meta data table
-#seqSamples<-load_seqSamples(comm.otu, stemSamples) #uncomment if the data changes
-#write_csv(seqSamples, "derived_data/seqSamples.csv")
-seqSamples<-read_csv("derived_data/seqSamples.csv")
+seqSamples <- load_seqSamples(comm.otu, stemSamples) #uncomment if the data changes
 
 #taxon lookup info
-#taxAndFunguild<-load_TaxAndFunguild(comm.otu) #uncomment if the data changes
-#write_csv(taxAndFunguild, "derived_data/taxaAndFunguild.csv")
-taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
+taxAndFunguild <- load_TaxAndFunguild(comm.otu) #uncomment if the data changes
 
 
 ### Load wood trait data
-# species+size-level trait data
-#traits.mean<-mergeTraitData() #uncomment if the data changes
-#write_csv(traits.mean, "derived_data/traits_code.csv") 
-traits.code<-read_csv("derived_data/traits_code.csv")
+# code-level
+traitmeans.code <- trait.means_byCode(stemSamples, fill.densitybark = F) # if fill.densitybark == T, then will use small size density and barkthickness estimates for large size too
+traitsds.code <- trait.sds_byCode(stemSamples)
+traitn.code <- trait.n_byCode(stemSamples)
 
 # stem-level trait data
-#traits.codeStem<-mergeTraitData_byStem() #uncomment if the data changes
-#write_csv(traits.codeStem, "derived_data/traits_stem.csv")
-traits.stem<-read_csv("derived_data/traits_stem.csv")
-
-
+traitmeans.stem <- trait.means_byStem(stemSamples)
+traitsds.stem <- trait.sds_byStem(stemSamples)
+traitn.stem <- trait.n_byStem(stemSamples)
+  
 ### Load decay data
 
 # load mass loss data and calculate percent mass remaining (pmr)
-#initial_mass <- read_in_initial_mass() #uncomment if the data changes
-#harvest_mass<-LoadHarvestFiles()
-#pmr<-Calc_massRemaining(initial_mass, harvest_mass)
-#write.csv(pmr,"derived_data/pmr.csv")
-pmr<-read.csv("derived_data/pmr.csv", row.names=1)
+initial_mass <- read_in_initial_mass() #uncomment if the data changes
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass)
 
 # average pmr for each stem and timepoint
-pmr_byStem<-AvgPMR_byStem(pmr)
+pmr_byStem <- AvgPMR_byStem(pmr)
 
 # calculate decay trajectory fits for each species+size
 #decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
 #write_csv(decayfits,"derived_data/decayfits.csv")
 decayfits <- read_csv("derived_data/decayfits.csv")
 
-# ggplot(decayfits,aes(x=t70,y=w.t70, col=size))+
-#   geom_point()+
-#   labs(x="Time to 30% mass loss (negative exponential)",
-#        y="Time to 30% mass loss (Weibull)")+
-#   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
-
-
-### Check for missing stem-level data
-traits.stem %>%
-  filter(!codeStem %in% stemSamples$codeStem) #there are 2 stems that are in the traits df but are missing from the stem lookup table...
-seqSamples %>%
-  filter(!codeStem %in% stemSamples$codeStem) %>%
-  separate(seq_sampName, into=c("drop","seq.stem"), 4, remove=FALSE) %>%
-  filter(grepl("[1-9]", seq.stem)) #these same 2 stems are in the sequence samples but are missing from the stem lookup table...
-
-pmr_byStem %>%
-  filter(!codeStem %in% stemSamples$codeStem) # no stem samples are missing from the decay data
 
 # wood phylo
 zanneTree <- load_zanne_tree()
+
+
+# saw dust sample inventory
+sawdust <- read.csv("data/approxSampleMass_forCfract.csv")
+sawdust %>%
+  separate(sampleID, into = c("code","Stem_maybe"), sep = 4, remove = F) %>%
+  mutate(Stem = ifelse(grepl('[0-9]$', Stem_maybe), Stem_maybe, NA)) %>% #stem assignment are only numbers
+  mutate(codeStem = paste0(code, Stem)) %>%
+  mutate(codeStem = ifelse(is.na(Stem), code, codeStem)) %>%
+  select(sampleID, code, codeStem) -> sawdustSamps 
+
+### Notes about stem-level data
+#there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+# acpa2 and lepa4
+# traitmeans.stem %>% filter(!codeStem %in% stemSamples$codeStem) 
+# seqSamples %>%
+#   filter(!codeStem %in% stemSamples$codeStem) %>%
+#   separate(seq_sampName, into=c("drop","Stem"), 4, remove=FALSE) %>%
+#   filter(grepl("[1-9]", Stem))
+
+# isolate time0 samples to be analyzed for wood C fractions
+sawdustSamps %>%
+  left_join(stemSamples) %>%
+  filter(size == "large") %>%
+  select(sampleID, code, Stem, species, size, Binomial) %>%
+  arrange(sampleID) -> tmp.large
+
+# sawdustSamps %>%
+#   left_join(stemSamples) %>%
+#   filter(size == "small") %>%
+#   select(sampleID, code, Stem, species, size, Binomial) %>%
+#   arrange(sampleID) -> tmp.small
+
 
 ```
 
@@ -119,7 +126,6 @@ Figure 1. Scaled decay rate (t70), decay variation (r2), and endophyte dissimila
 
 #plot wood phylo
 ggt <- ggtree(zanneTree) + geom_tiplab(size=4)
-# phylo drops 1 wood species
 
 #put together code-level data
 
@@ -189,106 +195,218 @@ pdf(file = "output/heatmap_decayendo.pdf",  width = 6, height = 6)
 grid.arrange(ggt, p.heat, nrow = 1,
              widths = c(1,8))
 dev.off()
-
 ```
 
-Figure 2. Initial wood trait means
+Figure 2. Initial wood trait *means*
 ```{r}
 
+t.levels <- c("waterperc","density","barkthick","C","N","P","Ca","Fe","K","Mn","Zn")
 
+make_traitByCode_plotdf <- function(trait.codeDF, stemSamples, b.levels, t.levels, title){
+  
+  #add Binomial
+  stemSamples %>%
+    select(size, code, Binomial) -> code.indx
+  trait.codeDF %>%
+    left_join(code.indx) -> tmp
+  
+  #scale it
+  justvals <- tmp[,!colnames(tmp) %in% c("code","species","size","Binomial")]
+  justvals.scaled <- scale(justvals)
+  tmp.scaled <- data.frame(tmp[,c("code","species","size","Binomial")], justvals.scaled)
+  
+  #gather and update factor levels for plotting
+  tmp.scaled %>%
+    gather(key = "trait", value = "trait.val", -c(code, species, size, Binomial)) %>%
+    mutate(Binomial = factor(Binomial, levels = b.levels)) %>%
+    mutate(trait = factor(trait, levels = t.levels)) -> tmp.scaled.l
+  
+  return(tmp.scaled.l)
+  
+}
 
-
-#traits
-traits.stem %>%
-  gather(key = "trait", value = "trait.val", 4:14) %>%
-  group_by(size, code, trait) %>%
-  summarize(n = sum(!is.na(trait.val)),
-            mean.val = mean(trait.val, na.rm = T),
-            sd.val = sd(trait.val, na.rm = T)) %>%
-  mutate(mean.val = ifelse(n <= 2, NA, mean.val)) %>%
-  mutate(sd.val = ifelse(n <= 2, NA, sd.val)) -> traits.stem.byCode
-# means
-tmp<-data.frame(traits.stem.byCode)
-tmp %>%
-  filter(!is.na(mean.val)) %>%
-  select(code, size, trait, mean.val) %>%
-  spread(key = trait, value = mean.val) -> trait.means
-colnames(trait.means)[3:13]<- paste0("mean_", colnames(trait.means)[3:13])
-# sds
-tmp<-data.frame(traits.stem.byCode)
-tmp %>%
-  filter(!is.na(sd.val)) %>%
-  select(code, size, trait, sd.val) %>%
-  spread(key = trait, value = sd.val) -> trait.sds
-colnames(trait.sds)[3:13]<- paste0("sd_", colnames(trait.sds)[3:13])
-
-traitnames <- c("density","barkthick","waterperc","C","N","P")
-
-# plot trait means
-all.traits <- unique(vars.byCode.scaled$measure)[grepl("mean", unique(vars.byCode.scaled$measure))]
-traits <- paste0("mean_", traitnames)
-select.traits <- c(traits, all.traits[!all.traits %in% traits])
-traits.df <- data.frame(measure = select.traits)
-traits.df %>%
-  separate(measure, into= c("drop","trait"), remove = F) -> traits.df
-vars.byCode.scaled %>%
-  filter(measure %in% select.traits) %>%
-  separate(measure, into= c("drop","trait")) %>%
-  mutate(trait = factor(trait, levels = traits.df$trait)) -> plot.df
-
-# plot
-p.heat <-ggplot(plot.df, aes(y = Binomial, x = size)) +
-  geom_tile(aes(fill = value), colour = "gray") + 
+#make plot
+tmp.scaled.l <- make_traitByCode_plotdf(trait.codeDF = traitmeans.code, 
+                                 title = "Trait means",
+                                 stemSamples, b.levels, t.levels)
+p.means <- ggplot(tmp.scaled.l, aes(y = Binomial, x = size)) +
+  geom_tile(aes(fill = trait.val), colour = "gray") + 
   facet_grid(~trait) +
   scale_fill_gradient2(mid = "gray",
                        na.value = "white") +
   theme_classic() + ylab("") + xlab("") +
-  ggtitle("Trait means")
-p.heat
+  ggtitle(title)
 
 # save plot
 pdf(file = "output/heatmap_traitmeans.pdf", width = 10, height = 6)
-grid.arrange(ggt, p.heat, nrow = 1,
+grid.arrange(ggt, p.means, nrow = 1,
              widths = c(1,15))
 dev.off()
 
 ```
 
-Figure 3. Initial wood trait standard deviations
+Figure 3. Initial wood trait *standard deviations*
 ```{r}
 
-traitnames <- c("density","barkthick","waterperc","C","N","P")
-
-# plot trait means
-all.traits <- unique(vars.byCode.scaled$measure)[grepl("sd", unique(vars.byCode.scaled$measure))]
-traits <- paste0("sd_", traitnames)
-select.traits <- c(traits, all.traits[!all.traits %in% traits])
-traits.df <- data.frame(measure = select.traits)
-traits.df %>%
-  separate(measure, into= c("drop","trait"), remove = F) -> traits.df
-vars.byCode.scaled %>%
-  filter(measure %in% select.traits) %>%
-  separate(measure, into= c("drop","trait")) %>%
-  mutate(trait = factor(trait, levels = traits.df$trait)) -> plot.df
-
-# plot
-p.heat <-ggplot(plot.df, aes(y = Binomial, x = size)) +
-  geom_tile(aes(fill = value), colour = "gray") + 
+#make plot
+tmp.scaled.l <- make_traitByCode_plotdf(trait.codeDF = traitsds.code, 
+                                 title = "Trait standard deviations",
+                                 stemSamples, b.levels, t.levels)
+p.sds <- ggplot(tmp.scaled.l, aes(y = Binomial, x = size)) +
+  geom_tile(aes(fill = trait.val), colour = "gray") + 
   facet_grid(~trait) +
   scale_fill_gradient2(mid = "gray",
                        na.value = "white") +
   theme_classic() + ylab("") + xlab("") +
-  ggtitle("Trait standard deviations")
-p.heat
+  ggtitle(title)
 
 # save plot
 pdf(file = "output/heatmap_traitsds.pdf", width = 10, height = 6)
-grid.arrange(ggt, p.heat, nrow = 1,
+grid.arrange(ggt, p.sds, nrow = 1,
              widths = c(1,15))
 dev.off()
 
 ```
 
+Figure 4a. Number of code-level samples: sawdust, endophyte community, percent mass loss at each time point, waterperc, density, barkthick, CN, and XRF. These include samples for which multiple stems were pooled to represent 1 code, e.g. many small diamter samples for XRF analysis like olst
+```{r}
+
+# sawdust samples in hand
+sawdustSamps %>%
+  group_by(codeStem) %>%
+  summarize(nSamps = sum(!is.na(sampleID))) %>%
+  mutate(measure = "sawdust") %>%
+  select(codeStem, measure, nSamps) -> sawdustSamps.l
+unique(sawdustSamps.l$codeStem)
+
+# trait coverage
+trait.data.l <- mergeTraitData()
+trait.data.l %>%
+  mutate(codeStem = paste0(code, Stem)) %>%
+  mutate(codeStem = ifelse(is.na(Stem), code, codeStem)) %>%
+  group_by(codeStem, trait) %>%
+  summarize(val = sum(!is.na(trait.val))) %>%
+  spread(key = trait, value = val) -> traitn.stem
+samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
+traitn.stem %>%
+  left_join(samp.indx) -> traitn.stem
+
+#note
+#there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+# acpa2 and lepa4
+# manually fill in the species and size column for these samples
+tmp <- traitn.stem
+tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
+tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+traitn.stem <- tmp
+traitn.stem %>%
+  gather(key = "measure", value = "nSamps", -c(codeStem, species, size, code)) %>%
+  select(codeStem, measure, nSamps) %>%
+  filter(!is.na(nSamps) & nSamps != 0) -> traitn.stem.l
+unique(traitn.stem.l$codeStem)
+
+# endophyte coverage
+tmp <- data.frame(seqSamples)
+tmp %>%
+  mutate(codeStem = ifelse(is.na(codeStem), code, codeStem)) %>%
+  group_by(codeStem) %>%
+  summarize(nSamps = sum(!is.na(seq_sampName))) %>%
+  mutate(measure = "endocomm") %>%
+  select(codeStem, measure, nSamps) -> seqSamples.l
+
+# mass loss coverage
+pmrn.stem <- n.PMR_byStem(pmr) #calculate the number of stem samples that we have pmr for at each time step
+pmrn.stem %>%
+  gather(key = "measure", value = "nSamps", -c(codeStem, species, size, code)) %>%
+  select(codeStem, measure, nSamps) %>%
+  filter(!is.na(nSamps) & nSamps !=0) -> pmrn.stem.l
+unique(pmrn.stem.l$codeStem)
+
+# join by codeStem
+sawdustSamps.l %>%
+  full_join(traitn.stem.l) %>%
+  full_join(traitn.stem.l) %>%
+  full_join(seqSamples.l) %>%
+  full_join(pmrn.stem.l) %>%
+  spread(key = measure, value = nSamps) %>%
+  separate(codeStem, into = c("code","Stem"), sep = 4, remove = F) %>%
+  mutate(Stem = ifelse(Stem == "", NA, Stem)) %>%
+  left_join(code.indx) %>%
+  gather(key = "measure", value = "nSamps", -c(codeStem, code, Stem, size, Binomial)) -> n.codeStem.samps
+
+# factor orders
+t.levels2 <- c("waterperc","density","barkthick","CN","XRF")
+times <- paste0("time", c(7, 13, 25, 37))
+m.levels <- c("sawdust","endocomm", times, t.levels2)
+
+# summarize the number of unique codeStems (pooled ok) that represent each code x measure
+n.codeStem.samps %>%
+  group_by(code, measure) %>%
+  summarize(nSamps.total = sum(nSamps, na.rm = T)) %>%
+  filter(measure != "N") %>% #get rid of extra CN measures
+  mutate(measure = ifelse(measure == "C", "CN", measure)) %>% #rename generic for CN
+  filter(!measure %in% c("Ca", "Fe", "K", "Mn", "Zn")) %>% #get rid of extra XRF measures
+  mutate(measure = ifelse(measure == "P", "XRF", measure)) %>% #rename generic for XRF
+  left_join(code.indx) %>%
+  mutate(measure = factor(measure, levels = m.levels)) %>%
+  mutate(Binomial = factor(Binomial, levels = b.levels)) %>%
+  filter(measure != "time0") %>%
+  mutate(nSamps.total = ifelse(nSamps.total == 0, NA, nSamps.total)) -> nSamps.measure
+  
+# make plot
+p.code <- ggplot(nSamps.measure, aes(y = Binomial, x = size, label = nSamps.total)) +
+  geom_tile(aes(fill = nSamps.total), colour = "gray") +
+  geom_text() +
+  facet_grid(~measure) +
+  scale_fill_gradient2(mid = "gray",
+                       na.value = "white") +
+  theme_classic() + ylab("") + xlab("") + guides(fill = F) +
+  ggtitle("Number of code-level samples")
+
+# save plot
+pdf(file = "output/heatmap_numCodeSamps.pdf", width = 10, height = 6)
+grid.arrange(ggt, p.code, nrow = 1,
+             widths = c(1,15))
+dev.off()
+
+```
+
+Figure 4b. Number of stem-level samples: sawdust, endophyte community, percent mass loss at each time point, waterperc, density, barkthick, CN, and XRF. These only include samples for which a Stem number was provided. A few sample IDs included the code + [A:Z] -- these were assummed to be pooled across multiple Stems and so are not included here.
+```{r}
+
+# summarize the number of samples that are represented in each code x measure
+n.codeStem.samps %>%
+  filter(!is.na(Stem)) %>%
+  group_by(code, measure) %>%
+  summarize(nStems = sum(!is.na(nSamps))) %>%
+  filter(measure != "N") %>% #get rid of extra CN measures
+  mutate(measure = ifelse(measure == "C", "CN", measure)) %>% #rename generic for CN
+  filter(!measure %in% c("Ca", "Fe", "K", "Mn", "Zn")) %>% #get rid of extra XRF measures
+  mutate(measure = ifelse(measure == "P", "XRF", measure)) %>% #rename generic for XRF
+  left_join(code.indx) %>%
+  mutate(measure = factor(measure, levels = m.levels)) %>%
+  mutate(Binomial = factor(Binomial, levels = b.levels)) %>%
+  filter(measure != "time0") %>%
+  mutate(nStems = ifelse(nStems == 0, NA, nStems)) -> nStems.measure
+
+# stem-specific info
+p.stem <- ggplot(nStems.measure, aes(y = Binomial, x = size, label = nStems)) +
+  geom_tile(aes(fill = nStems), colour = "gray") +
+  geom_text() +
+  facet_grid(~measure) +
+  scale_fill_gradient2(mid = "gray",
+                       na.value = "white") +
+  theme_classic() + ylab("") + xlab("") +
+  guides(fill = FALSE) +
+  ggtitle("Number of individual stems per code represented")
+
+# save plot
+pdf(file = "output/heatmap_numStems.pdf", width = 10, height = 6)
+grid.arrange(ggt, p.stem, nrow = 1,
+             widths = c(1,15))
+dev.off()
+
+```
 
 -----------------------------------------
 ## Branch-level mass loss
@@ -298,12 +416,9 @@ Figure 3. Intraspecific variation in wood mass loss
 
 #make a long version of pmr.byStem.df.w
 pmr_byStem %>%
-  gather(key="time",value="mean.pmr", 4:8, na.rm=TRUE) %>%
+  gather(key="time",value="mean.pmr", -c(codeStem, code, species, size), na.rm=TRUE) %>%
   separate(time, into=c("drop","timeNum"), sep="time") %>%
   mutate(timeNum=as.numeric(timeNum)) %>%
-  mutate(species=tolower(code)) %>%
-  mutate(size = case_when(code == species ~ "small", 
-                          code != species ~ "large")) %>%
   select(-drop) -> pmr.byStem.df
 
 p.pmrBystem<-ggplot(pmr.byStem.df, 
@@ -313,11 +428,132 @@ p.pmrBystem<-ggplot(pmr.byStem.df,
   geom_line() + facet_wrap(~code) +
   xlab("Time (years)") + ylab("Mass remaining (%)") + theme_bw() +
   scale_linetype_manual(values=c(2,1)) + guides(linetype = F)
-p.pmrBystem
 
+p.pmrBystem
 ggsave(file="output/pmrBystem.pdf", width = 10, height = 10)
 
 
 ```
+
+
+-----------------------------------------
+## Heatmaps for select codes
+Only species that have at least 3 stem-specific sawdust samples for large and small size classes
+
+# Figure Xa. Number of stems represented at each time point, and for non-chemistry traits
+```{r}
+
+nStems.measure %>%
+  filter(measure %in% c("sawdust","endocomm","CN","XRF")) %>%
+  filter(nStems >= 3) %>%
+  spread(key = measure, value = nStems) %>%
+  filter(!is.na(sawdust) & !is.na(endocomm) & !is.na(CN) & !is.na(XRF)) %>%
+  select(code, size) %>%
+  mutate(species = tolower(code)) %>%
+  spread(key = size, value = code) %>%
+  filter(!is.na(large) & !is.na(small)) -> select.species
+
+select.species
+
+# number of individual stems per code represented in pmr, waterperc, density and barkthick
+nStems.measure %>%
+  mutate(species = tolower(code)) %>%
+  filter(species %in% select.species$species) %>%
+  filter(measure %in% c("time7","time13","time25","time37","waterperc","density","barkthick"))-> plot.df
+p.stems.select <- ggplot(plot.df, aes(y = Binomial, x = size, label = nStems)) +
+  geom_tile(aes(fill = nStems), colour = "gray") +
+  geom_text() +
+  facet_grid(~measure) +
+  scale_fill_gradient2(mid = "gray", na.value = "white") +
+  theme_classic() + ylab("") + xlab("") +
+  guides(fill = FALSE) +
+  ggtitle("Number of individual stems per code represented")
+p.stems.select
+
+# # number of samples per code represented
+# nSamps.measure %>%
+#   mutate(species = tolower(code)) %>%
+#   filter(species %in% select.species$species) -> plot.df
+# p.samps.select <- ggplot(plot.df, aes(y = Binomial, x = size, label = nSamps.total)) +
+#   geom_tile(aes(fill = nSamps.total), colour = "gray") +
+#   geom_text() +
+#   facet_grid(~measure) +
+#   scale_fill_gradient2(mid = "gray", na.value = "white") +
+#   theme_classic() + ylab("") + xlab("") +
+#   guides(fill = FALSE) +
+#   ggtitle("Number of samples per code")
+# p.samps.select
+
+```
+
+# Figure Xb. Decay rate (t70), decay variation (r2), endophyte community distance (jaccDist)
+```{r}
+
+vars.byCode %>%
+  filter(measure %in% c("t70","ne.r2","jaccDist")) %>%
+  mutate(measure = factor(measure, levels = c("t70","ne.r2","jaccDist"))) %>%
+  mutate(species = tolower(code)) %>%
+  filter(species %in% select.species$species) %>%
+  spread(key = measure, value = value)
+
+#decay and endos
+vars.byCode.scaled %>%
+  filter(measure %in% c("t70","ne.r2","jaccDist")) %>%
+  mutate(measure = factor(measure, levels = c("t70","ne.r2","jaccDist"))) %>%
+  mutate(species = tolower(code)) %>%
+  filter(species %in% select.species$species)-> plot.df
+
+p.decayendo <-ggplot(plot.df, aes(y = Binomial, x = size)) +
+  geom_tile(aes(fill = value), colour = "gray") + 
+  facet_grid(~measure) +
+  scale_fill_gradient2(mid = "gray",
+                       na.value = "white") +
+  theme_classic() + ylab("") + xlab("")
+
+p.decayendo
+ggsave(file = "output/select_decayendo.pdf", width = 5, height = 4)
+
+```
+
+# Figure Xc. Trait means and standard deviations
+```{r}
+
+# trait means
+tmp.scaled.l <- make_traitByCode_plotdf(trait.codeDF = traitmeans.code, 
+                                 title = "Trait means",
+                                 stemSamples, b.levels, t.levels)
+tmp.scaled.l %>%
+  mutate(species = tolower(code)) %>%
+  filter(species %in% select.species$species) -> tmp.scaled.l
+p.means <- ggplot(tmp.scaled.l, aes(y = Binomial, x = size)) +
+  geom_tile(aes(fill = trait.val), colour = "gray") + 
+  facet_grid(~trait) +
+  scale_fill_gradient2(mid = "gray", na.value = "white") +
+  theme_classic() + ylab("") + xlab("") +
+  ggtitle("Means") + guides(fill=FALSE)
+
+# trait standard deviations
+tmp.scaled.l <- make_traitByCode_plotdf(trait.codeDF = traitsds.code, 
+                                 title = "Trait sds",
+                                 stemSamples, b.levels, t.levels)
+tmp.scaled.l %>%
+  mutate(species = tolower(code)) %>%
+  filter(species %in% select.species$species) -> tmp.scaled.l
+p.sds <- ggplot(tmp.scaled.l, aes(y = Binomial, x = size)) +
+  geom_tile(aes(fill = trait.val), colour = "gray") + 
+  facet_grid(~trait) +
+  scale_fill_gradient2(mid = "gray", na.value = "white") +
+  theme_classic() + ylab("") + xlab("") +
+  ggtitle("Standard deviations") + guides(fill = FALSE)
+
+pdf(file = "output/select_traits.pdf", width = 8, height = 4)
+grid.arrange(p.means, p.sds, ncol = 1)
+dev.off()
+
+
+```
+
+
+
 
 
