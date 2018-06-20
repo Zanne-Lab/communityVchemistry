@@ -185,7 +185,7 @@ harvest_ReorgDataFrame<-function(data){
   #rename and select columns
   data %>%
     rename("fruiting"="fruitingBodies","insects"="insectDamage") %>%
-    select(unique, species, size, time, totalSampleDryMass, total_density, fruiting, insects, drill, notes) -> data
+    select(order, unique, species, size, time, totalSampleDryMass, total_density, fruiting, insects, drill, notes) -> data
   
   return(data)
   
