@@ -17,7 +17,7 @@ library(tidyr) #data formatting
 library(dplyr) #data formatting
 library(ggplot2) #plotting
 library(grid) #plotting
-devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
+#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
 library(litterfitter) #fit decay models to timeseries
 library(lmtest) # for coxtest()
 library(vegan) #diversity metrics
@@ -30,46 +30,45 @@ source("code/load_decayData_fxns.R")
 source("code/summaryTable_fxns.R")
 source("code/analysisDF_fxns.R")
 
+
 ```
 
 ### Load microbial community data
 ```{r, echo=FALSE}
 #sample meta data
-#stemSamples<-load_stemSamples() #uncomment if the data changes
-#write_csv(stemSamples, "derived_data/stemSamples.csv")
-stemSamples<-read_csv("derived_data/stemSamples.csv")
+stemSamples <- load_stemSamples()
 
 #OTU table
-#fung.otu<-load_matotu() #uncomment if the data changes
-#comm.otu<-add_oomycetes(fung.otu) #add the oomycetes #uncomment if the data changes
-#write.csv(comm.otu, "derived_data/comm_otu.csv")
-comm.otu<-read.csv("derived_data/comm_otu.csv", row.names=1)
+fung.otu <- load_matotu() 
+comm.otu <- add_oomycetes(fung.otu) #add the oomycetes
 #plot_sampleEffortCurves(comm.otu) #this takes a while... uncomment if the data changes
 
 #create sequence sample meta data table
-#seqSamples<-load_seqSamples(comm.otu, stemSamples) #uncomment if the data changes
-#write_csv(seqSamples, "derived_data/seqSamples.csv")
-seqSamples<-read_csv("derived_data/seqSamples.csv")
+seqSamples <- load_seqSamples(comm.otu, stemSamples)
 
 #taxon lookup info
-#taxAndFunguild<-load_TaxAndFunguild(comm.otu) #uncomment if the data changes
-#write_csv(taxAndFunguild, "derived_data/taxaAndFunguild.csv")
-taxAndFunguild<-read_csv("derived_data/taxaAndFunguild.csv")
+taxAndFunguild <- load_TaxAndFunguild(comm.otu)
 
 ```
 
 ### Load wood trait data
 ```{r, echo=FALSE}
 
-# species+size-level trait data
-#traits.mean<-mergeTraitData() #uncomment if the data changes
-#write_csv(traits.mean, "derived_data/traits_code.csv") 
-traits.code<-read_csv("derived_data/traits_code.csv")
+# all trait data
+#trait.data.l <- mergeTraitData()
+#head(trait.data.l)
+#rm(trait.data.l)
 
-# stem-level trait data
-#traits.codeStem<-mergeTraitData_byStem() #uncomment if the data changes
-#write_csv(traits.codeStem, "derived_data/traits_stem.csv")
-traits.stem<-read_csv("derived_data/traits_stem.csv")
+# averaged by code
+#if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE)
+#trait.sds_byCode(stemSamples) # within code variation
+#trait.n_byCode(stemSamples) # number of code samples that were aggregated
+
+# averaged by codeStem
+traits.stem <- trait.means_byStem(stemSamples)
+#trait.sds_byStem(stemSamples) # within codeStem variation
+#trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
 
 ```
 
@@ -77,14 +76,12 @@ traits.stem<-read_csv("derived_data/traits_stem.csv")
 ```{r}
 
 # load mass loss data and calculate percent mass remaining (pmr)
-#initial_mass <- read_in_initial_mass() #uncomment if the data changes
-#harvest_mass<-LoadHarvestFiles()
-#pmr<-Calc_massRemaining(initial_mass, harvest_mass)
-#write.csv(pmr,"derived_data/pmr.csv")
-pmr<-read.csv("derived_data/pmr.csv", row.names=1)
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass)
 
 # average pmr for each stem and timepoint
-pmr_byStem<-AvgPMR_byStem(pmr)
+pmr_byStem <- AvgPMR_byStem(pmr)
 
 # calculate decay trajectory fits for each species+size
 #decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
@@ -123,10 +120,10 @@ Figure 1. Wood species x decay params
 ```{r}
 
 #make plot of decay params by wood species
-decayfits.p<-left_join(decayfits, stemSamples)
+decayfits.p <- left_join(decayfits, stemSamples)
 
 # t70
-p.t70<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) + 
+p.t70 <- ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) + 
   geom_point() +
   #geom_errorbar(aes(ymin=t70.lower, ymax=t70.upper)) +
   coord_flip() +
@@ -136,9 +133,9 @@ p.t70<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=t70, shape=size)) +
   theme(plot.margin = unit(c(0,1,0,0), "lines"))
 
 # k
-p.k<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) + 
+p.k <- ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) + 
   geom_point() +
-  geom_errorbar(aes(ymin=k.lower, ymax=k.upper)) +
+  #geom_errorbar(aes(ymin=k.lower, ymax=k.upper)) +
   coord_flip() +
   xlab("Wood species") + ylab("k (year^-1)") + theme_bw() +
   scale_shape_manual(values=c('large'=19, 'small'=1)) + 
@@ -150,7 +147,7 @@ p.k<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=k, shape=size)) +
             plot.background = element_blank())
 
 # ne.r2
-p.r2<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) + 
+p.r2 <- ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) + 
   geom_point() +
   coord_flip() +
   xlab("Wood species") + ylab("Neg. expon. R2") + theme_bw() +
@@ -162,22 +159,23 @@ p.r2<-ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=ne.r2, shape=size)) +
             plot.margin = unit(c(0,1,0,0), "lines"),
             plot.background = element_blank())
 
-pdf("output/decayfits.pdf", width=10, height=6)
-grid.newpage()
-grid.draw(cbind(ggplotGrob(p.t70), ggplotGrob(p.k), ggplotGrob(p.r2), size = "last"))
-dev.off()
+#pdf("output/decayfits.pdf", width=10, height=6) # uncomment if the data change
+#grid.newpage()
+#grid.draw(cbind(ggplotGrob(p.t70), ggplotGrob(p.k), ggplotGrob(p.r2), size = "last"))
+#dev.off()
 
 rm(p.t70, p.k, p.r2)
 
 ```
-
+![Figure 1](output/decayfits.pdf)
 
 Figure 2. Time x percent mass remaining by wood species
 ```{r}
 
 #make a long version of pmr.byStem.df.w
+head(pmr_byStem)
 pmr_byStem %>%
-  gather(key="time",value="mean.pmr", 4:8, na.rm=TRUE) %>%
+  gather(key="time",value="mean.pmr", 2:6, na.rm=TRUE) %>%
   separate(time, into=c("drop","timeNum"), sep="time") %>%
   mutate(timeNum=as.numeric(timeNum)) %>%
   mutate(species=tolower(code)) %>%
@@ -186,22 +184,22 @@ pmr_byStem %>%
   select(-drop) -> pmr.byStem.df
 
 #order the wood species by t70 to match species order in previous figure
-woodSp.o<-levels(reorder(decayfits.p$species, -decayfits.p$t70))
-pmr.byStem.df$species<-factor(pmr.byStem.df$species, levels=rev(woodSp.o))
+woodSp.o <- levels(reorder(decayfits.p$species, -decayfits.p$t70))
+pmr.byStem.df$species <- factor(pmr.byStem.df$species, levels=rev(woodSp.o))
 
-p.pmrBystem<-ggplot(pmr.byStem.df, aes(x=timeNum, y=mean.pmr*100, group=codeStem, linetype=size)) + 
+p.pmrBystem <- ggplot(pmr.byStem.df, aes(x=timeNum, y=mean.pmr*100, group=codeStem, linetype=size)) + 
   geom_line() + facet_wrap(~species) +
   xlab("Time (years)") + ylab("Mass remaining (%)") + theme_bw() +
   scale_linetype_manual(values=c(2,1)) + guides(linetype=FALSE)
 
-pdf("output/pmr_byStem.pdf", width=6, height=6)
-p.pmrBystem
-dev.off()
+# pdf("output/pmr_byStem.pdf", width=6, height=6) # uncomment if the data change
+# p.pmrBystem
+# dev.off()
 
 rm(decayfits.p, woodSp.o, p.pmrBystem, pmr.byStem.df)
 
 ```
-
+![Figure 2](output/pmr_byStem.pdf)
 
 ##########################################
 
@@ -213,6 +211,8 @@ We expect initial wood traits will explain varitation in species+size decay rate
 ```{r, include=FALSE}
 
 #merge traits and response variables into 1 df
+head(decayfits)
+head(traits.code)
 decayfits %>%
   select(code, species, size, ne.r2, k, t70, alpha) %>%
   left_join(traits.code) %>% 

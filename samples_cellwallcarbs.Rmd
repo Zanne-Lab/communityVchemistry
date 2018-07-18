@@ -243,7 +243,7 @@ harvest_mass %>%
   select(time, code, codeStem, unique, totalSampleDryMass, total_density, fruiting, insects, drill, notes) %>%
   arrange(code, time) -> tmp
 
-View(tmp)
+
 tmp %>%
   group_by(code, time) %>%
   summarize(n = sum(!is.na(totalSampleDryMass)))
