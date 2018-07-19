@@ -16,16 +16,17 @@ AverageOTUabund_byCode<-function(comm.otu, seqSamples){
     curr.comm.otu<-comm.otu[row.names(comm.otu) %in% curr.seqSamps,]
     #summarize
     temp<-apply(curr.comm.otu, 2, mean, na.rm=TRUE)
+    temp[is.nan(temp)] <- NA
     temp2<-t(data.frame(temp))
     temp3<-data.frame(code=CODE[i], temp2)
     meanOTUabund.list[[i]]<-temp3
-    
     temp<-apply(curr.comm.otu, 2, sd, na.rm=TRUE)
+    temp[is.nan(temp)] <- NA
     temp2<-t(data.frame(temp))
     temp3<-data.frame(code=CODE[i], temp2)
     sdOTUabund.list[[i]]<-temp3
   }
-  meanOTUabund<-bind_rows(meanOTUabund.list) 
+  meanOTUabund <- bind_rows(meanOTUabund.list) 
   #warnings() #these are about binding characters and factors
   
   #make the code col into rownames
@@ -33,7 +34,7 @@ AverageOTUabund_byCode<-function(comm.otu, seqSamples){
   row.names(tmp)<-meanOTUabund$code
   
   #get rid of empty OTU cols
-  meanOTUabund.trim<-tmp[,colSums(tmp)!=0]
+  meanOTUabund.trim<-tmp[,colSums(tmp, na.rm = T)!=0]
   
   return(meanOTUabund.trim)
   
@@ -75,7 +76,7 @@ Calc_richOTUtype<-function(colNam, grepTerm, taxAndFunguild, comm.otu){
   sub.otus<-taxAndFunguild[grepl(grepTerm,tf.col),"OTUId"]
   
   # subset the OTU table by the select otus
-  sub.otu<-comm.otu[,colnames(comm.otu) %in% sub.otus$OTUId]
+  sub.otu<-comm.otu[,colnames(comm.otu) %in% sub.otus]
   
   # turn the OTU table into presence/absence
   sub.otu.pa<-sub.otu

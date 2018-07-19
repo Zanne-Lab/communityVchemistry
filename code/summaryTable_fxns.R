@@ -1,4 +1,23 @@
 
+list_to_df <- function(mylist){
+  
+  # make a vector of row ids that correspond to the list names
+  rowid.indx <- lapply(mylist, function(x) dim(x)[1])
+  sourceVec.list <- list()
+  for(i in 1:length(rowid.indx)){
+    sourceName <- names(rowid.indx)[i]
+    numRows <- rowid.indx[[i]]
+    sourceVec.list[[i]] <- rep(sourceName, numRows)
+  }
+  rowVec <- unlist(sourceVec.list)
+  
+  # combine into df
+  df <- data.frame(do.call(rbind, mylist))
+  df$source <- rowVec
+  
+  return(df)
+}
+
 #########
 # LM summary stats
 

@@ -1,9 +1,8 @@
 "","term","df","Fval","pval"
-"1","size",1,1.65,0.003
-"2","barkthick",1,1.49,0.008
-"3","density",1,1.46,0.009
-"4","Ca",1,1.43,0.016
-"5","Residual",27,NA,NA
-"6",NA,NA,NA,NA
-"7","Constrained inertia",2.38,NA,NA
-"8","Unconstrained inertia",10.35,NA,NA
+"1","size",1,1.4,0.019
+"2","barkthick",1,1.6,0.004
+"3","waterperc",1,1.41,0.019
+"4","Residual",29,NA,NA
+"5",NA,NA,NA,NA
+"6","Constrained inertia",1.91,NA,NA
+"7","Unconstrained inertia",11.16,NA,NA

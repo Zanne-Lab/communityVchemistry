@@ -1,15 +1,14 @@
 "","term","df","Fval","pval"
-"1","size",1,1.88,0.004
-"2","waterperc",1,2.77,0.001
-"3","C",1,2.83,0.001
-"4","barkthick_smspp",1,2.31,0.001
-"5","Mn",1,2.07,0.005
-"6","K",1,1.73,0.009
-"7","N",1,2.2,0.003
-"8","Fe",1,1.71,0.015
-"9","density_smspp",1,1.6,0.028
-"10","Ca",1,1.64,0.02
-"11","Residual",45,NA,NA
-"12",NA,NA,NA,NA
-"13","Constrained inertia",7.82,NA,NA
-"14","Unconstrained inertia",14.01,NA,NA
+"1","waterperc",1,2.37,0.001
+"2","size",1,2.6,0.001
+"3","C",1,2.7,0.001
+"4","barkthick_smspp",1,2.64,0.001
+"5","N",1,2.02,0.002
+"6","K",1,1.59,0.027
+"7","Ca",1,1.93,0.003
+"8","density_smspp",1,1.68,0.014
+"9","Mn",1,1.61,0.024
+"10","Residual",47,NA,NA
+"11",NA,NA,NA,NA
+"12","Constrained inertia",7.18,NA,NA
+"13","Unconstrained inertia",14.86,NA,NA
