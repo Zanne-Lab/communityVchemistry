@@ -133,13 +133,17 @@ read.samp4 <- function(){
   # when recording wood volume, could not measure on whole piece so additional wet weights recorded for relevant fragment
   # following code is for sorting this out
   temp <- strsplit(gsub('^\\(', '', samp4$drilledWeight), ' total) ', fixed=T)
-  samp4$weightForVol <- sapply(temp, function(x){if(length(x) == 2) as.numeric(x)[2] else as.numeric(x)[1]})
-  x <- samp4$weightForVol %in% 0
-  samp4[x, 'weightForVol'] <- samp4[x, 'wetWeight']
-  rm(temp, x)
+  # samp4$weightForVol <- sapply(temp, function(x){if(length(x) == 2) as.numeric(x)[2] else as.numeric(x)[1]})
+  # x <- samp4$weightForVol %in% 0
+  # samp4[x, 'weightForVol'] <- samp4[x, 'wetWeight']
+  samp4$weightForVol <- samp4$dryMass.piece.used.to.do.vol.mass.
+  samp4$drilledWeight <- sapply(temp, function(x){as.numeric(x)[1]})
+  samp4[samp4$drill == 'no', 'drilledWeight'] <- NA
+  samp4[samp4$drill == 'yes' & samp4$wetWeight == 0, 'drilledWeight'] <- NA
+  rm(temp)
   # include excess wood in bag (fragments falling off during transit) for wet and dry mass of whole harvested piece
   samp4$wetWeightForMass <- apply(samp4[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
-  samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA
+  samp4[is.na(samp4$wetWeight), 'wetWeightForMass'] <- NA  # two samples missing from plot
   samp4[is.na(samp4$total.dry), 'total.dry'] <- samp4[is.na(samp4$total.dry), 'dryMass.piece.used.to.do.vol.mass.']
   samp4$dryMass <- apply(samp4[, c('dry.WWE', 'total.dry')], 1, sum, na.rm=T)
   samp4[with(samp4, which(is.na(dry.WWE) & is.na(total.dry))), 'dryMass'] <- NA
@@ -158,10 +162,48 @@ read.samp4 <- function(){
   return(samp4)
 }
 
+read.samp5 <- function(){
+  samp5 <- read.csv('data/samp5data_201806_quantitative.csv', stringsAsFactors=F)
+  # ensure consistency in column names
+  names(samp5) <- gsub('dryMassVolPiece', 'weightForVol', names(samp5))
+  names(samp5) <- gsub('totalDryMass', 'total.dry', names(samp5))
+  # 'totalDryMass' only included value if 'dryMassVolPiece' measured on fragment, sum of fragment and other wood pieces
+  # include mass of fragment where this column is NA
+  samp5[is.na(samp5$total.dry), 'total.dry'] <- samp5[is.na(samp5$total.dry), 'weightForVol']
+  # include excess wood in bag (fragments falling off during transit) for wet and dry mass of whole harvested piece
+  samp5$wetWeightForMass <- apply(samp5[, c('wetWeight', 'wetWeightExcess')], 1, sum, na.rm=T)
+  samp5[is.na(samp5$wetWeight), 'wetWeightForMass'] <- NA
+  samp5$dryMass <- apply(samp5[, c('dry.WWE', 'total.dry')], 1, sum, na.rm=T)
+  samp5[with(samp5, which(is.na(dry.WWE) & is.na(total.dry))), 'dryMass'] <- NA
+  # include damage scoring data
+  samp5.1 <- read.csv('data/samp5data_201806_qualitative.csv', stringsAsFactor=F)
+  names(samp5.1) <- gsub('notes', 'notes1', names(samp5.1))
+  names(samp5.1) <- gsub('typeInsects', 'typesInsects', names(samp5.1))
+  samp5 <- merge(samp5, samp5.1)
+  samp5$notes <- with(samp5, paste(notes, notes1, sep=' -- '))
+  samp5$notes1 <- samp5$dry.WWE <- samp5$dryMass.piece.used.to.do.vol.mass. <- NULL
+  samp5$time <- 59
+  #select columns to keep
+  keepCols<-c("order","unique","drill","wetWeight","fruitingBodies","wetWeightExcess",
+              "drilledWeight","volMass","volMassRetained","insectDamage","weightForVol","dryMass",
+              "notes","typesInsects","wetWeightForMass","time")
+  samp5<-samp5[, keepCols]
+  samp5$wetWeight <- samp5$wetWeight / 1000
+  samp5$wetWeightExcess <- samp5$wetWeightExcess / 1000
+  samp5$drilledWeight <- samp5$drilledWeight / 1000
+  samp5$volMass <- samp5$volMass / 1000
+  samp5$volMassRetained <- samp5$volMassRetained / 1000
+  samp5$weightForVol <- samp5$weightForVol / 1000
+  samp5$dryMass <- samp5$dryMass / 1000
+  samp5$wetWeightForMass <- samp5$wetWeightForMass / 1000
+  return(samp5)
+}
+
 harvest_CalcTotalDryMass<-function(data){
   data$totalSampleDryMass <- NA
   x <- which(data$drill == 'no' | data$dryMass == 0 | data$weightForVol == 0); data$totalSampleDryMass[x] <- data$dryMass[x]
-  x <- which(data$drill == 'yes' & data$dryMass > 0 & data$weightForVol > 0); data$totalSampleDryMass[x] <- (data$weightForVol[x] * data$dryMass[x]) / data$wetWeightForMass[x]
+  x <- which(data$drill == 'yes' & !is.na(data$drilledWeight) & data$wetWeightForMass > 0); data$totalSampleDryMass[x] <- (data$drilledWeight[x] * data$dryMass[x]) / data$wetWeightForMass[x]
+  x <- which(data$drill == 'yes' & is.na(data$drilledWeight) & data$wetWeightForMass > 0); data$totalSampleDryMass[x] <- data$dryMass[x]
   data$totalSampleDryMass <- round(data$totalSampleDryMass, 2)
   return(data)
 }
@@ -198,9 +240,10 @@ LoadHarvestFiles<-function(){
   s2 <- read.samp2()
   s3 <- read.samp3()
   s4 <- read.samp4()
+  s5 <- read.samp5()
   
   #bind everything together
-  s.data<-rbind(s1,s2,s3,s4)
+  s.data<-rbind(s1,s2,s3,s4,s5)
   
   #calculate total dry mass
   s.data<-harvest_CalcTotalDryMass(s.data)
@@ -211,10 +254,22 @@ LoadHarvestFiles<-function(){
   #reorganize data frame
   s.data<-harvest_ReorgDataFrame(s.data)
   
+  #fix issues with problematic samples
+  #duplicates -- s.data[duplicated(s.data$unique, fromLast=F), ]; s.data[duplicated(s.data$unique, fromLast=T), ]
+  s.data[s.data$unique == 'ripi3k' & s.data$time == 37, c('order', 'unique', 'notes')] <- c(NA, 'ripi3b', '')  # ripi3b taken instead of ripi3k at 37
+  s.data <- filter(s.data, !(unique == 'ALLI311' & time == 37))  # not found at 37, harvested later
+  s.data <- filter(s.data, !(unique == 'baae1a' & time == 37))  # not found at 37, harvested later
+  #very high density values -- filter(s.data, total_density > 1)
+  
+  
   #check for missing data
   #filter(s.data, is.na(totalSampleDryMass))
-  filter(s.data, is.na(totalSampleDryMass), notes =="all wwe -- all wet weight excess") #what does this note mean?
+  filter(s.data, notes =="all wwe -- all wet weight excess")  # sample not intact so no drilling and density not measured
   filter(s.data, is.na(totalSampleDryMass), notes !="all wwe -- all wet weight excess") #for missing samples, we don't know if they rotted away completely or were moved/missing, so entered as NA
+  #some looked to be completely rotted, entered totalSampleDryMass as 0
+  x <- c(grep('rotted', s.data$notes, value=T), grep('crumbled', s.data$notes, value=T))
+  s.data[s.data$notes %in% x & is.na(s.data$totalSampleDryMass), 'totalSampleDryMass'] <- 0
+  rm(x)
   
   return(s.data)
   
