@@ -358,7 +358,8 @@ AvgPMR_byStem<-function(plotting_df){
            'time7'=`7`,
            'time13'=`13`,
            'time25'=`25`,
-           'time37'=`37`) -> pmr.byStem.df.w
+           'time37'=`37`, 
+           'time59'=`59`) -> pmr.byStem.df.w
   
   return(pmr.byStem.df.w)
   
