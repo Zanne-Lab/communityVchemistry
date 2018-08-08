@@ -34,7 +34,7 @@ source("code/analysisDF_fxns.R")
 ```
 
 ### Load microbial community data
-```{r, echo=FALSE}
+```{r}
 #sample meta data
 stemSamples <- load_stemSamples()
 
@@ -52,7 +52,7 @@ taxAndFunguild <- load_TaxAndFunguild(comm.otu)
 ```
 
 ### Load wood trait data
-```{r, echo=FALSE}
+```{r}
 
 # all trait data
 #trait.data.l <- mergeTraitData()
@@ -73,7 +73,7 @@ traits.stem <- trait.means_byStem(stemSamples)
 ```
 
 ### Load percent mass remaining (pmr) data
-```{r, echo = F}
+```{r}
 # load mass loss data and calculate percent mass remaining (pmr)
 initial_mass <- read_in_initial_mass()
 harvest_mass <- LoadHarvestFiles()
@@ -85,7 +85,7 @@ pmr_byStem <- AvgPMR_byStem(pmr)
 ```
 
 Plot pmr data
-```{r, echo = F}
+```{r}
 ggplot(pmr, aes(y=pmr, x=time, color = size)) + 
   geom_point(alpha=.8) +
   geom_hline(yintercept = 1, linetype = 2) +
@@ -94,8 +94,8 @@ ggplot(pmr, aes(y=pmr, x=time, color = size)) +
   geom_smooth()
 ```
 
-Calculate decay trajectory fits for each species+size
-```{r, echo = F}
+Calculate decay trajectory fits for each code (species+size)
+```{r}
 # calculate decay trajectory fits for each species+size
 #decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
 #write_csv(decayfits,"derived_data/decayfits.csv")
@@ -104,8 +104,8 @@ decayfits <- read_csv("derived_data/decayfits.csv")
 rm(pmr)
 ```
 
-Compare negative exp. vs weibull by plotting time to 30% mass remaining (t70) for each species+size
-```{r, echo = F}
+Compare negative exp. vs weibull by plotting time to 70% mass remaining (t70) for each species+size
+```{r}
 ggplot(decayfits,aes(x=t70,y=w.t70,col=size))+
   geom_point()+
   labs(x="Time to 30% mass loss (negative exponential)",
@@ -115,7 +115,7 @@ ggplot(decayfits,aes(x=t70,y=w.t70,col=size))+
 ```
 
 Check for missing stem-level data
-```{r, echo = F}
+```{r}
 traits.stem %>%
   filter(!codeStem %in% stemSamples$codeStem) #there are 2 stems that are in the traits df but are missing from the stem lookup table...
 
@@ -130,10 +130,8 @@ pmr_byStem %>%
 ```
 issue #31 -- There are 2 unique codeStem ids that are found in the trait data (xrf sample names) and the sequence data, but not in the stemSamples data (deployment sample names).  These codeStem ids are not found in the percent mass loss data.  Because the main goal is to analyze decay responses, I'm going to continue to leave these codeStems out of the stemSamples dataframe. Is it possible that stem id numbers got switched? Something to follow-up on.
 
-
-Figure 1. Wood species x decay params
-probably want to use weibull instead?
-```{r, echo = F}
+Figure 1. Wood species x decay params -- probably want to use weibull instead?
+```{r}
 
 #make plot of decay params by wood species
 indx <- unique(stemSamples[,c("code","species","size","Family","Binomial","site")])
@@ -189,9 +187,8 @@ rm(p.t70, p.k, p.r2)
 
 ```
 
-
 Figure 2. Time x percent mass remaining by wood species
-```{r, echo = F}
+```{r}
 
 #make a long version of pmr.byStem.df.w
 pmr_byStem %>%
@@ -228,7 +225,7 @@ rm(decayfits.p, woodSp.o, p.pmrBystem, pmr.byStem.df)
 We expect initial wood traits will explain varitation in species+size decay rate (k and t70), species+size lagginess (alpha), and stem-level percent mass remaining at 7, 13, 25, and 37 months of decay. Specifically, we expect samples with (a) high water percent, (b) low density and total C, (c) high macro and micro nutrients, and (d) thicker bark (potential mech: limiting microbial colonization) to have faster decay and less lagginess. 
 
 ## *Hyp (species+size-level)* Species+size-level initial wood traits will predict variation decay rates and lagginess.
-```{r, echo=FALSE}
+```{r}
 
 #merge traits and response variables into 1 df
 decayfits %>%
@@ -273,7 +270,7 @@ First, we need to decide what trait data (and samples) to include in this analys
 Density and bark thickness were only measured on small sized stems.  If there is not be very much within-species variation in these traits that contribute to variation in percent mass loss than we can justify including species-level estimates of these traits in the stem-level model. 
 
 Plot the small-sized stem-level measures of density and barkthick
-```{r, echo=FALSE}
+```{r}
 
 # prep a dataset with pmr, stem-level and code-level density and barkthick
 traits.stem %>%
@@ -317,7 +314,7 @@ rm(db.stem, db.code, p.denVar, p.barVar)
 ```
 
 Compare model fits (r2) using stem and species-level data to identify how much information about percent mass remaining is lost by using species-level estimates...For density, it looks like stem-level data improves model fit a tiny bit for early percent mass remaining time points (after 7 and 13 months) but not later time points. For barkthickness, fits are about the same.
-```{r, echo=FALSE}
+```{r}
 
 #set up models
 respVars <- list("time7", "time13", "time25", "time37","time59")
@@ -352,7 +349,7 @@ Stem-level density estimates provide additional information about mass loss beyo
 
 
 Compile a "stem-level" dataframe with (a) stem-level percent mass remaining values, (b) stem-level traits including waterperc and chemistry along, and (c) small species-level density and bark thickness data. 
-```{r, echo=FALSE}
+```{r, results=FALSE}
 
 # create dataframes
 # stem-level waterperc, xrf, and CN and (small) species-level barkthickness and density
@@ -396,7 +393,7 @@ rm(dataset.list, datasets, lhs, rhs, mod.full.list, mod.select.list, respVars, p
 # Community as a predictor
 
 Filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
-```{r, echo=FALSE}
+```{r}
 
 minSamps<-floor(dim(comm.otu)[1] * .2) #how many samples is 20% of them?
 dat1 <- apply(comm.otu>0, 2, sum) #how many samples does each OTU show up in?
@@ -409,7 +406,7 @@ rm(minSamps, dat1)
 ```
 
 ## *Hyp (species+size-level)* Species+size-level (average) initial microbial community composition will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
-```{r, message=FALSE}
+```{r, message = F, results = F}
 
 #average OTU abundances by code
 #codeOTUabund <- AverageOTUabund_byCode(comm.otu=comm.otu, seqSamples=seqSamples) #analysisDF_fxns.R... this take a while
@@ -447,16 +444,20 @@ prettyTab.notrim$trim<-"no"
 prettyTab.trim$trim<-"yes"
 prettyTabs.code<-rbind(prettyTab.trim, prettyTab.notrim)
 prettyTabs.code
+```
+
+```{r}
+prettyTabs.code
 
 rm(respVars, 
    cvfit.notrim, cvfit.trim, 
    wapls.out.notrim, wapls.out.trim, 
    prettyTab.notrim, prettyTab.trim, ord)
-
 ```
 
+
 ## *Hyp (stem-level)* Stem-level initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
-```{r, echo = FALSE}
+```{r, message = F, results = F}
 
 respVars <- list("time7", "time13", "time25", "time37","time59")
 
@@ -498,7 +499,7 @@ rm(datasets.notrim, datasets.trim,
 Comp01 (of the non-trimmed community) is a significant predictor of percent mass remaining at 37 months. 
 
 Plot the distribution of WA-PLS scores
-```{r, echo = FALSE}
+```{r}
 coef.comp <- cvfit.notrim$time37$coefficients[,'Comp01']
 coef.comp.df <- data.frame(OTUId=names(coef.comp), coefComp=coef.comp)
 
@@ -519,7 +520,7 @@ ggplot(coef.comp.ann, aes(x = reorder(OTUId, coefComp), y = coefComp)) +
 ```
 
 Who is in the top and bottom 1%?
-```{r, echo = FALSE}
+```{r}
 coef.comp.ann %>%
   filter(coefComp < quant[1]) %>%
   arrange(coefComp) %>%
@@ -555,7 +556,7 @@ tmp %>%
 Many of the bottom 1% OTUs are classified as saprotrophs.  That makes sense since low WA-PLS scores indicate an association with high mass loss (i.e. less mass remaining) at time37.
 
 But saprotrophs are also found at many points along the gradient...
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
+```{r, message=FALSE, warning=FALSE}
 
 #shorten x axis labels
 orgNames<-levels(factor(coef.comp.ann$Trophic.Mode))
@@ -606,13 +607,13 @@ rm(coef.comp.df, coef.comp, newNames, orgNames, p.king, p.phylum, p.troph)
 Is this because there is an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months?  The next analysis ("Community+traits" as predictor) will test this formally. Just out of curiousity, I'd like to pull in OTU "niche" info from the boral analysis to see if there's a relationship between OTU WA-PLS scores and wood trait coeffient estimates.
 
 Reminder of which wood traits were included in the best model to explain pmr at time37...
-```{r, echo = FALSE}
+```{r}
 read.csv("output/traitsummary_stem.csv")
 ```
 More water leads to less mass remaining; more P leads to more mass remaining
 
 Plot OTU wood trait estimates (from boral) versus signif WA-PLS score.
-```{r, echo=FALSE}
+```{r}
 # size was included as a roweffect in the boral model, so there are no OTU-specific estimates
 xVar.df<-read.csv("data/xVar_OTUcoefs.csv", row.names=1) #import wood trait coefs estimated by boral in the wooddecay repo
 
@@ -653,7 +654,7 @@ There's a weak negative relationship between an OTU's WA-PLS score and waterperc
 # Community+traits as a predictor
 
 ## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
-```{r, message=FALSE}
+```{r, message=FALSE, results = F}
 #run rioja::WAPLS on wood trait residuals
 
 #average OTU abundances by code
@@ -707,7 +708,7 @@ Community data doesn't improve our understanding of decay rates (k, t70) or vari
 
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits (no models with density, includes small-species level bark thickness), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
-```{r, message=FALSE}
+```{r, message=FALSE, results = F}
 #run rioja::WAPLS on wood trait residuals
 
 respVars <- list("time7", "time13", "time25", "time37","time59")
@@ -780,7 +781,7 @@ Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne
 ## *Hyp-b (species+size-level)* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
 ## *Hyp-c (species+size-level)* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
-```{r, echo=FALSE}
+```{r}
 
 # summarize the diversity in each sample
 rich.df<-Calc_richOTU(taxAndFunguild, comm.otu)
@@ -863,7 +864,7 @@ Hyp-Alt: Greater microbial diversity will lead to more mass remaining because ta
 ## *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
 Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
 ## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
-```{r, echo=FALSE}
+```{r}
 
 # summarize the diversity in each sample
 rich.df<-Calc_richOTU(taxAndFunguild, comm.otu) #codeStems that need to be excluded because it just used the seq_sampName information.... will get fixed in the next step
@@ -921,7 +922,7 @@ names(richList.stem)<-richNames
 A couple of models were informative, particularly for time37. Saprotroph OTU richness is associated with percent mass remaining at time25 and time37. Pathogen OTU richness and Shannon's H are associated with pmr at time 37. In all cases, there is a negative interaction between stem size and diversity.
 
 Plot the relationship between saprotroph OTU richness and pmr at time25 and time37
-```{r, echo = F}
+```{r}
 names(rich.decayfits) <- richNames
 tmp <- rich.decayfits[['Sapro.rich']]
 tmp %>%
@@ -937,7 +938,7 @@ More saprotrophs leads to less mass remaining - but only in small stems.
 
 
 Plot the relationship between pathogen OTU richness and pmr at time37
-```{r, echo = F}
+```{r}
 tmp <- rich.decayfits[['Patho.rich']]
 ggplot(tmp, aes(x = sub_rich, y = time37)) +
   geom_point() +
@@ -949,7 +950,7 @@ More pathotrophs leads to less mass remaining - but only in small stems.
 
 
 Plot the relationship between Shannon's H and pmr at time37
-```{r, echo = F}
+```{r}
 tmp <- rich.decayfits[['ShannonsH']]
 ggplot(tmp, aes(x = sub_rich, y = time37)) +
   geom_point() +
@@ -969,7 +970,7 @@ Higher Shannon's H leads to less mass remaining in small stems, more mass remain
 # Diversity plus traits as a predictor
 
 ## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
-```{r, echo=FALSE}
+```{r}
 
 #merge the diversity and trait residuals data
 rich.traitresid.list<-lapply(richList.code, function(x) {CreateRichTraitResid_df(otutype.df = x, trait.residuals = traitResiduals.code)})
@@ -995,7 +996,6 @@ pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
 pretty.df <- list_to_df(pretty.list)
 write.csv(pretty.df, file="output/diversitysummary_code_traitresid.csv")
 
-pretty.df
 #identify significant relationships
 pretty.df %>%
   filter(term %in% c('mean','sizesmall','sizesmall:mean')) %>%
@@ -1009,7 +1009,7 @@ rm(richList.code, rhs, lhs, richType.list, resp.list, pretty.list, summ, summ.df
 Beyond wood trait data, saprotroph richness improves models for k and t70. In addition, pathotroph richness improves the model for ne.r2.
 
 Plot the relationship between Saprotroph richness and k
-```{r, echo = F}
+```{r}
 tmp <- rich.traitresid.list[['Sapro.rich']]
 tmp %>%
   filter(resp == "k") -> tmp
@@ -1021,7 +1021,7 @@ ggplot(tmp, aes(x = mean, y = resid, color = size)) +
 Higher saprotroph richness leads to faster decay than would be expected based on wood traits alone.
 
 Plot the relationship between Saprotroph richness and t70
-```{r, echo = F}
+```{r}
 tmp <- rich.traitresid.list[['Sapro.rich']]
 tmp %>%
   filter(resp == "t70") -> tmp
@@ -1033,7 +1033,7 @@ ggplot(tmp, aes(x = mean, y = resid, color = size)) +
 Higher saprotroph richness leads to shorter times to 70% mass remaining than would be expected based on wood traits alone.
 
 Plot the relationship between Pathotroph richness and ne.r2
-```{r, echo = F}
+```{r}
 tmp <- rich.traitresid.list[['Patho.rich']]
 tmp %>%
   filter(resp == "ne.r2") -> tmp
@@ -1051,7 +1051,7 @@ Higher pathotroph richness leads to better-fitting decay models than would be ex
 
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
-```{r, echo=FALSE}
+```{r}
 
 #merge the diversity and trait residuals data
 rich.traitresid.list<-lapply(richList.stem, function(x) {traitResiduals.stem %>% left_join(x)})
@@ -1087,7 +1087,7 @@ pretty.df %>%
 Overall OTU richness improves model estimates for percent mass remaining at 25 months. Pathotroph richness improves model estmates for pmr at 37 months.
 
 Plot the relationship between OTU richness and residuals of pmr at time25
-```{r, echo = F}
+```{r}
 tmp <- rich.traitresid.list[['Richness']]
 tmp %>%
   select(codeStem, resp, sub_rich, size, resid) %>%
@@ -1104,7 +1104,7 @@ In small stems, more fungal OTUs leads to less mass remaining after 25 months th
 
 
 Plot the relationship between Pathotroph OTU richness and residuals of pmr at time37
-```{r, echo = F}
+```{r}
 tmp <- rich.traitresid.list[['Patho.rich']]
 tmp %>%
   select(codeStem, resp, sub_rich, size, resid) %>%
@@ -1126,7 +1126,7 @@ In small stems, more pathotrophs leads to less mass remaining after 37 months th
 # Relationship between wood traits and community
 
 ## *Hyp (species+size-level)* Initial microbial communitiy compositions will covary with initial wood traits
-```{r, include=FALSE}
+```{r}
 
 # remove trait NAs
 traits.code %>% 
@@ -1173,7 +1173,7 @@ dev.off()
 ```
 
 Full community anova-like table
-```{r, echo = F}
+```{r}
 #save summary tables
 an.nt.code<-anova.margin.table(dbrda.obj=mod.nt.code)
 an.nt.code
@@ -1181,14 +1181,14 @@ write.csv(an.nt.code, file="output/dbRDAanova_nt_code.csv")
 ```
 
 Trimmed community anova-like table
-```{r, echo = F}
+```{r}
 an.t.code<-anova.margin.table(dbrda.obj=mod.t.code)
 an.t.code
 write.csv(an.t.code, file="output/dbRDAanova_t_code.csv")
 ```
 
 ## *Hyp (stem-level)* Average initial microbial communitiy compositions will covary with initial wood traits
-```{r, include=FALSE}
+```{r}
 
 # put together best stem-level trait matrix, remove NAs
 head(traits.code)
@@ -1245,7 +1245,7 @@ dev.off()
 ```
 
 Full community anova-like table
-```{r, echo = F}
+```{r}
 #save summary tables
 an.nt.stem<-anova.margin.table(dbrda.obj=mod.nt.stem)
 an.nt.stem
@@ -1253,7 +1253,7 @@ write.csv(an.nt.stem, file="output/dbRDAanova_nt_stem.csv")
 ```
 
 Trimmed community anova-like table
-```{r, echo = F}
+```{r}
 an.t.stem<-anova.margin.table(dbrda.obj=mod.t.stem)
 an.t.stem
 write.csv(an.t.stem, file="output/dbRDAanova_t_stem.csv")
