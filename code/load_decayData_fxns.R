@@ -259,8 +259,7 @@ LoadHarvestFiles<-function(){
   s.data[s.data$unique == 'ripi3k' & s.data$time == 37, c('order', 'unique', 'notes')] <- c(NA, 'ripi3b', '')  # ripi3b taken instead of ripi3k at 37
   s.data <- filter(s.data, !(unique == 'ALLI311' & time == 37))  # not found at 37, harvested later
   s.data <- filter(s.data, !(unique == 'baae1a' & time == 37))  # not found at 37, harvested later
-  #very high density values -- filter(s.data, total_density > 1)
-  
+  #very high density values -- filter(s.data, total_density > 1) # issue #30 on github
   
   #check for missing data
   #filter(s.data, is.na(totalSampleDryMass))
@@ -335,7 +334,6 @@ Calc_massRemaining<-function(initial_mass, harvest_mass){
 
 
 # average pmr for each stem and timepoint
-
 AvgPMR_byStem<-function(plotting_df){
   
   #average pmr by codeStem and time
@@ -360,7 +358,7 @@ AvgPMR_byStem<-function(plotting_df){
            'time25'=`25`,
            'time37'=`37`, 
            'time59'=`59`) -> pmr.byStem.df.w
-  
+
   return(pmr.byStem.df.w)
   
 }

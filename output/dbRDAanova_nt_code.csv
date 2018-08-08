@@ -1,7 +1,7 @@
 "","term","df","Fval","pval"
 "1","size",1,1.4,0.019
-"2","barkthick",1,1.6,0.004
-"3","waterperc",1,1.41,0.019
+"2","barkthick",1,1.6,0.001
+"3","waterperc",1,1.41,0.015
 "4","Residual",29,NA,NA
 "5",NA,NA,NA,NA
 "6","Constrained inertia",1.91,NA,NA
