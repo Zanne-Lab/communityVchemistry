@@ -58,7 +58,7 @@ order,unique,drill,wetWeightExcess,dry WWE,wetWeight,drilledWeight ,volMass ,vol
 320,PEPU15,yes,,,,,,,,,
 321,eute1c,no,,,,,,,,,
 324,ANBA29,yes,,,,,,,,,
-337,EXCU21,yes,,,40939,40106,65510,21925.2,,,
+337,EXCU21,yes,NA,1150,40939,40106,39500,14270,15410,,"remeasured density and mass after drying, so no measure of WWE "
 339,acpa4g,no,0,0,7550,,14240,2440,6190.9,,
 340,JASC211,yes,0,0,72684,71876,112000,18560,51508.1,,
 341,cota2a,no,,,,,,,,,
@@ -85,7 +85,7 @@ order,unique,drill,wetWeightExcess,dry WWE,wetWeight,drilledWeight ,volMass ,vol
 406,lepa2e,no,289,233,8064,,9020,2120,4816,,
 413,cota2e,no,0,0,3038,,3490,540,1784,,
 416,PEPU11,yes,185,105,170185,168948,226630,26440,102902,,
-418,MEDE215,yes,67,,252656,250101,29580,98140,109091,,no excess found after dry
+418,MEDE215,yes,67,,252656,250101,295800,98140,109091,,no excess found after dry
 433,pepu3a,no,0,0,10721,,59180,1080,8032,,
 437,hase1i,no,728,384,5151,,8200,1250,2021,,
 443,eusc2l,no,,,,,,,,,
@@ -134,7 +134,7 @@ order,unique,drill,wetWeightExcess,dry WWE,wetWeight,drilledWeight ,volMass ,vol
 637,baae2l,no,0,0,1234,,3890,1420,969,,
 645,jasc3h,no,0,0,2200,,2850,400,1136,,
 648,mede3i,no,0,0,2841,,4290,640,1706,,
-655,peli1j,no,504,372,7049,,1170,1810,3843,,
+655,peli1j,no,504,372,7049,,11700,1810,3843,,
 656,jasc1k,no,0,0,2707,,3640,360,888,,
 674,penu4d,no,0,0,3601,,6230,820,1479,,
 677,isan2e,no,0,0,4090,,5610,540,2802,,
