@@ -332,7 +332,6 @@ Calc_massRemaining<-function(initial_mass, harvest_mass){
   return(return_df)
 }
 
-
 # average pmr for each stem and timepoint
 AvgPMR_byStem<-function(plotting_df){
   
@@ -406,51 +405,62 @@ fit_all_curves<-function(df_in, stemSamples){
     fit_litter(time = x$time/12, 
                mass.remaining = x$pmr, model = c("neg.exp"), iters = 500)
   })
+  #create bootstrap distrib and get the 95% CI
+  boot.ne<-lapply(ne_fits, function(x){
+    bootmat<-bootstrap_parameters(x, nboot=500) #1st column is param 1, but what is in the 2nd col?
+    #plot(bootmat)
+    mean.k<-mean(bootmat[,1])
+    ci.k<-quantile(bootmat[,1], c(.05, .95))
+    result<-data.frame(mean.k, lower.k = ci.k[[1]], upper.k = ci.k[[2]])
+    return(result)
+  })
+  boot.ne.df <- list_to_df(boot.ne)
+  # from ne model
+  k<-unlist(lapply(ne_fits, function(x) x$optimFit$par))
+  t70<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.70)))
+  neg.exp.aic<-unlist(lapply(ne_fits, function(x) x$fitAICc))
+  ne.r2<-unlist(lapply(ne_fits, function(x) Calc_R2(x)))
+  #boot.ne.df$source
   
   #weibull fit
   w.fits <- lapply(split(df_in, factor(df_in$code)), function(x){
     fit_litter(time = x$time/12, 
                mass.remaining = x$pmr, model = c("weibull"), iters = 500)
   })
-  
-  #create bootstrap distrib of k and get the 95% CI
-  # bootk<-lapply(ne_fits, function(x){
-  #   
-  #   bootmat<-bootstrap_parameters(x, nboot=500) #1st column are iteration of the param, right, but what is in the second col?
-  #   meanboot<-mean(bootmat[,1])
-  #   sdboot<-sd(bootmat[,1])
-  #   seboot<-sdboot/sqrt(length(bootmat[,1]))
-  #   upperboot<-meanboot+(1.96*seboot)
-  #   lowerboot<-meanboot-(1.96*seboot)
-  #   
-  #   result<-list(upper=upperboot, lower=lowerboot)
-  #   return(result)
-  # })
-  # tmp<-lapply(bootk, function(x) data.frame(upper=x[[1]], lower=x[[2]]))
-  # k.upper<-unlist(lapply(tmp, function(x) x[['upper']]))
-  # k.lower<-unlist(lapply(tmp, function(x) x[['lower']]))
-  
-  #create a 95% CI bootstrap distribution of t70
-  #not sure how to do this...
-  
-  #put everything together in a df
-  k<-unlist(lapply(ne_fits, function(x) x$optimFit$par))
-  t70<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.70)))
-  neg.exp.aic<-unlist(lapply(ne_fits, function(x) x$fitAICc))
-  ne.r2<-unlist(lapply(ne_fits, function(x) Calc_R2(x)))
+  #create bootstrap distrib and get the 95% CI
+  boot.w<-lapply(w.fits, function(x){
+    bootmat<-bootstrap_parameters(x, nboot=500) #1st and 2nd column are param 1 and 2, but what is in the third col?
+    #plot(bootmat)
+    #plot(bootmat, 2)
+    mean1<-mean(bootmat[,1])
+    ci1<-quantile(bootmat[,1], c(.05, .95))
+    mean2<-mean(bootmat[,2])
+    ci2<-quantile(bootmat[,2], c(.05, .95))
+    result<-data.frame(mean1, lower1 = ci1[[1]], upper1 = ci1[[2]], 
+                       mean2, lower2 = ci2[[1]], upper2 = ci2[[2]])
+    return(result)
+  })
+  boot.w.df <- list_to_df(boot.w)
+  # from weibull model
+  alpha<-unlist(lapply(w.fits, function(x) x$optimFit$par[[2]]))
+  beta<-unlist(lapply(w.fits, function(x) x$optimFit$par[[1]]))
   w.t70<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.70)))
   w.aic<-unlist(lapply(w.fits, function(x) x$fitAICc))
-  alpha<-unlist(lapply(w.fits, function(x) x$optimFit$par[[2]]))
   w.r2<-unlist(lapply(w.fits, function(x) Calc_R2(x)))
+  #boot.w.df
+  
+  # put everything in a dataframe
   spdf<-data.frame(k=k,
-                   #k.upper=k.upper,
-                   #k.lower=k.lower,
                    t70=t70,
-                   w.t70 = w.t70,
-                   ne.r2 = ne.r2,
                    ne.aic = neg.exp.aic,
+                   ne.r2 = ne.r2,
+                   boot.ne.df[,c("mean.k", "lower.k", "upper.k")],
+                   alpha = alpha, 
+                   beta = beta,
+                   w.t70 = w.t70,
                    w.aic = w.aic,
-                   alpha = alpha)
+                   w.r2 = w.r2,
+                   boot.w.df[,c("mean1", "lower1", "upper1", "mean2", "lower2", "upper2")])
   spdf$code<-rownames(spdf)
   
   #annotate df with species, size
@@ -459,7 +469,7 @@ fit_all_curves<-function(df_in, stemSamples){
   indx <- unique(indx)
   spdf %>%
     left_join(indx) -> spdf
-  
+
   return(spdf)
 }
 

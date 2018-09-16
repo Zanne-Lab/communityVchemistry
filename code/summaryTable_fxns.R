@@ -61,7 +61,7 @@ PullLmFitStats<-function(sum.list, respvars){
   return(fitstat.df)
 }
 
-MakeLmSummaryTable<-function(respvars, mod.list, termorder){
+MakeLmSummaryTable<-function(respvars, mod.list){
   
   #summarize
   sum.list<-lapply(mod.list, summary)
@@ -74,21 +74,10 @@ MakeLmSummaryTable<-function(respvars, mod.list, termorder){
   
   #reformat
   coefs.df %>%
-    select(respvar, term, printvec) %>%
-    spread(respvar, printvec) -> coefs.df
-  if(termorder=='stemTraits'){
-    row.order<-c("(Intercept)","sizesmall","waterperc","density_smspp","barkthick_smspp","C","N","P","Mn")
-  }
-  if(termorder=='codeTraits'){
-    row.order<-c("(Intercept)","sizesmall","waterperc","barkthick","C","N","Ca","Zn")
-  }
-  if(termorder=='none'){
-    row.order<-coefs.df$term
-  }
-  coefs.df %>%
-    slice(match(row.order, term)) -> coefs.df
-  colorder<-c("term", respvars)
-  coefs.df<-coefs.df[,colorder]
+    mutate(print.est = paste(signif(est, 2), stars)) %>%
+    select(respvar, term, print.est) %>%
+    spread(respvar, print.est) -> coefs.df
+  
   prettyTab<-rbind(coefs.df, rep(NA, length(colnames(coefs.df))), fitstat.df)
   
   return(prettyTab)

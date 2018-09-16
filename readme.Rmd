@@ -17,11 +17,13 @@ library(tidyr) #data formatting
 library(dplyr) #data formatting
 library(ggplot2) #plotting
 library(grid) #plotting
+library(gridExtra)
 #devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
 library(litterfitter) #fit decay models to timeseries
 library(lmtest) # for coxtest()
 library(vegan) #diversity metrics
 library(rioja) #WA-PLS
+
 
 #fxns
 source("code/load_microbeData_fxns.R")
@@ -29,7 +31,6 @@ source("code/load_traitData_fxns.R")
 source("code/load_decayData_fxns.R")
 source("code/summaryTable_fxns.R")
 source("code/analysisDF_fxns.R")
-
 
 ```
 
@@ -41,7 +42,6 @@ stemSamples <- load_stemSamples()
 #OTU table
 fung.otu <- load_matotu() 
 comm.otu <- add_oomycetes(fung.otu) #add the oomycetes
-#plot_sampleEffortCurves(comm.otu) #this takes a while... uncomment if the data changes
 
 #create sequence sample meta data table
 seqSamples <- load_seqSamples(comm.otu, stemSamples)
@@ -49,6 +49,11 @@ seqSamples <- load_seqSamples(comm.otu, stemSamples)
 #taxon lookup info
 taxAndFunguild <- load_TaxAndFunguild(comm.otu)
 
+```
+
+Figure S1. Sample-effort curves
+```{r}
+#plot_sampleEffortCurves(comm.otu) #this takes a while... uncomment if the data changes
 ```
 
 ### Load wood trait data
@@ -84,7 +89,7 @@ pmr_byStem <- AvgPMR_byStem(pmr)
 
 ```
 
-Plot pmr data
+Quick plot of pmr data
 ```{r}
 ggplot(pmr, aes(y=pmr, x=time, color = size)) + 
   geom_point(alpha=.8) +
@@ -92,6 +97,8 @@ ggplot(pmr, aes(y=pmr, x=time, color = size)) +
   geom_hline(yintercept = 0, linetype = 2) +
   facet_wrap(~species) +
   geom_smooth()
+
+
 ```
 
 Calculate decay trajectory fits for each code (species+size)
@@ -100,8 +107,13 @@ Calculate decay trajectory fits for each code (species+size)
 #decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
 #write_csv(decayfits,"derived_data/decayfits.csv")
 decayfits <- read_csv("derived_data/decayfits.csv")
+indx <- unique(stemSamples[,c("code","Binomial","size")])
+decayfits %>%
+  left_join(indx) -> decayfits
 
-rm(pmr)
+# weibull params
+# alpha = shape param
+# beta = scale param
 ```
 
 Compare negative exp. vs weibull by plotting time to 70% mass remaining (t70) for each species+size
@@ -111,8 +123,44 @@ ggplot(decayfits,aes(x=t70,y=w.t70,col=size))+
   labs(x="Time to 30% mass loss (negative exponential)",
        y="Time to 30% mass loss (Weibull)")+
   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+```
+
+Another view...
+Figure S2. Comparison of negative exp and weibull models using t70
+```{r}
+decayfits %>%
+  select(Binomial, size, t70, w.t70) %>%
+  gather(key = "variable", value ="value", -c(Binomial,size)) %>%
+  mutate(value.round = round(value, digits = 1)) -> plot.df
+plot.df$variable <- recode(plot.df$variable, "t70" = "neg.exp", "w.t70" = "weibull")
+
+ggplot(plot.df, aes(x = variable, y = reorder(Binomial, value), 
+                    fill = value, label = value.round)) +
+  geom_tile() +
+  geom_text() +
+  facet_grid(~size) +
+  scale_fill_distiller(direction = 1) +
+  theme_bw() +
+  xlab("Years to 30% mass loss") + ylab("") +
+  guides(fill = F)
+ggsave(filename = "output/compare_t70.pdf", width = 5, height = 6)
 
 ```
+
+Figure S3. Comparison of negative exp and weibull models using AIC
+```{r}
+decayfits %>%
+  select(code, Binomial, size, ne.aic, w.aic) %>%
+  mutate(diff.aic = ne.aic - w.aic) -> tmp
+
+ggplot(tmp, aes(y = reorder(Binomial, diff.aic), x = diff.aic, color = size)) +
+  geom_point() +
+  geom_vline(xintercept = 0, linetype = 2) +
+  ylab("Code") + xlab("Delta AIC (>0 favors Weibull)") +
+  theme_bw()
+ggsave(filename = "output/compare_aic.pdf", width = 5, height = 6)
+```
+
 
 Check for missing stem-level data
 ```{r}
@@ -130,65 +178,66 @@ pmr_byStem %>%
 ```
 issue #31 -- There are 2 unique codeStem ids that are found in the trait data (xrf sample names) and the sequence data, but not in the stemSamples data (deployment sample names).  These codeStem ids are not found in the percent mass loss data.  Because the main goal is to analyze decay responses, I'm going to continue to leave these codeStems out of the stemSamples dataframe. Is it possible that stem id numbers got switched? Something to follow-up on.
 
-Figure 1. Wood species x decay params -- probably want to use weibull instead?
+Figure 1. Wood species x decay params (weibull model)
 ```{r}
-
-#make plot of decay params by wood species
-indx <- unique(stemSamples[,c("code","species","size","Family","Binomial","site")])
+#plot the weibull fits
 decayfits %>%
-  left_join(indx) -> decayfits.p
+  select(Binomial, size, code, 
+         alpha, beta,
+         mean1, lower1, upper1, mean2, lower2, upper2, 
+         w.t70, w.aic, w.r2) -> decayfits.w
 
-# t70
-p.t70 <- ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=t70, color=size)) + 
-  geom_point(size = 3, alpha = .5) +
-  #geom_errorbar(aes(ymin=t70.lower, ymax=t70.upper)) +
-  coord_flip() +
-  xlab("Wood species") + ylab("Years to 70% mass remaining") + theme_bw() +
-  scale_color_manual(values=c('large'="red", 'small'="black")) + 
-  guides(color = F) +
-  theme(plot.margin = unit(c(0,1,0,0), "lines"))
+#order Binomial by w.t70
+decayfits.w %>%
+  select(Binomial, w.t70) %>%
+  group_by(Binomial) %>%
+  summarize(mean = mean(w.t70)) %>%
+  arrange(mean)-> binom.order
+decayfits.w$Binomial <- factor(decayfits.w$Binomial, levels = as.character(binom.order$Binomial))
 
-# k
-p.k <- ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=k, color=size)) + 
-  geom_point(size = 3, alpha = .5) +
-  #geom_errorbar(aes(ymin=k.lower, ymax=k.upper)) +
-  coord_flip() +
-  xlab("Wood species") + ylab("k (year^-1)") + theme_bw() +
-  scale_color_manual(values=c('large'="red", 'small'="black")) + 
-  guides(color=F) +
-  theme(axis.text.y = element_blank(), 
-            axis.ticks.y = element_blank(), 
-            axis.title.y = element_blank(),
-            plot.margin = unit(c(0,1,0,0), "lines"),
-            plot.background = element_blank())
+# plot
+p.t70 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t70, 
+                                 color = size)) +
+  geom_point() +
+  scale_color_manual(values = c("black","darkgray")) +
+  ylab("") + xlab("Years to 30% mass loss") +
+  theme_bw() + guides(color = F)
 
-# ne.r2
-p.r2 <- ggplot(decayfits.p, aes(x=reorder(Binomial, -t70), y=ne.r2, color=size)) + 
-  geom_point(size = 3, alpha = .5) +
-  coord_flip() +
-  xlab("Wood species") + ylab("Neg. expon. R2") + theme_bw() +
-  scale_color_manual(values=c('large'="red", 'small'="black")) + 
-  guides(color=F) +
-  theme(axis.text.y = element_blank(), 
-            axis.ticks.y = element_blank(), 
-            axis.title.y = element_blank(),
-            plot.margin = unit(c(0,1,0,0), "lines"),
-            plot.background = element_blank())
-grid.newpage()
-grid.draw(cbind(ggplotGrob(p.t70), ggplotGrob(p.k), ggplotGrob(p.r2), size = "last"))
+p.scale <- ggplot(decayfits.w, aes(y = Binomial, x = beta, color = size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower1, xmax = upper1)) +
+  #geom_point(aes(x = mean1), shape = 2, alpha = .5, size = 3) +
+  scale_color_manual(values = c("black","darkgray")) +
+  ylab("") + xlab("Scale parameter") +
+  theme_bw() + guides(color = F)
 
-pdf("output/decayfits.pdf", width=10, height=6) # uncomment if the data change
-grid.newpage()
-grid.draw(cbind(ggplotGrob(p.t70), ggplotGrob(p.k), ggplotGrob(p.r2), size = "last"))
+p.shape <- ggplot(decayfits.w, aes(y = Binomial, x = alpha, color = size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower2, xmax = upper2)) +
+  #geom_point(aes(x = mean2), shape = 2, alpha = .5, size = 3) +
+  scale_color_manual(values = c("black","darkgray")) +
+  ylab("") + xlab("Shape parameter") +
+  theme_bw() + guides(color = F)
+
+pdf(file = "output/decayfits.pdf", width = 8, height = 6)
+grid.arrange(p.t70,
+             p.scale +
+              theme(axis.line=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.title.y=element_blank()), 
+             p.shape + 
+              theme(axis.line=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.title.y=element_blank()),
+            ncol=3, widths=c(2,1,1)
+)
 dev.off()
-
-rm(p.t70, p.k, p.r2)
-#![Figure 1](output/decayfits.pdf)
 
 ```
 
-Figure 2. Time x percent mass remaining by wood species
+Figure 2. Time x percent mass remaining
 ```{r}
+# add points that show real data in the background
 
 #make a long version of pmr.byStem.df.w
 pmr_byStem %>%
@@ -201,19 +250,35 @@ pmr_byStem %>%
   select(-drop) -> pmr.byStem.df
 
 #order the wood species by t70 to match species order in previous figure
-woodSp.o <- levels(reorder(decayfits.p$species, -decayfits.p$t70))
+unique(pmr.byStem.df$timeNum)
+woodSp.o <- levels(reorder(decayfits$species, -decayfits$w.t70))
 pmr.byStem.df$species <- factor(pmr.byStem.df$species, levels=rev(woodSp.o))
-p.pmrBystem <- ggplot(pmr.byStem.df, aes(x=timeNum/12, y=mean.pmr*100, group=codeStem, linetype=size)) + 
-  geom_line() + facet_wrap(~species) +
-  xlab("Time (years)") + ylab("Mass remaining (%)") + theme_bw() +
-  scale_linetype_manual(values=c(2,1)) + guides(linetype=FALSE)
+
+#add underlying pmr data points
+pmr %>%
+  select(codeStem, code, species, size, time, pmr) %>%
+  rename('timeNum' = 'time') -> pmr.tmp
+
+p.pmrBystem <- ggplot(pmr.byStem.df, 
+                      aes(x=timeNum/12, y=mean.pmr*100, 
+                          group=codeStem,
+                          linetype=size)) + 
+  geom_line() + 
+  geom_point(inherit.aes = F, data = pmr.tmp, 
+             aes(x= timeNum/12, y = pmr*100), 
+             alpha = .2, pch = 16) +
+  facet_wrap(~species) +
+  xlab("Time (years)") + ylab("Mass remaining (%)") + 
+  theme_bw() +
+  scale_linetype_manual(values=c(2,1)) + 
+  guides(linetype=FALSE)
 p.pmrBystem
 
 pdf("output/pmr_byStem.pdf", width=6, height=6)
 p.pmrBystem
 dev.off()
 
-rm(decayfits.p, woodSp.o, p.pmrBystem, pmr.byStem.df)
+rm(woodSp.o, p.pmrBystem, pmr.byStem.df)
 #![Figure 2](output/pmr_byStem.pdf)
 ```
 
@@ -229,13 +294,15 @@ We expect initial wood traits will explain varitation in species+size decay rate
 
 #merge traits and response variables into 1 df
 decayfits %>%
-  select(code, species, size, ne.r2, k, t70, alpha) %>%
+  select(code, species, size, 
+         ne.r2, k, t70, 
+         w.r2, alpha, beta, w.t70) %>%
   left_join(traits.code) %>% 
   filter(!is.na(P)) %>%
   filter(!is.na(waterperc)) -> decayfits.traits
 
 #set up full models
-respVars <- list("k","t70","ne.r2")
+respVars <- list("k","t70","ne.r2", "alpha","beta","w.t70","w.r2")
 rhs <- "size + waterperc + density + barkthick + P + K + Ca + Mn + Fe + Zn + N + C"
 mod.full.list<-lapply(respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits) # summaryTable_fxns.R
 
@@ -246,11 +313,11 @@ mod.full.list<-lapply(respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits
 #   return(mod.select)
 #   })
 # names(mod.select.list) <- respVars
-# saveRDS(mod.select.list, file = "derived_data/modSelect.RData")
+# #saveRDS(mod.select.list, file = "derived_data/modSelect.RData")
 mod.select.list <- readRDS(file = "derived_data/modSelect.RData")
 
 #summarize the best models
-prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list, termorder="codeTraits") # summaryTable_fxns.R
+prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list) # summaryTable_fxns.R
 prettyTab
 write.csv(prettyTab, "output/traitsummary_code.csv")
 
@@ -290,11 +357,13 @@ db.stem %>%
   left_join(pmr_byStem) -> db.df
 
 # look at the within-species variation in density and barkthick
-p.denVar<-ggplot(db.df, aes(x=reorder(code, density_code), y=density_stem)) + 
-  geom_point(size = 3, alpha = .5) + theme_bw() + coord_flip() +
+p.denVar<-ggplot(db.df, 
+                 aes(x=reorder(code, density_code), y=density_stem)) + 
+  geom_point() + theme_bw() + coord_flip() +
   xlab("Wood species") + ylab("Density (g/cm3)")
-p.barVar<-ggplot(db.df, aes(x=reorder(code, barkthick_code), y=barkthick_stem)) + 
-  geom_point(size = 3, alpha = .5) + theme_bw() + coord_flip() +
+p.barVar<-ggplot(db.df, 
+                 aes(x=reorder(code, barkthick_code), y=barkthick_stem)) + 
+  geom_point() + theme_bw() + coord_flip() +
   xlab("Wood species") + ylab("Bark thickness (mm)") +
   theme(axis.text.y = element_blank(), 
             axis.ticks.y = element_blank(), 
@@ -304,7 +373,7 @@ p.barVar<-ggplot(db.df, aes(x=reorder(code, barkthick_code), y=barkthick_stem)) 
 grid.newpage()
 grid.draw(cbind(ggplotGrob(p.denVar), ggplotGrob(p.barVar), size = "last"))
 
-pdf("output/variation_densityNbarkthick.pdf", width=8, height=6)
+pdf("output/variation_densityNbarkthick.pdf", width=5, height=5)
 grid.newpage()
 grid.draw(cbind(ggplotGrob(p.denVar), ggplotGrob(p.barVar), size = "last"))
 dev.off()
@@ -325,24 +394,28 @@ mod.code_barkthick.list <- lapply(respVars, ModelFit_manyYs, rhs="barkthick_code
 
 #cox test to compare non-nested models
 # if the first model (M1) contains the correct set of regressors, then a fit of the regressors from the second model (M2) to the fitted values from M1 should have no further explanatory value. But if it has, it can be concluded that M1 does not contain the correct set of regressors
-Do_coxTests(mod.stem_density.list, mod.code_density.list, respvars=unlist(respVars))
+cox.density <- Do_coxTests(mod.stem_density.list, 
+               mod.code_density.list, 
+               respvars=unlist(respVars))
 # stem level density information improves estimates for time7 and time59
-Do_coxTests(mod.stem_barkthick.list, mod.code_barkthick.list, respvars=unlist(respVars))
+cox.barkthick <- Do_coxTests(mod.stem_barkthick.list, 
+                             mod.code_barkthick.list, 
+                             respvars=unlist(respVars))
 
-#compare model r2s
-density.r2s<-Do_compareR2(mod.stem_density.list, mod.code_density.list, respvars=unlist(respVars))
-barkthick.r2s<-Do_compareR2(mod.stem_barkthick.list, mod.code_barkthick.list, respvars=unlist(respVars))
-density.r2s %>%
-  rename('density_code_r2'='code.r2s',
-         'density_stem_r2'='stem.r2s') %>%
-  left_join(barkthick.r2s) %>%
-  rename('barkthick_code_r2'='code.r2s',
-         'barkthick_stem_r2'='stem.r2s') -> compare.r2.Tab
-compare.r2.Tab
-#write.csv(compare.r2.Tab, file="output/smallsize_codeVstem_r2s.csv")
+#annotation <- c("M1 = stem, M2 = code")
+extr_cox_results <-function(x){
+  df <- data.frame(mod = row.names(x), pval = x$`Pr(>|z|)`)
+  return(df)
+}
 
-rm(db.df, mod.stem_density.list, mod.code_density.list, mod.stem_barkthick.list, mod.code_barkthick.list,
-   density.r2s, barkthick.r2s, compare.r2.Tab)
+cox.density.df <- list_to_df(lapply(cox.density, extr_cox_results))
+cox.density.df$meas <- "density"
+cox.barkthick.df <- list_to_df(lapply(cox.barkthick, extr_cox_results))
+cox.barkthick.df$meas <- "barkthick"
+cox.df <- rbind(cox.density.df, cox.barkthick.df)
+write.csv(cox.df, file="output/smallsize_codeVstem_cox.csv")
+
+rm(db.df, mod.stem_density.list, mod.code_density.list, mod.stem_barkthick.list, mod.code_barkthick.list)
 
 ```
 Stem-level density estimates provide additional information about mass loss beyond code-level density at time7 and time 59. Stem-level bark thickness estimates are not useful (beyond code-level bark thickness) at any time point.
@@ -375,7 +448,7 @@ mod.select.list<-lapply(mod.full.list, function(x) {
   })
 
 #summarize the best models
-prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list, termorder="stemTraits") # summaryTable_fxns.R
+prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list) # summaryTable_fxns.R
 prettyTab
 write.csv(prettyTab, "output/traitsummary_stem.csv")
 
@@ -429,7 +502,7 @@ decayfits.o<-decayfits[ord,]
 sum(row.names(codeOTUabund) != decayfits.o$code) #this needs to be 0
 
 #fit models
-respVars <- list("k","t70","ne.r2")
+respVars <- list("k","t70","ne.r2", "alpha","beta","w.t70","w.r2")
 cvfit.notrim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund, curr.respVar = decayfits.o[[x]])}) #analysisDF_fxns.R
 cvfit.trim<-lapply(respVars, function(x) {fitNcrossval_WAPLS(curr.comm = codeOTUabund.trim, curr.respVar = decayfits.o[[x]])}) #analysisDF_fxns.R
 
@@ -485,7 +558,8 @@ prettyTabs.stem
 
 # merge code and stem-level summary tables
 tmp<-left_join(prettyTabs.code, prettyTabs.stem)
-commTab<-tmp[,c("trim","stat","t70","k","ne.r2",unlist(respVars))]
+commTab<-tmp[,c("trim","stat",
+                "k","t70","ne.r2", "alpha","beta","w.t70","w.r2", unlist(respVars))]
 write.csv(commTab, file="output/commcompsummary.csv")
 
 rm(datasets.notrim, datasets.trim,
@@ -517,6 +591,7 @@ ggplot(coef.comp.ann, aes(x = reorder(OTUId, coefComp), y = coefComp)) +
   xlab("OTU identity") + ylab("WA-PLS score (pmr at time37)") +
   geom_hline(yintercept = quant[1], linetype = 2) +
   geom_hline(yintercept = quant[2], linetype = 2) 
+ggsave(filename = "output/wapls_score_time37.pdf", width = 4, height = 4)
 ```
 
 Who is in the top and bottom 1%?
@@ -565,7 +640,7 @@ coef.comp.ann %>% mutate(Trophic.Mode.short = factor(Trophic.Mode, labels = newN
 
 p.troph<-ggplot(coef.comp.ann, aes(x=Trophic.Mode.short, y=coefComp)) + 
   geom_jitter(alpha=.5, pch=16) +
-  xlab("Trophic mode") + ylab("Component coefficient estimate") +
+  xlab("Trophic mode") + ylab("WA-PLS score (pmr at time37)") +
   theme_classic() +
   geom_hline(yintercept=0, linetype=2) +
   theme(axis.text.x = element_text(angle = 70, hjust = 1))
@@ -595,7 +670,7 @@ p.phylum<-ggplot(coef.comp.ann, aes(x=phylum, y=coefComp)) +
             plot.background = element_blank(),
         axis.text.x = element_text(angle = 70, hjust = 1))
 
-pdf("output/signif_wapls_otuCats.pdf", width=10, height=6)
+pdf("output/wapls_score_time37_otuCats.pdf", width=10, height=6)
 grid.newpage()
 grid.draw(cbind(ggplotGrob(p.troph), ggplotGrob(p.king), ggplotGrob(p.phylum), size = "last"))
 dev.off()
@@ -632,6 +707,8 @@ p<-ggplot(tmp.df1, aes(x=coefComp, y=coefEst)) +
   xlab("Wood trait response (boral coef estimate)") +
   facet_grid(~ trait)
 p
+ggsave(filename = "output/wapls_score_time37_boral.pdf", 
+       width = 6, height = 4)
 
 #waterperc
 tmp.df1 %>%
@@ -662,7 +739,8 @@ There's a weak negative relationship between an OTU's WA-PLS score and waterperc
 #codeOTUabund.trim
 
 #unique(traitResiduals.code$resp)
-respVars <- list("k","t70","ne.r2")
+respVars <- list("k","t70","ne.r2", "alpha","beta","w.t70","w.r2")
+
 
 # create dataframes
 datasets.notrim<-lapply(respVars, function(x) {
@@ -756,7 +834,10 @@ prettyTabs.stem
 
 # merge code and stem-level summary tables
 tmp<-left_join(prettyTabs.code, prettyTabs.stem)
-commTab<-tmp[,c("trim","stat","t70","k","ne.r2",unlist(respVars))]
+
+commTab<-tmp[,c("trim","stat",
+                "k","t70","ne.r2", "alpha","beta","w.t70","w.r2",
+                unlist(respVars))]
 commTab
 write.csv(commTab, file="output/commcompsummary_traitresid.csv")
 
@@ -771,6 +852,8 @@ Community data doesn't improve our understanding of mass loss (pmr after 7, 13, 
 
 
 ##########################################
+
+# LEFT OFF HERE
 
 # Diversity (and diversity of specific clades) as a predictor  
 
