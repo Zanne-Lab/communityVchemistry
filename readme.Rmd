@@ -318,7 +318,6 @@ mod.select.list <- readRDS(file = "derived_data/modSelect.RData")
 
 #summarize the best models
 prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list) # summaryTable_fxns.R
-prettyTab
 write.csv(prettyTab, "output/traitsummary_code.csv")
 
 #extract and save the residuals
@@ -449,7 +448,6 @@ mod.select.list<-lapply(mod.full.list, function(x) {
 
 #summarize the best models
 prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list) # summaryTable_fxns.R
-prettyTab
 write.csv(prettyTab, "output/traitsummary_stem.csv")
 
 #extract and save the residuals
@@ -853,8 +851,6 @@ Community data doesn't improve our understanding of mass loss (pmr after 7, 13, 
 
 ##########################################
 
-# LEFT OFF HERE
-
 # Diversity (and diversity of specific clades) as a predictor  
 
 **Note that the full community matrix was used for these analyses**
@@ -883,7 +879,7 @@ rich.decayfits<-lapply(richList, function(x) {CreateRichDecayfits_df(otutype.df=
 rhs <- "size * mean"
 # size = small/large
 # mean = mean OTU richness
-lhs <- list("t70","k","ne.r2")
+lhs <- list("k","t70","ne.r2", "alpha","beta","w.t70","w.r2")
 
 richType.list<-list()
 for(i in 1:length(rich.decayfits)){
@@ -897,7 +893,7 @@ for(i in 1:length(rich.decayfits)){
 names(richType.list)<-richNames
 
 #summarize
-pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
+pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
 pretty.df <- list_to_df(pretty.list)
 write.csv(pretty.df, file="output/diversitysummary_code.csv")
 
@@ -913,7 +909,6 @@ richList.code <- richList
 names(richList.code)<-richNames
 
 ```
-None of the richness variables were significant predictors of k, ne.r2, or t70
 
 
 ```{r, echo = F}
@@ -972,7 +967,7 @@ rich.decayfits<-lapply(richList, function(x) {
 
 # fit models
 rhs <- "size * sub_rich"
-lhs <- list("time7", "time13", "time25", "time37")
+lhs <- list("time7", "time13", "time25", "time37","time59")
 
 richType.list<-list()
 for(i in 1:length(rich.decayfits)){
@@ -986,7 +981,7 @@ for(i in 1:length(rich.decayfits)){
 names(richType.list)<-richNames
 
 #summarize
-pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
+pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
 pretty.df <- list_to_df(pretty.list)
 write.csv(pretty.df, file="output/diversitysummary_stem.csv")
 
@@ -1015,7 +1010,9 @@ ggplot(tmp1, aes(x = sub_rich, y = pmr)) +
   geom_point() +
   geom_smooth(method = "lm") +
   facet_grid(time~size)+
-  xlab("Saprotroph OTU richness") + ylab("Mass remaining after X months (%)")
+  xlab("Saprotroph OTU richness") + ylab("Mass remaining after X months (%)") +
+  theme_bw()
+ggsave(filename = "output/richness_sapro_pmr.pdf", width = 5, height = 5)
 ```
 More saprotrophs leads to less mass remaining - but only in small stems.
 
@@ -1027,7 +1024,9 @@ ggplot(tmp, aes(x = sub_rich, y = time37)) +
   geom_point() +
   geom_smooth(method = "lm") +
   facet_grid(~size)+
-  xlab("Pathotroph OTU richness") + ylab("Mass remaining after 37 months (%)")
+  xlab("Pathotroph OTU richness") + ylab("Mass remaining after 37 months (%)") +
+  theme_bw()
+ggsave(filename = "output/richness_patho_pmr.pdf", width = 5, height = 3.5)
 ```
 More pathotrophs leads to less mass remaining - but only in small stems.
 
@@ -1039,7 +1038,9 @@ ggplot(tmp, aes(x = sub_rich, y = time37)) +
   geom_point() +
   geom_smooth(method = "lm") +
   facet_grid(~size)+
-  xlab("Shannon's H") + ylab("Mass remaining after 37 months (%)")
+  xlab("Shannon's H") + ylab("Mass remaining after 37 months (%)")+
+  theme_bw()
+ggsave(filename = "output/richness_shannonsh_pmr.pdf", width = 5, height = 3.5)
 
 rm(rich.df, H.df, sapro.df, basidio.df, path.df, oomy.df, 
    richList, richNames, rhs, lhs, richType.list, pretty.list, summ, summ.df,
@@ -1060,7 +1061,7 @@ rich.traitresid.list<-lapply(richList.code, function(x) {CreateRichTraitResid_df
 
 #fit models
 rhs <- "size * mean"
-lhs <- list("t70","k","ne.r2")
+lhs <- list("k","t70","ne.r2", "alpha","beta","w.t70","w.r2")
 
 richType.list<-list()
 for(i in 1:length(rich.traitresid.list)){
@@ -1075,7 +1076,7 @@ for(i in 1:length(rich.traitresid.list)){
 names(richType.list)<-names(richList.code)
 
 #summarize
-pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
+pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
 pretty.df <- list_to_df(pretty.list)
 write.csv(pretty.df, file="output/diversitysummary_code_traitresid.csv")
 
@@ -1099,7 +1100,10 @@ tmp %>%
 ggplot(tmp, aes(x = mean, y = resid, color = size)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  xlab("Saprotroph richness") + ylab("Residuals - Decay rate (k)")
+  xlab("Saprotroph richness") + ylab("Residuals - Decay rate (k)") +
+  theme_bw()
+
+ggsave(filename = "output/richness_sapro_kResids.pdf", width = 5, height = 3.5)
 ```
 Higher saprotroph richness leads to faster decay than would be expected based on wood traits alone.
 
@@ -1111,7 +1115,25 @@ tmp %>%
 ggplot(tmp, aes(x = mean, y = resid, color = size)) +
   geom_point() +
   geom_smooth(method = "lm") +
-  xlab("Saprotroph richness") + ylab("Residuals - Time to 70% mr (t70)")
+  xlab("Saprotroph richness") + ylab("Residuals - Time to 70% mr (t70)") +
+  theme_bw()
+ggsave(filename = "output/richness_sapro_t70Resids.pdf", width = 5, height = 3.5)
+
+```
+Higher saprotroph richness leads to shorter times to 70% mass remaining than would be expected based on wood traits alone.
+
+Plot the relationship between Saprotroph richness and beta
+```{r}
+tmp <- rich.traitresid.list[['Sapro.rich']]
+tmp %>%
+  filter(resp == "beta") -> tmp
+ggplot(tmp, aes(x = mean, y = resid, color = size)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Saprotroph richness") + ylab("Residuals - Beta") +
+  theme_bw()
+ggsave(filename = "output/richness_sapro_betaResids.pdf", width = 5, height = 3.5)
+
 ```
 Higher saprotroph richness leads to shorter times to 70% mass remaining than would be expected based on wood traits alone.
 
@@ -1156,7 +1178,7 @@ for(i in 1:length(rich.traitresid.list)){
 names(richType.list)<-names(richList.stem)
 
 #summarize
-pretty.list<-lapply(richType.list, MakeSummaryTable_diversity, respvars=lhs)
+pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
 pretty.df <- list_to_df(pretty.list)
 write.csv(pretty.df, file="output/diversitysummary_stem_traitresid.csv")
 
@@ -1197,7 +1219,10 @@ ggplot(tmp1, aes(x = sub_rich, y = resid)) +
   geom_point() +
   geom_smooth(method = "lm") +
   facet_grid(~size)+
-  xlab("Pathotroph OTU richness") + ylab("Residuals - pmr time37")
+  xlab("Pathotroph OTU richness") + ylab("Residuals - pmr time37") +
+  theme_bw()
+ggsave(filename = "output/richness_patho_time37Resids.pdf", width = 5, height = 3.5)
+
 
 rm(richList.stem, rich.traitresid.list, rhs, lhs, richType.list, resp.list, pretty.list, df.sub, i, k)
 ```

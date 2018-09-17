@@ -84,27 +84,6 @@ MakeLmSummaryTable<-function(respvars, mod.list){
   
 }
 
-MakeSummaryTable_diversity<-function(respvars, mod.list){
-  
-  #summarize
-  sum.list<-lapply(mod.list, summary)
-  
-  #pull term coefs
-  coefs.df<-PullLmCoefs(sum.list, respvars)
-  
-  #pull model fit stats
-  fitstat.df<-PullLmFitStats(sum.list, respvars)
-  
-  #reformat
-  coefs.df %>%
-    select(respvar, term, printvec) %>%
-    spread(respvar, printvec) -> coefs.df
-  prettyTab<-rbind(coefs.df, rep(NA, length(colnames(coefs.df))), fitstat.df)
-  
-  return(prettyTab)
-  
-} #make this work in fxn above....
-
 
 #########
 # LM residuals (for use in other analyses)
