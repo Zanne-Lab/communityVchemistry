@@ -1283,16 +1283,16 @@ dev.off()
 Full community anova-like table
 ```{r}
 #save summary tables
-an.nt.code<-anova.margin.table(dbrda.obj=mod.nt.code)
-an.nt.code
-write.csv(an.nt.code, file="output/dbRDAanova_nt_code.csv")
+#an.nt.code<-anova.margin.table(dbrda.obj=mod.nt.code)
+#an.nt.code
+#write.csv(an.nt.code, file="output/dbRDAanova_nt_code.csv")
 ```
 
 Trimmed community anova-like table
 ```{r}
-an.t.code<-anova.margin.table(dbrda.obj=mod.t.code)
-an.t.code
-write.csv(an.t.code, file="output/dbRDAanova_t_code.csv")
+#an.t.code<-anova.margin.table(dbrda.obj=mod.t.code)
+#an.t.code
+#write.csv(an.t.code, file="output/dbRDAanova_t_code.csv")
 ```
 
 ## *Hyp (stem-level)* Average initial microbial communitiy compositions will covary with initial wood traits
@@ -1355,16 +1355,16 @@ dev.off()
 Full community anova-like table
 ```{r}
 #save summary tables
-an.nt.stem<-anova.margin.table(dbrda.obj=mod.nt.stem)
-an.nt.stem
-write.csv(an.nt.stem, file="output/dbRDAanova_nt_stem.csv")
+#an.nt.stem<-anova.margin.table(dbrda.obj=mod.nt.stem)
+#an.nt.stem
+#write.csv(an.nt.stem, file="output/dbRDAanova_nt_stem.csv")
 ```
 
 Trimmed community anova-like table
 ```{r}
-an.t.stem<-anova.margin.table(dbrda.obj=mod.t.stem)
-an.t.stem
-write.csv(an.t.stem, file="output/dbRDAanova_t_stem.csv")
+#an.t.stem<-anova.margin.table(dbrda.obj=mod.t.stem)
+#an.t.stem
+#write.csv(an.t.stem, file="output/dbRDAanova_t_stem.csv")
 ```
 
 
