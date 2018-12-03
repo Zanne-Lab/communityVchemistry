@@ -195,6 +195,38 @@ load_CN<-function(){
   
 }
 
+load_Cfract<-function(){
+  
+  cfract <- read_csv(file = "data/Marissa_Chemistry_Data_export.csv")
+  cfract <- cfract[complete.cases(cfract),] # get rid of empty row from the excel file
+  
+  # fix typo
+  cfract %>%
+    mutate(codeStem = ifelse(codeStem == "JASC2" &  labID %in% c(47,48), 
+                             "JASC3", 
+                             codeStem)) -> cfract
+  
+  # average the 2 analytical reps
+  num.out <- length(unique(cfract$labID))/2
+  cfract %>%
+    mutate(rep = paste0("rep",rep(c(1,2), times = num.out))) %>%
+    select(codeStem, rep, perc.Total.lignin, Arabinose, Rhamnose, Galactose, Glucose, Xylose, Mannose, Total) %>%
+    gather(key = "type", value = "value", -c(codeStem, rep)) %>%
+    spread(key = rep, value = value) %>%
+    mutate(diff = abs(rep1 - rep2)) %>%
+    mutate(avg = (rep1 + rep2) / 2) %>%
+    select(codeStem, type, avg) %>%
+    spread(key = type, value = avg) -> cfract.w
+  
+  # add unique, code, size, Stem
+  cfract.w %>%
+    separate(codeStem, into = c("code","Stem"), sep = 4, remove = F) %>%
+    mutate(size = ifelse(code == tolower(code), "small","large")) %>%
+    rename('unique'=codeStem) -> cfract.wt
+  
+  return(cfract.wt)
+}
+
 mergeTraitData<-function(){
   
   #load raw trait datasets
@@ -226,6 +258,45 @@ mergeTraitData<-function(){
   
 }
 
+# adds C fraction data
+mergeTraitData_new<-function(){
+  
+  #load raw trait datasets
+  waterperc <- load_waterPercent.perGwetmass() ##### this is in units of g water per g of wet mass x 100
+  densityNbarkthick <- load_densityNbarkthick()
+  xrf <- load_XRF()
+  cn <- load_CN()
+  cfract <-load_Cfract()
+  
+  #make long
+  waterperc %>%
+    mutate(trait = "waterperc") %>%
+    rename('trait.val'='waterperc') %>%
+    mutate(compositeSample = FALSE) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> waterperc.l
+  densityNbarkthick %>%
+    gather(key = "trait", value = "trait.val", c(density, barkthick)) %>%
+    mutate(compositeSample = FALSE) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> densityNbarkthick.l
+  xrf %>%
+    gather(key = "trait", value = "trait.val", c(P, K, Ca, Mn, Fe, Zn)) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> xrf.l
+  cn %>%
+    gather(key = "trait", value = "trait.val", c(C, N)) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cn.l
+  cfract %>%
+    select(-Total) %>%
+    gather(key = "trait", value = "trait.val", -c(unique, code, Stem, size)) %>%
+    mutate(compositeSample = FALSE) %>%
+    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cfract.l
+  
+  
+  trait.data.l <- rbind(waterperc.l, densityNbarkthick.l, xrf.l, cn.l, cfract.l)
+  
+  return(trait.data.l)
+  
+}
+
 # code-level traits
 
 #if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
@@ -233,6 +304,54 @@ trait.means_byCode <- function(stemSamples, fill.densitybark){
   
   #load trait data
   trait.data.l <- mergeTraitData()
+  
+  #summarize
+  trait.data.l %>%
+    group_by(code, trait) %>%
+    summarize(val = mean(trait.val, na.rm=T)) %>%
+    spread(key = trait, value = val) -> traitmeans.code
+  
+  #add species and size
+  samp.indx <- unique(stemSamples[,c("code","species","size")])
+  traitmeans.code %>%
+    left_join(samp.indx) -> traitmeans.code
+  
+  if(fill.densitybark == TRUE){
+    # use species-level small-stem estimates of density and barkthick for large-stem samples
+    
+    #pull out the small-stem estimates
+    traitmeans.code %>%
+      filter(size == "small") %>%
+      select(code, density, barkthick) %>%
+      mutate(species = code) %>%
+      mutate(size = "large") -> filler.data
+    tmp <- data.frame(filler.data)
+    tmp %>%
+      select(-code) %>%
+      mutate(code = toupper(species)) -> filler.data
+    
+    #identify which species overlap in the large size class
+    fillcodes <- unique(filler.data$code)
+    allcodes <- unique(traitmeans.code$code)
+    
+    #loop through the large samples that can be filled in
+    CODE <- allcodes[allcodes %in% fillcodes]
+    for(i in 1:length(CODE)){
+      fill.vals <- filler.data[filler.data$code == CODE[i], c("density","barkthick")]
+      traitmeans.code[traitmeans.code$code == CODE[i], c("density","barkthick")] <- fill.vals
+    }
+    
+  }
+  
+  return(traitmeans.code)
+  
+}
+
+# adds C fraction data
+trait.means_byCode_new <- function(stemSamples, fill.densitybark){
+  
+  #load trait data
+  trait.data.l <- mergeTraitData_new()
   
   #summarize
   trait.data.l %>%
@@ -347,7 +466,38 @@ trait.means_byStem <- function(stemSamples){
   
   return(traitmeans.stem)
   
-  }
+}
+
+trait.means_byStem_new <- function(stemSamples){
+  
+  #load trait data
+  trait.data.l <- mergeTraitData_new()
+  
+  #summarize
+  trait.data.l %>%
+    filter(!is.na(Stem)) %>%
+    mutate(codeStem = paste0(code, Stem)) %>%
+    group_by(codeStem, trait) %>%
+    summarize(val = mean(trait.val, na.rm=T)) %>%
+    spread(key = trait, value = val) -> traitmeans.stem
+  
+  #add species and size
+  samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
+  traitmeans.stem %>%
+    left_join(samp.indx) -> traitmeans.stem
+  
+  #note
+  #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
+  # acpa2 and lepa4
+  # manually fill in the species and size column for these samples
+  tmp <- traitmeans.stem
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  traitmeans.stem <- tmp
+  
+  return(traitmeans.stem)
+  
+}
 
 trait.sds_byStem <- function(stemSamples){
   

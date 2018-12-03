@@ -1,0 +1,286 @@
+---
+title: "How do wood species and sizes vary in decay?"
+author: "Marissa Lee"
+date: "12/2/2018"
+output: github_document
+---
+
+```{r}
+#chunk options
+
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+```
+
+Load libraries, functions, data
+```{r load}
+#libraries, fxns, data
+
+#---------------------------#
+#libraries
+library(knitr) #r markdown
+library(readr) #read/write
+library(magrittr) #data formatting
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(grid) #plotting
+library(gridExtra)
+#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
+library(litterfitter) #fit decay models to timeseries
+#library(lmtest) # for coxtest()
+#library(vegan) #diversity metrics
+#library(rioja) #WA-PLS
+
+#---------------------------#
+#fxns
+source("code/load_microbeData_fxns.R")
+source("code/load_traitData_fxns.R")
+source("code/load_decayData_fxns.R")
+source("code/check_fxns.R")
+#source("code/summaryTable_fxns.R")
+#source("code/analysisDF_fxns.R")
+
+#---------------------------#
+#sample meta data
+stemSamples <- load_stemSamples() # in code/load_microbeData_fxns.R
+
+#---------------------------#
+# all trait data
+#trait.data.l <- mergeTraitData()
+#head(trait.data.l)
+#rm(trait.data.l)
+
+# averaged by code
+#if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE)
+#trait.sds_byCode(stemSamples) # within code variation
+#trait.n_byCode(stemSamples) # number of code samples that were aggregated
+
+# averaged by codeStem
+traits.stem <- trait.means_byStem(stemSamples)
+#trait.sds_byStem(stemSamples) # within codeStem variation
+#trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
+
+#---------------------------#
+
+# load mass loss data and calculate percent mass remaining (pmr)
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass)
+
+# average pmr for each stem and timepoint
+pmr_byStem <- AvgPMR_byStem(pmr)
+
+
+```
+
+Plot percent mass remaining (pmr) for each sample over time
+```{r}
+ggplot(pmr, aes(y=pmr, x=time, color = size)) + 
+  geom_point(alpha=.8) +
+  geom_hline(yintercept = 1, linetype = 2) +
+  geom_hline(yintercept = 0, linetype = 2) +
+  facet_wrap(~species) +
+  geom_smooth()
+```
+
+Calculate decay trajectory fits for each code (species+size)
+```{r}
+# calculate decay trajectory fits for each species+size
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
+indx <- unique(stemSamples[,c("code","Binomial","size")])
+decayfits %>%
+  left_join(indx) -> decayfits
+
+# weibull params
+# alpha = shape param
+# beta = scale param
+```
+For the weibull model, alpha = shape, beta = scale.
+
+Compare the negative exp. vs weibull models by plotting time to 70% mass remaining (t70) for each species+size
+```{r}
+ggplot(decayfits,aes(x=t70,y=w.t70,col=size))+
+  geom_point()+
+  labs(x="Time to 30% mass loss (negative exponential)",
+       y="Time to 30% mass loss (Weibull)")+
+  geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
+```
+
+Another view...
+Figure S2. Comparison of negative exp and weibull models using t70
+```{r}
+decayfits %>%
+  select(Binomial, size, t70, w.t70) %>%
+  gather(key = "variable", value ="value", -c(Binomial,size)) %>%
+  mutate(value.round = round(value, digits = 1)) -> plot.df
+plot.df$variable <- recode(plot.df$variable, "t70" = "neg.exp", "w.t70" = "weibull")
+
+ggplot(plot.df, aes(x = variable, y = reorder(Binomial, value), 
+                    fill = value, label = value.round)) +
+  geom_tile() +
+  geom_text() +
+  facet_grid(~size) +
+  scale_fill_distiller(direction = 1) +
+  theme_bw() +
+  xlab("Years to 30% mass loss") + ylab("") +
+  guides(fill = F)
+#ggsave(filename = "output/compare_t70.pdf", width = 5, height = 6)
+
+```
+
+Figure S3. Comparison of negative exp and weibull models using AIC
+```{r}
+decayfits %>%
+  select(code, Binomial, size, ne.aic, w.aic) %>%
+  mutate(diff.aic = ne.aic - w.aic) -> tmp
+
+ggplot(tmp, aes(y = reorder(Binomial, diff.aic), x = diff.aic, color = size)) +
+  geom_point() +
+  geom_vline(xintercept = 0, linetype = 2) +
+  ylab("Code") + xlab("Delta AIC (>0 favors Weibull)") +
+  theme_bw()
+#ggsave(filename = "output/compare_aic.pdf", width = 5, height = 6)
+```
+
+```{r checkmissing}
+
+#load community data to check for missing samples
+#stemSamples <- load_stemSamples()
+#fung.otu <- load_matotu() 
+#comm.otu <- add_oomycetes(fung.otu) #add the oomycetes
+#seqSamples <- load_seqSamples(comm.otu, stemSamples)
+
+#checkMissing_stems(traits.stem, seqSamples, pmr_byStem)
+
+#issue #31 -- There are 2 unique codeStem ids that are found in the trait data (xrf sample names) and the sequence data, but not in the stemSamples data (deployment sample names).  These codeStem ids are not found in the percent mass loss data.  Because the main goal is to analyze decay responses, I'm going to continue to leave these codeStems out of the stemSamples dataframe. Is it possible that stem id numbers got switched? Something to follow-up on.
+
+```
+
+
+Figure 1. Wood species x decay params (weibull model)
+```{r}
+#plot the weibull fits
+decayfits %>%
+  select(Binomial, size, code, 
+         alpha, beta,
+         mean1, lower1, upper1, mean2, lower2, upper2, 
+         w.t70, w.aic, w.r2) -> decayfits.w
+
+#order Binomial by w.t70
+decayfits.w %>%
+  select(Binomial, w.t70) %>%
+  group_by(Binomial) %>%
+  summarize(mean = mean(w.t70)) %>%
+  arrange(mean)-> binom.order
+decayfits.w$Binomial <- factor(decayfits.w$Binomial, levels = as.character(binom.order$Binomial))
+
+# plot
+p.t70 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t70, 
+                                 color = size)) +
+  geom_point() +
+  scale_color_manual(values = c("black","darkgray")) +
+  ylab("") + xlab("Years to 30% mass loss") +
+  theme_bw() + guides(color = F)
+
+p.scale <- ggplot(decayfits.w, aes(y = Binomial, x = beta, color = size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower1, xmax = upper1)) +
+  #geom_point(aes(x = mean1), shape = 2, alpha = .5, size = 3) +
+  scale_color_manual(values = c("black","darkgray")) +
+  ylab("") + xlab("Scale parameter") +
+  theme_bw() + guides(color = F)
+
+p.shape <- ggplot(decayfits.w, aes(y = Binomial, x = alpha, color = size)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = lower2, xmax = upper2)) +
+  #geom_point(aes(x = mean2), shape = 2, alpha = .5, size = 3) +
+  scale_color_manual(values = c("black","darkgray")) +
+  ylab("") + xlab("Shape parameter") +
+  theme_bw() + guides(color = F)
+
+#pdf(file = "output/decayfits.pdf", width = 8, height = 6)
+grid.arrange(p.t70,
+             p.scale +
+              theme(axis.line=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.title.y=element_blank()), 
+             p.shape + 
+              theme(axis.line=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.title.y=element_blank()),
+            ncol=3, widths=c(2,1,1)
+)
+#dev.off()
+
+pdf(file = "output/decayfits.pdf", width = 8, height = 6)
+grid.arrange(p.t70,
+             p.scale +
+              theme(axis.line=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.title.y=element_blank()), 
+             p.shape + 
+              theme(axis.line=element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.title.y=element_blank()),
+            ncol=3, widths=c(2,1,1)
+)
+dev.off()
+
+```
+
+Figure 2. Time x percent mass remaining
+```{r}
+# add points that show real data in the background
+
+#make a long version of pmr.byStem.df.w
+pmr_byStem %>%
+  gather(key="time",value="mean.pmr", 2:7, na.rm=TRUE) %>%
+  separate(time, into=c("drop","timeNum"), sep="time") %>%
+  mutate(timeNum=as.numeric(timeNum)) %>%
+  mutate(species=tolower(code)) %>%
+  mutate(size = case_when(code == species ~ "small", 
+                          code != species ~ "large")) %>%
+  select(-drop) -> pmr.byStem.df
+
+#order the wood species by t70 to match species order in previous figure
+unique(pmr.byStem.df$timeNum)
+woodSp.o <- levels(reorder(decayfits$species, -decayfits$w.t70))
+pmr.byStem.df$species <- factor(pmr.byStem.df$species, levels=rev(woodSp.o))
+
+#add underlying pmr data points
+pmr %>%
+  select(codeStem, code, species, size, time, pmr) %>%
+  rename('timeNum' = 'time') -> pmr.tmp
+
+p.pmrBystem <- ggplot(pmr.byStem.df, 
+                      aes(x=timeNum/12, y=mean.pmr*100, 
+                          group=codeStem,
+                          linetype=size)) + 
+  geom_line() + 
+  geom_point(inherit.aes = F, data = pmr.tmp, 
+             aes(x= timeNum/12, y = pmr*100), 
+             alpha = .2, pch = 16) +
+  facet_wrap(~species) +
+  xlab("Time (years)") + ylab("Mass remaining (%)") + 
+  theme_bw() +
+  scale_linetype_manual(values=c(2,1)) + 
+  guides(linetype=FALSE)
+p.pmrBystem
+
+#pdf("output/pmr_byStem.pdf", width=6, height=6)
+#p.pmrBystem
+#dev.off()
+
+rm(woodSp.o, p.pmrBystem, pmr.byStem.df)
+#![Figure 2](output/pmr_byStem.pdf)
+```
+
+
+
+
+
+
+
