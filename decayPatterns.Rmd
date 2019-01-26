@@ -37,7 +37,7 @@ source("code/load_microbeData_fxns.R")
 source("code/load_traitData_fxns.R")
 source("code/load_decayData_fxns.R")
 source("code/check_fxns.R")
-#source("code/summaryTable_fxns.R")
+source("code/summaryTable_fxns.R") #for list_to_df()
 #source("code/analysisDF_fxns.R")
 
 #---------------------------#
@@ -87,9 +87,13 @@ ggplot(pmr, aes(y=pmr, x=time, color = size)) +
 Calculate decay trajectory fits for each code (species+size)
 ```{r}
 # calculate decay trajectory fits for each species+size
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
+decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
+write_csv(decayfits,"derived_data/decayfits.csv")
+
+###----###
+#Error in time_to_prop_mass_remaining(x, threshold.mass = 0.5) : Not predicted to reach threshold mass within the time range.
+
+#decayfits <- read_csv("derived_data/decayfits.csv")
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits

@@ -417,7 +417,7 @@ fit_all_curves<-function(df_in, stemSamples){
   boot.ne.df <- list_to_df(boot.ne)
   # from ne model
   k<-unlist(lapply(ne_fits, function(x) x$optimFit$par))
-  t70<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.70)))
+  t50<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.50)))
   neg.exp.aic<-unlist(lapply(ne_fits, function(x) x$fitAICc))
   ne.r2<-unlist(lapply(ne_fits, function(x) Calc_R2(x)))
   #boot.ne.df$source
@@ -444,20 +444,20 @@ fit_all_curves<-function(df_in, stemSamples){
   # from weibull model
   alpha<-unlist(lapply(w.fits, function(x) x$optimFit$par[[2]]))
   beta<-unlist(lapply(w.fits, function(x) x$optimFit$par[[1]]))
-  w.t70<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.70)))
+  w.t50<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.50)))
   w.aic<-unlist(lapply(w.fits, function(x) x$fitAICc))
   w.r2<-unlist(lapply(w.fits, function(x) Calc_R2(x)))
   #boot.w.df
   
   # put everything in a dataframe
   spdf<-data.frame(k=k,
-                   t70=t70,
+                   t50=t50,
                    ne.aic = neg.exp.aic,
                    ne.r2 = ne.r2,
                    boot.ne.df[,c("mean.k", "lower.k", "upper.k")],
                    alpha = alpha, 
                    beta = beta,
-                   w.t70 = w.t70,
+                   w.t50 = w.t50,
                    w.aic = w.aic,
                    w.r2 = w.r2,
                    boot.w.df[,c("mean1", "lower1", "upper1", "mean2", "lower2", "upper2")])
@@ -474,14 +474,14 @@ fit_all_curves<-function(df_in, stemSamples){
 }
 
 
-# compare estimated t70 based on the negative exponential vs weibull model
+# compare estimated t50 based on the negative exponential vs weibull model
 
 comparePlot_ne_weibull <- function(decayfits){
   
-  p <- ggplot(decayfits, aes(x=t70,y=w.t70, col=size))+
+  p <- ggplot(decayfits, aes(x=t50,y=w.t50, col=size))+
    geom_point()+
-   labs(x="Time to 30% mass loss (negative exponential)",
-        y="Time to 30% mass loss (Weibull)")+
+   labs(x="Time to 50% mass loss (negative exponential)",
+        y="Time to 50% mass loss (Weibull)")+
    geom_abline(slope=1,intercept=0,linetype="dashed") + theme_bw()
 
   return(p)
