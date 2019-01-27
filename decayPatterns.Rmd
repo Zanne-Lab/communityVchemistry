@@ -87,13 +87,9 @@ ggplot(pmr, aes(y=pmr, x=time, color = size)) +
 Calculate decay trajectory fits for each code (species+size)
 ```{r}
 # calculate decay trajectory fits for each species+size
-decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
-write_csv(decayfits,"derived_data/decayfits.csv")
-
-###----###
-#Error in time_to_prop_mass_remaining(x, threshold.mass = 0.5) : Not predicted to reach threshold mass within the time range.
-
-#decayfits <- read_csv("derived_data/decayfits.csv")
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits
@@ -106,10 +102,10 @@ For the weibull model, alpha = shape, beta = scale.
 
 Compare the negative exp. vs weibull models by plotting time to 70% mass remaining (t70) for each species+size
 ```{r}
-ggplot(decayfits,aes(x=t70,y=w.t70,col=size))+
+ggplot(decayfits,aes(x=t60,y=w.t60,col=size))+
   geom_point()+
-  labs(x="Time to 30% mass loss (negative exponential)",
-       y="Time to 30% mass loss (Weibull)")+
+  labs(x="Time to 40% mass loss (negative exponential)",
+       y="Time to 40% mass loss (Weibull)")+
   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
@@ -117,10 +113,10 @@ Another view...
 Figure S2. Comparison of negative exp and weibull models using t70
 ```{r}
 decayfits %>%
-  select(Binomial, size, t70, w.t70) %>%
+  select(Binomial, size, t60, w.t60) %>%
   gather(key = "variable", value ="value", -c(Binomial,size)) %>%
   mutate(value.round = round(value, digits = 1)) -> plot.df
-plot.df$variable <- recode(plot.df$variable, "t70" = "neg.exp", "w.t70" = "weibull")
+plot.df$variable <- recode(plot.df$variable, "t60" = "neg.exp", "w.t60" = "weibull")
 
 ggplot(plot.df, aes(x = variable, y = reorder(Binomial, value), 
                     fill = value, label = value.round)) +
@@ -129,9 +125,9 @@ ggplot(plot.df, aes(x = variable, y = reorder(Binomial, value),
   facet_grid(~size) +
   scale_fill_distiller(direction = 1) +
   theme_bw() +
-  xlab("Years to 30% mass loss") + ylab("") +
+  xlab("Years to 40% mass loss") + ylab("") +
   guides(fill = F)
-#ggsave(filename = "output/compare_t70.pdf", width = 5, height = 6)
+#ggsave(filename = "output/compare_t60.pdf", width = 5, height = 6)
 
 ```
 
@@ -171,23 +167,24 @@ decayfits %>%
   select(Binomial, size, code, 
          alpha, beta,
          mean1, lower1, upper1, mean2, lower2, upper2, 
-         w.t70, w.aic, w.r2) -> decayfits.w
+         w.t60, w.aic, w.r2) -> decayfits.w
 
-#order Binomial by w.t70
+#order Binomial by w.t60
 decayfits.w %>%
-  select(Binomial, w.t70) %>%
+  select(Binomial, w.t60) %>%
   group_by(Binomial) %>%
-  summarize(mean = mean(w.t70)) %>%
+  summarize(mean = mean(w.t60)) %>%
   arrange(mean)-> binom.order
 decayfits.w$Binomial <- factor(decayfits.w$Binomial, levels = as.character(binom.order$Binomial))
 
 # plot
-p.t70 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t70, 
+p.t60 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t60, 
                                  color = size)) +
   geom_point() +
   scale_color_manual(values = c("black","darkgray")) +
-  ylab("") + xlab("Years to 30% mass loss") +
+  ylab("") + xlab("Years to 40% mass loss") +
   theme_bw() + guides(color = F)
+# updates to t60 end here
 
 p.scale <- ggplot(decayfits.w, aes(y = Binomial, x = beta, color = size)) +
   geom_point() +

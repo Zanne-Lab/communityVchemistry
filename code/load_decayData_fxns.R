@@ -417,7 +417,7 @@ fit_all_curves<-function(df_in, stemSamples){
   boot.ne.df <- list_to_df(boot.ne)
   # from ne model
   k<-unlist(lapply(ne_fits, function(x) x$optimFit$par))
-  t50<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.50)))
+  t60<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.6)))
   neg.exp.aic<-unlist(lapply(ne_fits, function(x) x$fitAICc))
   ne.r2<-unlist(lapply(ne_fits, function(x) Calc_R2(x)))
   #boot.ne.df$source
@@ -444,20 +444,20 @@ fit_all_curves<-function(df_in, stemSamples){
   # from weibull model
   alpha<-unlist(lapply(w.fits, function(x) x$optimFit$par[[2]]))
   beta<-unlist(lapply(w.fits, function(x) x$optimFit$par[[1]]))
-  w.t50<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.50)))
+  w.t60<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.60)))
   w.aic<-unlist(lapply(w.fits, function(x) x$fitAICc))
   w.r2<-unlist(lapply(w.fits, function(x) Calc_R2(x)))
   #boot.w.df
   
   # put everything in a dataframe
   spdf<-data.frame(k=k,
-                   t50=t50,
+                   t60=t60,
                    ne.aic = neg.exp.aic,
                    ne.r2 = ne.r2,
                    boot.ne.df[,c("mean.k", "lower.k", "upper.k")],
                    alpha = alpha, 
                    beta = beta,
-                   w.t50 = w.t50,
+                   w.t60 = w.t60,
                    w.aic = w.aic,
                    w.r2 = w.r2,
                    boot.w.df[,c("mean1", "lower1", "upper1", "mean2", "lower2", "upper2")])
@@ -480,8 +480,8 @@ comparePlot_ne_weibull <- function(decayfits){
   
   p <- ggplot(decayfits, aes(x=t50,y=w.t50, col=size))+
    geom_point()+
-   labs(x="Time to 50% mass loss (negative exponential)",
-        y="Time to 50% mass loss (Weibull)")+
+   labs(x="Time to 60% mass loss (negative exponential)",
+        y="Time to 60% mass loss (Weibull)")+
    geom_abline(slope=1,intercept=0,linetype="dashed") + theme_bw()
 
   return(p)
