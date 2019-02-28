@@ -399,7 +399,9 @@ Calc_R2<-function(ne_fits_df){
 }
 
 fit_all_curves<-function(df_in, stemSamples){
-  
+
+  #df_in <- pmr  #testing stuff
+    
   #negative expon fit
   ne_fits <- lapply(split(df_in, factor(df_in$code)),function(x){
     fit_litter(time = x$time/12, 

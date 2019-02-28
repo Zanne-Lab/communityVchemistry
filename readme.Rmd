@@ -48,6 +48,126 @@ output: github_document
 - Exclude mycorrhizal fungi and animal-associated fungi that somehow made it into our OTU table -- *code/unexpectedTaxa.Rmd*
 
 
+## Make figures
+
+```{r loadforfigs}
+#libraries, fxns, data
+
+#---------------------------#
+#libraries
+library(knitr) #r markdown
+library(readr) #read/write
+library(magrittr) #data formatting
+library(tidyr) #data formatting
+library(dplyr) #data formatting
+library(ggplot2) #plotting
+library(grid) #plotting
+library(gridExtra)
+library(corrplot)
+
+#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
+#library(litterfitter) #fit decay models to timeseries
+#library(lmtest) # for coxtest()
+#library(vegan) #diversity metrics
+#library(rioja) #WA-PLS
+
+#---------------------------#
+#fxns
+source("code/load_microbeData_fxns.R")
+source("code/load_traitData_fxns.R")
+source("code/load_decayData_fxns.R")
+source("code/check_fxns.R")
+source("code/summaryTable_fxns.R")
+source("code/analysisDF_fxns.R")
+
+#---------------------------#
+#data -- microbes and sample meta
+
+stemSamples <- load_stemSamples() # in code/load_microbeData_fxns.R
+fung.otu <- load_matotu() 
+comm.otu <- add_oomycetes(fung.otu) #add the oomycetes
+seqSamples <- load_seqSamples(comm.otu, stemSamples) #create sequence sample meta data table
+taxAndFunguild <- load_TaxAndFunguild(comm.otu) #taxon lookup info
+
+#---------------------------#
+#data -- wood traits
+
+# all trait data
+#trait.data.l <- mergeTraitData()
+#head(trait.data.l)
+#rm(trait.data.l)
+
+# averaged by code
+#if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE)
+#trait.sds_byCode(stemSamples) # within code variation
+#trait.n_byCode(stemSamples) # number of code samples that were aggregated
+
+# averaged by codeStem
+traits.stem <- trait.means_byStem(stemSamples)
+#trait.sds_byStem(stemSamples) # within codeStem variation
+#trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
+
+#---------------------------#
+#data -- mass loss
+
+# load mass loss data and calculate percent mass remaining (pmr)
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass)
+
+# average pmr for each stem and timepoint
+pmr_byStem <- AvgPMR_byStem(pmr)
+
+#---------------------------#
+# calculate decay trajectory fits for each species+size
+
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
+indx <- unique(stemSamples[,c("code","Binomial","size")])
+decayfits %>%
+  left_join(indx) -> decayfits
+
+# weibull params
+# alpha = shape param
+# beta = scale param
+
+```
+
+Main text figures
+```{r}
+#decayPatterns
+makefig__decayfits(decayfits) # output/figures/maintext/decayfits.pdf
+makefig__pmr_byStem(pmr_byStem) # output/figures/maintext/pmr_byStem.pdf
+
+#woodtraits_explainDecay
+makefig__traits_explain_decayParams(traits.stem, traits.code, pmr_byStem) # output/figures/maintext/traits_explain_decayparams.pdf
+makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem) # output/figures/maintext/traits_explain_pmr.pdf
+
+```
+
+Supplementary figures
+```{r}
+#decayPatterns
+makefig__compare_t60(decayfits) # output/figures/supplementary/compare_t60.pdf
+makefig__compare_aic(decayfits) # output/figures/supplementary/compare_aic.pdf
+
+#woodtraits_explainDecay
+makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) # output/figures/supplementary/variation_densityNbarkthick.pdf
+
+  
+```
+
+
+3. Does endophyte composition explain decay?
+- script: *endoComp_explainDecay.Rmd*
+
+4. Does endophyte diversity explain decay? *
+- script: *endoDiv_explainDecay.Rmd*
+
+
+
 
 ## Recent findings
 
@@ -74,7 +194,7 @@ library(gridExtra)
 library(corrplot)
 
 #devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
-#library(litterfitter) #fit decay models to timeseries
+library(litterfitter) #fit decay models to timeseries
 #library(lmtest) # for coxtest()
 #library(vegan) #diversity metrics
 #library(rioja) #WA-PLS
