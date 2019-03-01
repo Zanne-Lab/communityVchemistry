@@ -81,13 +81,12 @@ source("code/summaryTable_fxns.R")
 source("code/analysisDF_fxns.R")
 
 #---------------------------#
-#data -- microbes and sample meta
-
-stemSamples <- load_stemSamples() # in code/load_microbeData_fxns.R
-fung.otu <- load_matotu() 
-comm.otu <- add_oomycetes(fung.otu) #add the oomycetes
-seqSamples <- load_seqSamples(comm.otu, stemSamples) #create sequence sample meta data table
-taxAndFunguild <- load_TaxAndFunguild(comm.otu) #taxon lookup info
+#load data
+stemSamples <- load_stemSamples() 
+microb.data <- load_MicrobeCollection(stemSamples); names(microb.data)
+taxAndFunguild <- microb.data$taxAndFunguild
+comm.otu <- microb.data$comm.otu
+seqSamples <- microb.data$seqSamples
 
 #---------------------------#
 #data -- wood traits
