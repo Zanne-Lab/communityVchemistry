@@ -4,16 +4,13 @@ author: "Marissa Lee"
 date: "12/2/2018"
 output: github_document
 ---
-
-```{r}
+```{r, include = F}
 #chunk options
-
-knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 ```
 
 Load libraries, functions, data
 ```{r load}
-#libraries, fxns, data
 
 #---------------------------#
 #libraries
@@ -33,44 +30,31 @@ library(litterfitter) #fit decay models to timeseries
 
 #---------------------------#
 #fxns
-source("code/load_microbeData_fxns.R")
-source("code/load_traitData_fxns.R")
-source("code/load_decayData_fxns.R")
-source("code/check_fxns.R")
-source("code/summaryTable_fxns.R") #for list_to_df()
-#source("code/analysisDF_fxns.R")
+source('code/helper_fxns.R')
+sourceDir('code')
 
 #---------------------------#
-#sample meta data
-stemSamples <- load_stemSamples() # in code/load_microbeData_fxns.R
+#data
 
-#---------------------------#
-# all trait data
-#trait.data.l <- mergeTraitData()
-#head(trait.data.l)
-#rm(trait.data.l)
+# stems in the study
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 
-# averaged by code
-#if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
-traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE)
-#trait.sds_byCode(stemSamples) # within code variation
-#trait.n_byCode(stemSamples) # number of code samples that were aggregated
-
-# averaged by codeStem
-traits.stem <- trait.means_byStem(stemSamples)
-#trait.sds_byStem(stemSamples) # within codeStem variation
-#trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
-
-#---------------------------#
-
-# load mass loss data and calculate percent mass remaining (pmr)
+# stem mass
 initial_mass <- read_in_initial_mass()
 harvest_mass <- LoadHarvestFiles()
-pmr <- Calc_massRemaining(initial_mass, harvest_mass)
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 
-# average pmr for each stem and timepoint
-pmr_byStem <- AvgPMR_byStem(pmr)
-
+# decay fits
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
+indx <- unique(stemSamples[,c("code","Binomial","size")])
+decayfits %>%
+  left_join(indx) -> decayfits
+# weibull params
+# alpha = shape param
+# beta = scale param
 
 ```
 
@@ -83,22 +67,6 @@ ggplot(pmr, aes(y=pmr, x=time, color = size)) +
   facet_wrap(~species) +
   geom_smooth()
 ```
-
-Calculate decay trajectory fits for each code (species+size)
-```{r}
-# calculate decay trajectory fits for each species+size
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
-indx <- unique(stemSamples[,c("code","Binomial","size")])
-decayfits %>%
-  left_join(indx) -> decayfits
-
-# weibull params
-# alpha = shape param
-# beta = scale param
-```
-For the weibull model, alpha = shape, beta = scale.
 
 Compare the negative exp. vs weibull models by plotting time to 70% mass remaining (t70) for each species+size
 ```{r}
@@ -113,17 +81,16 @@ Another view...
 Figure S2. Comparison of negative exp and weibull models using t70
 ```{r}
 makefig__compare_t60(decayfits) # output/figures/supplementary/compare_t60.pdf
-
 ```
+![](output/figures/supplementary/compare_t60.pdf)
 
 Figure S3. Comparison of negative exp and weibull models using AIC
 ```{r}
 makefig__compare_aic(decayfits) # output/figures/supplementary/compare_aic.pdf
-
 ```
+![](output/figures/supplementary/compare_aic.pdf)
 
 ```{r checkmissing}
-
 #load community data to check for missing samples
 #stemSamples <- load_stemSamples()
 #fung.otu <- load_matotu() 
@@ -140,15 +107,14 @@ makefig__compare_aic(decayfits) # output/figures/supplementary/compare_aic.pdf
 Figure 1. Wood species x decay params (weibull model)
 ```{r}
 makefig__decayfits(decayfits) # output/figures/maintext/decayfits.pdf
-
 ```
+![](output/figures/maintext/decayfits.pdf)
 
 Figure 2. Time x percent mass remaining
 ```{r}
 makefig__pmr_byStem(pmr_byStem) # output/figures/maintext/pmr_byStem.pdf
-
 ```
-
+![](output/figures/maintext/pmr_byStem.pdf)
 
 
 
