@@ -2,10 +2,10 @@
 makefig__compare_t60 <- function(decayfits){
   
   decayfits %>%
-    select(Binomial, size, t60, w.t60) %>%
+    select(Binomial, size, t50, w.t50) %>%
     gather(key = "variable", value ="value", -c(Binomial,size)) %>%
     mutate(value.round = round(value, digits = 1)) -> plot.df
-  plot.df$variable <- recode(plot.df$variable, "t60" = "neg.exp", "w.t60" = "weibull")
+  plot.df$variable <- recode(plot.df$variable, "t50" = "neg.exp", "w.t50" = "weibull")
   
   ggplot(plot.df, aes(x = variable, y = reorder(Binomial, value), 
                       fill = value, label = value.round)) +
@@ -14,10 +14,10 @@ makefig__compare_t60 <- function(decayfits){
     facet_grid(~size) +
     scale_fill_distiller(direction = 1) +
     theme_bw() +
-    xlab("Years to 40% mass loss") + ylab("") +
+    xlab("Years to 50% mass loss") + ylab("") +
     guides(fill = F)
   
-  ggsave(filename = "output/figures/supplementary/compare_t60.pdf", width = 5, height = 6)
+  ggsave(filename = "output/figures/supplementary/compare_t50.pdf", width = 5, height = 6)
   
 }
 
@@ -44,22 +44,22 @@ makefig__decayfits <- function(decayfits){
     select(Binomial, size, code, 
            alpha, beta,
            mean1, lower1, upper1, mean2, lower2, upper2, 
-           w.t60, w.aic, w.r2) -> decayfits.w
+           w.t50, w.aic, w.r2) -> decayfits.w
   
   #order Binomial by w.t60
   decayfits.w %>%
-    select(Binomial, w.t60) %>%
+    select(Binomial, w.t50) %>%
     group_by(Binomial) %>%
-    summarize(mean = mean(w.t60)) %>%
+    summarize(mean = mean(w.t50,na.rm=TRUE)) %>%
     arrange(mean)-> binom.order
   decayfits.w$Binomial <- factor(decayfits.w$Binomial, levels = as.character(binom.order$Binomial))
   
   # plot
-  p.t60 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t60, 
+  p.t60 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t50, 
                                    color = size)) +
     geom_point() +
     scale_color_manual(values = c("black","darkgray")) +
-    ylab("") + xlab("Years to 40% mass loss") +
+    ylab("") + xlab("Years to 50% mass loss") +
     theme_bw() + guides(color = F)
   
   p.scale <- ggplot(decayfits.w, aes(y = Binomial, x = beta, color = size)) +

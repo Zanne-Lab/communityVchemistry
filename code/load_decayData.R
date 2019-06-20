@@ -405,11 +405,11 @@ fit_all_curves<-function(df_in, stemSamples){
   #negative expon fit
   ne_fits <- lapply(split(df_in, factor(df_in$code)),function(x){
     fit_litter(time = x$time/12, 
-               mass.remaining = x$pmr, model = c("neg.exp"), iters = 500)
+               mass.remaining = x$pmr, model = c("neg.exp"), iters = 2000)
   })
   #create bootstrap distrib and get the 95% CI
   boot.ne<-lapply(ne_fits, function(x){
-    bootmat<-bootstrap_parameters(x, nboot=500) #1st column is param 1, but what is in the 2nd col?
+    bootmat<-bootstrap_parameters(x, nboot=2000) #1st column is param 1, but what is in the 2nd col?
     #plot(bootmat)
     mean.k<-mean(bootmat[,1])
     ci.k<-quantile(bootmat[,1], c(.05, .95))
@@ -419,7 +419,7 @@ fit_all_curves<-function(df_in, stemSamples){
   boot.ne.df <- list_to_df(boot.ne)
   # from ne model
   k<-unlist(lapply(ne_fits, function(x) x$optimFit$par))
-  t60<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.6)))
+  t50<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.5)))
   neg.exp.aic<-unlist(lapply(ne_fits, function(x) x$fitAICc))
   ne.r2<-unlist(lapply(ne_fits, function(x) Calc_R2(x)))
   #boot.ne.df$source
@@ -427,7 +427,7 @@ fit_all_curves<-function(df_in, stemSamples){
   #weibull fit
   w.fits <- lapply(split(df_in, factor(df_in$code)), function(x){
     fit_litter(time = x$time/12, 
-               mass.remaining = x$pmr, model = c("weibull"), iters = 500)
+               mass.remaining = x$pmr, model = c("weibull"), iters = 2000)
   })
   #create bootstrap distrib and get the 95% CI
   boot.w<-lapply(w.fits, function(x){
@@ -446,20 +446,20 @@ fit_all_curves<-function(df_in, stemSamples){
   # from weibull model
   alpha<-unlist(lapply(w.fits, function(x) x$optimFit$par[[2]]))
   beta<-unlist(lapply(w.fits, function(x) x$optimFit$par[[1]]))
-  w.t60<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.60)))
+  w.t50<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.50)))
   w.aic<-unlist(lapply(w.fits, function(x) x$fitAICc))
   w.r2<-unlist(lapply(w.fits, function(x) Calc_R2(x)))
   #boot.w.df
   
   # put everything in a dataframe
   spdf<-data.frame(k=k,
-                   t60=t60,
+                   t50=t50,
                    ne.aic = neg.exp.aic,
                    ne.r2 = ne.r2,
                    boot.ne.df[,c("mean.k", "lower.k", "upper.k")],
                    alpha = alpha, 
                    beta = beta,
-                   w.t60 = w.t60,
+                   w.t50 = w.t50,
                    w.aic = w.aic,
                    w.r2 = w.r2,
                    boot.w.df[,c("mean1", "lower1", "upper1", "mean2", "lower2", "upper2")])
@@ -490,4 +490,25 @@ comparePlot_ne_weibull <- function(decayfits){
 
 }
 
+time_to_prop_mass_remaining<-function (x, threshold.mass = 0.5) 
+{
+  if (class(x) != "litfit") {
+    stop("Something went wrong -- litterfitter::steady_state takes a 'litfit' object")
+  }
+  mod <- get(x$model)
+  time.vec <- seq(0, max(x$time), 1e-04)
+  mass.predict <- do.call(mod, c(list(time.vec), as.list(x$optimFit$par)))
+  if (all(mass.predict > threshold.mass)) {
+    print("Warning: not predicted to reach threshold mass within the time range.")
+    time.vec2<-time.vec+2
+    mass.predict2 <- do.call(mod, c(list(time.vec2), as.list(x$optimFit$par)))
+    if (all(mass.predict2 > threshold.mass)) { return(NA) }
+    return(min(time.vec2[mass.predict2 < threshold.mass]))
+  }
+  return(min(time.vec[mass.predict < threshold.mass]))
+}
 
+
+neg.exp<-litterfitter:::neg.exp
+
+weibull<-litterfitter:::weibull

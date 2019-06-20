@@ -48,7 +48,7 @@ pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 # decay fits
 #decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
 #write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits2.csv")
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits
@@ -70,10 +70,10 @@ ggplot(pmr, aes(y=pmr, x=time, color = size)) +
 
 Compare the negative exp. vs weibull models by plotting time to 70% mass remaining (t70) for each species+size
 ```{r}
-ggplot(decayfits,aes(x=t60,y=w.t60,col=size))+
+ggplot(decayfits,aes(x=t50,y=w.t50,col=size))+
   geom_point()+
-  labs(x="Time to 40% mass loss (negative exponential)",
-       y="Time to 40% mass loss (Weibull)")+
+  labs(x="Time to 50% mass loss (negative exponential)",
+       y="Time to 50% mass loss (Weibull)")+
   geom_abline(slope=1,intercept=0,linetype="dashed")+theme_bw()
 ```
 
