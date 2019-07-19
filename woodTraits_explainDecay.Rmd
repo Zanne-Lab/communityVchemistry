@@ -49,13 +49,13 @@ pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
 
 # decay fits
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
+decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
+write_csv(decayfits,"derived_data/decayfits2.csv")
+decayfits <- read_csv("derived_data/decayfits2.csv")
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits
-code.respVars <- list("k","t60","ne.r2", "alpha","beta","w.t60","w.r2") # weibull params: alpha = shape param, beta = scale param
+code.respVars <- list("k","t50","ne.r2", "alpha","beta","w.t50","w.r2") # weibull params: alpha = shape param, beta = scale param
 
 # wood traits
 #trait.data.l <- mergeTraitData() # all trait data
@@ -96,7 +96,7 @@ We expect initial wood traits will explain varitation in species+size decay rate
 
 ## *Hyp (species+size-level)* Species+size-level initial wood traits will predict variation decay rates and lagginess.
 ```{r}
-makefig__traits_explain_decayParams(decayfits, traits.code) # output/figures/maintext/traits_explain_decayparams.pdf
+makefig__traits_explain_decayParams(decayfits, traits.code,code.respVars,use.cache = F) # output/figures/maintext/traits_explain_decayparams.pdf
 
 #save the resulting object that contains residual values
 #result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code) # this fxn is called in the makefig fxn above
