@@ -1,7 +1,8 @@
 ---
-title: "Community v chemistry -- Recent analyses"
-date: "10/23/2017"
-output: github_document
+title: "Carbon fraction analyses"
+author: "Marissa Lee"
+date: "7/19/2019"
+output: pdf_document
 ---
 
 
