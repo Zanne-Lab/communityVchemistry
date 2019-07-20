@@ -1,13 +1,13 @@
 
-makefig__compare_t60 <- function(decayfits){
+makefig__compare_t50 <- function(decayfits){
   
   decayfits %>%
-    select(Binomial, size, t50, w.t50) %>%
-    gather(key = "variable", value ="value", -c(Binomial,size)) %>%
+    select(species, size, t50, w.t50) %>%
+    gather(key = "variable", value ="value", -c(species,size)) %>%
     mutate(value.round = round(value, digits = 1)) -> plot.df
   plot.df$variable <- recode(plot.df$variable, "t50" = "neg.exp", "w.t50" = "weibull")
   
-  ggplot(plot.df, aes(x = variable, y = reorder(Binomial, value), 
+  ggplot(plot.df, aes(x = variable, y = reorder(species, value), 
                       fill = value, label = value.round)) +
     geom_tile() +
     geom_text() +
@@ -24,10 +24,10 @@ makefig__compare_t60 <- function(decayfits){
 makefig__compare_aic <- function(decayfits){
   
   decayfits %>%
-    select(code, Binomial, size, ne.aic, w.aic) %>%
+    select(code, species, size, ne.aic, w.aic) %>%
     mutate(diff.aic = ne.aic - w.aic) -> tmp
   
-  ggplot(tmp, aes(y = reorder(Binomial, diff.aic), x = diff.aic, color = size)) +
+  ggplot(tmp, aes(y = reorder(species, diff.aic), x = diff.aic, color = size)) +
     geom_point() +
     geom_vline(xintercept = 0, linetype = 2) +
     ylab("Code") + xlab("Delta AIC (>0 favors Weibull)") +
@@ -41,28 +41,28 @@ makefig__decayfits <- function(decayfits){
   
   #plot the weibull fits
   decayfits %>%
-    select(Binomial, size, code, 
+    select(species, size, code, 
            alpha, beta,
            mean1, lower1, upper1, mean2, lower2, upper2, 
            w.t50, w.aic, w.r2) -> decayfits.w
   
-  #order Binomial by w.t60
+  #order species by w.t60
   decayfits.w %>%
-    select(Binomial, w.t50) %>%
-    group_by(Binomial) %>%
+    select(species, w.t50) %>%
+    group_by(species) %>%
     summarize(mean = mean(w.t50,na.rm=TRUE)) %>%
     arrange(mean)-> binom.order
-  decayfits.w$Binomial <- factor(decayfits.w$Binomial, levels = as.character(binom.order$Binomial))
+  decayfits.w$species <- factor(decayfits.w$species, levels = as.character(binom.order$species))
   
   # plot
-  p.t60 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t50, 
+  p.t50 <- ggplot(decayfits.w, aes(y = species, x = w.t50, 
                                    color = size)) +
     geom_point() +
     scale_color_manual(values = c("black","darkgray")) +
     ylab("") + xlab("Years to 50% mass loss") +
     theme_bw() + guides(color = F)
   
-  p.scale <- ggplot(decayfits.w, aes(y = Binomial, x = beta, color = size)) +
+  p.scale <- ggplot(decayfits.w, aes(y = species, x = beta, color = size)) +
     geom_point() +
     geom_errorbarh(aes(xmin = lower1, xmax = upper1)) +
     #geom_point(aes(x = mean1), shape = 2, alpha = .5, size = 3) +
@@ -70,7 +70,7 @@ makefig__decayfits <- function(decayfits){
     ylab("") + xlab("Scale parameter") +
     theme_bw() + guides(color = F)
   
-  p.shape <- ggplot(decayfits.w, aes(y = Binomial, x = alpha, color = size)) +
+  p.shape <- ggplot(decayfits.w, aes(y = species, x = alpha, color = size)) +
     geom_point() +
     geom_errorbarh(aes(xmin = lower2, xmax = upper2)) +
     #geom_point(aes(x = mean2), shape = 2, alpha = .5, size = 3) +
@@ -79,7 +79,7 @@ makefig__decayfits <- function(decayfits){
     theme_bw() + guides(color = F)
   
   pdf(file = "output/figures/maintext/decayfits.pdf", width = 8, height = 6)
-  grid.arrange(p.t60,
+  grid.arrange(p.t50,
                p.scale +
                  theme(axis.line=element_blank(),
                        axis.text.y=element_blank(),
@@ -108,7 +108,7 @@ makefig__pmr_byStem <- function(pmr_byStem){
   
   #order the wood species by t70 to match species order in previous figure
   unique(pmr.byStem.df$timeNum)
-  woodSp.o <- levels(reorder(decayfits$species, -decayfits$w.t60))
+  woodSp.o <- levels(reorder(decayfits$species, -decayfits$w.t50))
   pmr.byStem.df$species <- factor(pmr.byStem.df$species, levels=rev(woodSp.o))
   
   #add underlying pmr data points

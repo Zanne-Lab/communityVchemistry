@@ -207,10 +207,10 @@ doAnalysis_traits_explain_pmr <- function(pmr_byStem, traits.code, traits.stem, 
   
 }
 
-makefig__traits_explain_pmr <- function(traits.stem, traits.code, pmr_byStem, stem.respVars){
+makefig__traits_explain_pmr <- function(traits.stem, traits.code, pmr_byStem, stem.respVars, use.cache){
   
   #do analysis
-  result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem, stem.respVars)
+  result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem, stem.respVars, use.cache)
   mod.select.list <- result.traitsPMR$mod.select.list
   respVars <- result.traitsPMR$respVars
   

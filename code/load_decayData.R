@@ -383,9 +383,7 @@ n.PMR_byStem<-function(plotting_df){
   
 }
 
-
 # calculate decay trajectory fits for each species+size
-
 Calc_R2<-function(ne_fits_df){
   
   pred<-ne_fits_df[['predicted']]
@@ -398,10 +396,31 @@ Calc_R2<-function(ne_fits_df){
   return(r2)
 }
 
-fit_all_curves<-function(df_in, stemSamples){
+# override the 'stop' piece if not predicted to reach thresold mass within observed time range, see GitHub Issue #33
+neg.exp <- function(x, k, upper = c(5), lower = c(1e-04)){
+  exp(-k * x)
+}
+time_to_prop_mass_remaining <- function(x, threshold.mass = 0.5){
+  if (class(x) != "litfit") {
+    stop("Something went wrong -- litterfitter::steady_state takes a 'litfit' object")
+  }
+  mod <- get(x$model)
+  time.vec <- seq(0, max(x$time), 1e-04)
+  mass.predict <- do.call(mod, c(list(time.vec), as.list(x$optimFit$par)))
+  
+  if (all(mass.predict > threshold.mass)) {
+    warning("Not predicted to reach threshold mass within the time range.")
+    time.vec <- seq(0, max(x$time)+10, 1e-04)
+    mass.predict <- do.call(mod, c(list(time.vec), as.list(x$optimFit$par)))
+  }
+  result <- min(time.vec[mass.predict < 0.5])
+  return(result)
+}
 
-  #df_in <- pmr  #testing stuff
-    
+fit_all_curves<-function(df_in, stemSamples){
+  
+  df_in <- pmr  #testing stuff
+  
   #negative expon fit
   ne_fits <- lapply(split(df_in, factor(df_in$code)),function(x){
     fit_litter(time = x$time/12, 
@@ -422,7 +441,6 @@ fit_all_curves<-function(df_in, stemSamples){
   t50<-unlist(lapply(ne_fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.5)))
   neg.exp.aic<-unlist(lapply(ne_fits, function(x) x$fitAICc))
   ne.r2<-unlist(lapply(ne_fits, function(x) Calc_R2(x)))
-  #boot.ne.df$source
   
   #weibull fit
   w.fits <- lapply(split(df_in, factor(df_in$code)), function(x){
@@ -449,7 +467,6 @@ fit_all_curves<-function(df_in, stemSamples){
   w.t50<-unlist(lapply(w.fits, function(x) time_to_prop_mass_remaining(x,threshold.mass=0.50)))
   w.aic<-unlist(lapply(w.fits, function(x) x$fitAICc))
   w.r2<-unlist(lapply(w.fits, function(x) Calc_R2(x)))
-  #boot.w.df
   
   # put everything in a dataframe
   spdf<-data.frame(k=k,

@@ -1,6 +1,7 @@
 
 plot_sampleEffortCurves<-function(mat.otu){
   
+  require(vegan)
   pdf(file="output/figures/supplementary/sampleEffortCurve.pdf", width=5, height=5)
   
   rarecurve(mat.otu, step=100,
@@ -37,10 +38,12 @@ calc_codeOTUabund <- function(comm.otu, seqSamples, use.cache){
   
 }
 
-doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, code.respVars){
+doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, code.respVars, use.cache){
+  
+  require(rioja)
   
   # calculate code-level OTU abundances w/ and w/o trimming the OTU table
-  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples)
+  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache)
   codeOTUabund <- codeOTU.list$codeOTUabund
   codeOTUabund.trim <- codeOTU.list$codeOTUabund.trim
   
@@ -74,6 +77,8 @@ doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, co
 }
 
 doAnalysis_endoComp_explainPMR <- function(comm.otu, pmr_byStem, stem.respVars){
+  
+  require(rioja)
   
   comm.otu.trimmed <- removeRareOTUs(comm.otu)
   
@@ -271,10 +276,12 @@ makefig__wapls_score_time37_boral <- function(cvfit.results.stem, taxAndFunguild
   
 }
 
-doAnalysis_endoComp_explainDecayResids <- function(comm.otu, seqSamples, decayfits, code.respVars, traitResiduals.code){
+doAnalysis_endoComp_explainDecayResids <- function(comm.otu, seqSamples, decayfits, code.respVars, traitResiduals.code, use.cache){
+  
+  require(rioja)
   
   # calculate code-level OTU abundances w/ and w/o trimming the OTU table
-  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples)
+  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache)
   codeOTUabund <- codeOTU.list$codeOTUabund
   codeOTUabund.trim <- codeOTU.list$codeOTUabund.trim
   
@@ -323,6 +330,8 @@ doAnalysis_endoComp_explainDecayResids <- function(comm.otu, seqSamples, decayfi
 
 doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem, stem.respVars, traitResiduals.stem){
   
+  require(rioja)
+  
   # create dataframes
   datasets.notrim<-lapply(stem.respVars, function(x) {
     CreateCommTraitResidpair(respVar=x, 
@@ -330,6 +339,8 @@ doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem, stem.resp
                              traitResiduals = traitResiduals.stem,
                              sampleName = "codeStem")} ) #analysisDF_fxns.R
   names(datasets.notrim)<-unlist(stem.respVars)
+  
+  comm.otu.trimmed <- removeRareOTUs(comm.otu)
   datasets.trim<-lapply(stem.respVars, function(x) {
     CreateCommTraitResidpair(respVar=x, 
                              comm.mat=comm.otu.trimmed, 
@@ -369,7 +380,7 @@ doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem, stem.resp
 doAnalysis_endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
   
   # calculate code-level OTU abundances w/ and w/o trimming the OTU table
-  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples)
+  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache)
   codeOTUabund <- codeOTU.list$codeOTUabund
   codeOTUabund.trim <- codeOTU.list$codeOTUabund.trim
   
@@ -403,9 +414,9 @@ doAnalysis_endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, us
   
 }
 
-makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code){
+makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
   
-  mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code)
+  mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache)
   mod.nt.code <- mod.list$mod.nt.code
   mod.t.code <- mod.list$mod.t.code
   
@@ -425,9 +436,9 @@ makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code){
   
 }
 
-maketabs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code){
+maketabs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
   
-  mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code)
+  mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache)
   mod.nt.code <- mod.list$mod.nt.code
   mod.t.code <- mod.list$mod.t.code
   
@@ -462,10 +473,10 @@ doAnalysis_endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.st
   
   # choose a model by permutation tests in a constrained ordination
   if(use.cache == F){
-    #mod.nt.stem<-ordistep_wrapper(datasets=datasets.notrim.stem) #this can take a while
-    #saveRDS(mod.nt.stem, file = "derived_data/modSelect_nt_stem.RData")
-    #mod.t.stem<-ordistep_wrapper(datasets=datasets.trim.stem)
-    #saveRDS(mod.t.stem, file = "derived_data/modSelect_t_stem.RData")
+    mod.nt.stem<-ordistep_wrapper(datasets=datasets.notrim.stem) #this can take a while
+    saveRDS(mod.nt.stem, file = "derived_data/modSelect_nt_stem.RData")
+    mod.t.stem<-ordistep_wrapper(datasets=datasets.trim.stem)
+    saveRDS(mod.t.stem, file = "derived_data/modSelect_t_stem.RData")
   }else{
     mod.nt.stem <- readRDS(file = "derived_data/modSelect_nt_stem.RData")
     mod.t.stem <- readRDS(file = "derived_data/modSelect_t_stem.RData")
@@ -482,9 +493,9 @@ doAnalysis_endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.st
   
 }
 
-makefigs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem){
+makefigs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem, use.cache){
   
-  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem)
+  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
   mod.nt.stem <- mod.list$mod.nt.stem
   mod.t.stem <- mod.list$mod.t.stem
   
@@ -504,9 +515,9 @@ makefigs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.ste
   
 }
 
-maketabs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem){
+maketabs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem, use.cache){
   
-  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem)
+  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
   mod.nt.stem <- mod.list$mod.nt.stem
   mod.t.stem <- mod.list$mod.t.stem
   
