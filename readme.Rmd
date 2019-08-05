@@ -283,7 +283,9 @@ traits.stem.sel %>%
 matonly.s <- scale(as.matrix(matonly[,-1]))
 
 # plot correlations
+pdf(file = "output/corplot.pdf")
 corrplot(cor(matonly.s), type = "lower")
+dev.off()
 
 ```
 
@@ -300,7 +302,22 @@ matonly.s <- scale(as.matrix(matonly[,-1]))
 
 # plot correlations again
 corrplot(cor(matonly.s), type = "lower")
+
 cor(matonly.s)
+
+```
+
+Plot variation in C fractions w/in and between species
+```{r}
+
+traits.stem.sel %>%
+  select(-c(Ca, Fe, K, Mn, N, P, waterperc, Zn)) %>%
+  gather(key = "trait", value = "trait.val", -c(codeStem, species, size, code, unique, Stem)) -> tmp
+
+ggplot(tmp, aes(x = reorder(species, trait.val), y = trait.val)) +
+  geom_point() +
+  facet_wrap(~trait, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
 
 ```
 
