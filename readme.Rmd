@@ -4,6 +4,10 @@ date: "10/23/2017"
 output: github_document
 ---
 
+```{r, include = F}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
 
 ```{r load}
 # load libraries and fxns
@@ -67,6 +71,7 @@ code.respVars <- list("k","t50","ne.r2", "alpha","beta","w.t50","w.r2") # weibul
 
 #Fig 1
 makefig__decayfits(decayfits) # output/figures/maintext/decayfits.pdf
+# why are there no error bars for t50?
 
 #Fig 2
 makefig__pmr_byStem(pmr_byStem) # output/figures/maintext/pmr_byStem.pdf
@@ -76,10 +81,7 @@ makefig__pmr_byStem(pmr_byStem) # output/figures/maintext/pmr_byStem.pdf
 # supplementary figures and tables
 
 #Fig S1
-makefig__compare_t50(decayfits) # output/figures/supplementary/compare_t50.pdf
-
-#Fig S2
-makefig__compare_aic(decayfits) # output/figures/supplementary/compare_aic.pdf
+makefig__compare_t50_aic(decayfits) # output/figures/supplementary/compare_t50.pdf
 
 ```
 
@@ -111,10 +113,12 @@ traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 #Fig 3
 makefig__traits_explain_decayParams(decayfits, traits.code, 
                                     code.respVars, use.cache = T) # output/figures/maintext/traits_explain_decayparams.pdf
+# remove color for R2 and just report that in the figure legend. make this into a horizontal bar plot to show the coef magnitudes
 
 #Fig 4
 makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem, 
                             stem.respVars, use.cache = T) # output/figures/maintext/traits_explain_pmr.pdf
+# see updates above
 
 #---------------------------#
 # supplementary figures and tables
@@ -130,7 +134,7 @@ write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv"
 
 3. Does endophyte composition explain decay?
 - script: *endoComp_explainDecay.Rmd*
-- summary: No. There is a relationship between composition and percent mass remaining after 37 months, but this is likely driven by the role of water content (and P?) on the microbial community and decay.
+- summary: No. There is a relationship between composition and percent mass remaining after 37 months, but this is likely driven by the role of water content on the microbial community and decay.
 ```{r load_microbes}
 
 #---------------------------#
@@ -158,20 +162,17 @@ seqSamples <- microb.data$seqSamples
 #plot_sampleEffortCurves(comm.otu) # output/figures/supplementary/sampleEffortCurve.pdf; #this takes a while... uncomment if the data changes
 
 #Fig S5
-#FIX THESE FXNS
-#makefig__wapls_score_time37(cvfit.results.stem, taxAndFunguild) # output/figures/supplementary/wapls_score_time37.pdf
-#makefig__wapls_score_time37_otuCats(cvfit.results.stem, taxAndFunguild) # output/figures/supplementary/wapls_score_time37_otuCats.pdf
-#makefig__wapls_score_time37_boral(cvfit.results.stem, taxAndFunguild) # output/figures/supplementary/wapls_score_time37_boral.pdf
+makefig__wapls_score_time37(comm.otu, pmr_byStem, stem.respVars, taxAndFunguild) # output/figures/supplementary/wapls_score_time37.pdf
+# remember that this fig does not include oomycetes because we do not have boral coef estimates for them
 #otucats <- maketab__wapls_score_time37_otuCats(cvfit.results.stem, taxAndFunguild)
 #write.csv(otucats, file = "output/tables/supplementary/wapls_score_time37_otuCats.csv")
 
 #Fig S6
-makefigs__endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache = T) # output/figures/supplementary/dbRDA_code.pdf
+makefigs__endoComp_woodTraits(comm.otu, seqSamples, traits.code, traits.stem, use.cache = T) # output/figures/supplementary/dbRDA_code.pdf
+# figure only shows results from the trimmed community dataset
 tab.list <- maketabs__endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache = T)
 write.csv(tab.list$an.nt.code, file="output/tables/supplementary/dbRDAanova_nt_code.csv")
 write.csv(tab.list$an.t.code, file="output/tables/supplementary/dbRDAanova_t_code.csv")
-makefigs__endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache = T) # output/figures/supplementary/dbRDA_stem.pdf
-tab.list <- maketabs__endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache = T)
 write.csv(tab.list$an.nt.stem, file="output/tables/supplementary/dbRDAanova_nt_stem.csv")
 write.csv(tab.list$an.t.stem, file="output/tables/supplementary/dbRDAanova_t_stem.csv")
 
@@ -193,6 +194,7 @@ write.csv(commTab, file="output/tables/supplementary/commcompsummary_traitresid.
 
 4. Does endophyte diversity explain decay? *
 - script: *endoDiv_explainDecay.Rmd*
+- add bonferonni correction for multiple comparisons?
 - summary:
     - More saprotrophs leads to less mass remaining after 25 and 37 months, but only in small stems
     - More pathotrophs leads to less mass remaining after 37 months, but only in small stems
@@ -202,6 +204,8 @@ write.csv(commTab, file="output/tables/supplementary/commcompsummary_traitresid.
 
 #---------------------------#
 # main figures and tables
+
+# see output/tables/diversitySummary.pdf
 
 #---------------------------#
 # supplementary figures and tables
@@ -259,16 +263,16 @@ write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversit
 Check out correlations among C fractions and other traits. Exclude two samples for which there isn't waterperc data. Remember that there is no stem-level barkthick or density data for large stem samples.
 ```{r}
 cfract.load<- load_Cfract()
+cfract.load %>%
+  select(-Total) -> cfract.load
 traits.stem %>%
   left_join(cfract.load) %>%
-  filter(!is.na(Total)) %>%
+  filter(!is.na(Arabinose)) %>%
   select(-c(barkthick, density)) -> traits.stem.sel
-
 #two samples are missing waterperc data
 traits.stem.sel %>%
   filter(is.na(waterperc)) %>%
   select(codeStem, waterperc) 
-
 #remove them
 traits.stem.sel %>%
   filter(!is.na(waterperc)) -> traits.stem.sel
@@ -294,6 +298,10 @@ traits.stem.sel %>%
   select(-c(species, size, code, unique, Stem)) -> matonly
 matonly.s <- scale(as.matrix(matonly[,-1]))
 
+# plot correlations again
+corrplot(cor(matonly.s), type = "lower")
+cor(matonly.s)
+
 ```
 
 Check out samples in trait space
@@ -310,14 +318,16 @@ datapc <- transform(datapc,
                     v1 = .7 * mult * datapc$PC1,
                     v2 = .7 * mult * datapc$PC2)
   
+
 plot_12 <- ggplot(data=datapc, aes(x=v1, y=v2, label=varnames)) + 
   geom_text(size=3, vjust=1, color=1) + 
   geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
                arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) + 
   coord_fixed() +
-  geom_point(mapping=aes(x=PC1, y=PC2, 
-                        color = species), data=df, inherit.aes = FALSE) +
-  theme_bw() + xlab("PC1") + ylab("PC2")
+  geom_text(mapping=aes(x=PC1, y=PC2, 
+                        color = species, label = code), data=df, inherit.aes = FALSE) +
+  theme_bw() + xlab("PC1 (24%)") + ylab("PC2 (16%)") +
+  guides(color = F)
 plot_12
 ggsave(plot_12, filename = "output/stem_traitord.pdf")
 # for some reason this plot knit with more extra data points? it seems to work fine in ggsave
@@ -331,11 +341,30 @@ Load new versions of trait data
 traits.code <- trait.means_byCode_new(stemSamples, fill.densitybark = T)
 traits.stem <- trait.means_byStem_new(stemSamples)
 
+# remove traits that are highly correlated with others
+exclude <- c("Glucose","Xylose","C")
+traits.code %>%
+  select(-exclude) -> traits.code
+traits.stem %>%
+  select(-exclude) -> traits.stem
+
+# remove observations w/o C fract data
+traits.code %>%
+  filter(!is.na(Arabinose)) -> traits.code.tmp
+traits.stem %>%
+  filter(!is.na(Arabinose)) -> traits.stem.tmp
+
+# remove density and barkthickness from stem data
+traits.stem.tmp %>%
+  select(-c("barkthick","density")) -> traits.stem.tmp
+
 ```
 
 Do wood C fractions explain decay?
 
 (by code)
+Note that there are only 12 observations by code, so that limits the number of traits we can include in the model. Not including micronutrients
+
 ```{r}
 #merge traits and response variables into 1 df
 decayfits %>%
@@ -345,15 +374,21 @@ decayfits %>%
   left_join(traits.code) %>% 
   filter(!is.na(P)) %>%
   filter(!is.na(waterperc)) -> decayfits.traits
-
 # subset by wood fract data
 decayfits.traits %>%
   filter(!is.na(Arabinose)) -> decayfits.traits
 
+# scale all the traits
+decayfits.traits %>%
+  select(waterperc, N, P, perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose) -> mat
+decayfits.traits %>%
+  select(-c(waterperc, N, P, perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose)) -> tmp
+decayfits.traits.s <- data.frame(tmp, scale(mat))
+
 #set up full models
 respVars <- list("k","t50","ne.r2", "alpha","beta","w.t50","w.r2")
-rhs <- "waterperc + N + Arabinose + Galactose + Mannose + perc.Total.lignin + Rhamnose" # got rid of size because only looking at large stems
-mod.full.list<-lapply(respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits) # summaryTable_fxns.R
+rhs <- "waterperc + N + P + perc.Total.lignin + Rhamnose + Arabinose + Galactose + Mannose" # got rid of size because only looking at large stems
+mod.full.list<-lapply(respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits.s) # summaryTable_fxns.R
 
 #do stepwise model selection #uncomment if data changes
 mod.select.list<-lapply(mod.full.list, function(x) {
@@ -366,7 +401,6 @@ names(mod.select.list) <- respVars
 #plot
 sum.list<-lapply(mod.select.list, summary)
 coefs.df<-PullLmCoefs(sum.list, unlist(respVars))
-fitstat.df
 fitstat.df<-PullLmFitStats(sum.list, unlist(respVars))
 fitstat.df %>%
   gather(key = "respvar", value = "value", -c(term)) %>%
@@ -377,24 +411,46 @@ coefs.df %>%
   left_join(r2.df) %>%
   filter(respvar %in% c("alpha","beta","w.t50","w.r2")) -> coefs.df
 
-ggplot(coefs.df, aes(x = respvar, y = term, fill = r.squared)) +
-  geom_tile() + geom_text(aes(label = round(est, digits = 2))) +
-  xlab("Response variable") + ylab("Wood trait") +
-  theme_classic()
+unique(coefs.df$term)
+# term.order <- c("(Intercept)","waterperc","N","perc.Total.lignin","Arabinose","Galactose","Mannose","Rhamnose")
+# coefs.df$term <- factor(coefs.df$term, levels = rev(term.order))
+
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_wrap(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p
+ggsave(p, filename = "output/cfract_code.pdf")
 
 ```
 
-- alpha: Codes that decay quickly (at first) have more water and Rhamnose
-- beta: Codes with s-shaped trajectories have less water, more Rhamnose, larger fraction of total lignin
-- w.r2: Codes with better model fits have more water and less lignin
-- w.t50: Codes with longer half lives have more water, more lignin, more Rhamnose
 
-(by stem)
+(by stem) -- I want to update this so that the traits values are scaled before running the models
 ```{r}
 # create dataframes
 # stem-level waterperc, xrf, and CN and (small) species-level barkthickness and density
 
 respVars <- list("time7", "time13", "time25", "time37","time59")
+
+traits.stem.tmp %>%
+  filter(!is.na(P)) %>%
+  filter(!is.na(waterperc)) %>%
+  filter(!is.na(Arabinose)) -> traits.stem.tmp
+
+# scale all the traits
+traits.stem.tmp %>%
+  select(waterperc, N, P, perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose) -> mat
+traits.stem.tmp %>%
+  select(codeStem) -> tmp
+traits.stem.tmp.s <- data.frame(tmp, scale(mat[,-1]))
+traits.stem.tmp.s
+
 datasets<-lapply(respVars, function(x) {
   result<-CreateTraitPMRpair(x, traits.stem, traits.code, pmr_byStem) #analysisDF_fxns.R
   return(result)
@@ -430,16 +486,27 @@ coefs.df %>%
 
 coefs.df$respvar<- factor(coefs.df$respvar, levels = c("time7","time13","time25","time37","time59"))
 coefs.df
-ggplot(coefs.df, aes(x = respvar, y = term, fill = r.squared)) +
-  geom_tile() + geom_text(aes(label = round(est, digits = 2))) +
-  xlab("Response variable") + ylab("Wood trait") +
-  theme_classic()
+term.order <- c("(Intercept)","waterperc","N","perc.Total.lignin","Arabinose","Galactose","Mannose","Rhamnose")
+coefs.df$term <- factor(coefs.df$term, levels = rev(term.order))
+
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.stem
+
+ggsave(p.stem, filename = "output/cfract_stem.pdf")
+
+
+
 
 ```
-
-- waterperc is important for explaining pmr at each time point. Stems with low waterperc tend to have more mass remaining.
-- Low Rhamnose, Mannose and Arabinose correspond with more mass remaining early-on
-- High Rhamnose and lignin correspond with more mass remaining at later timepoints
 
 
 Visualize the relationship between wood C fractions and endophyte communities
@@ -499,23 +566,54 @@ mod.obj <- capscale(mat.otu.t ~ 1, data = envVars, distance='bray')
 
 ```
 
-Does adding C fraction data explain more variation in endophyte composition? How much?
+Does adding C fraction data explain more variation in endophyte composition? How much? Doubles the unique info (with the caveat that I didn't include micronutrients)
+
+X1 = original trait set: waterperc, C, N, and P
+X2 = C fractions: perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose
 ```{r}
 
-xVars <- traits.tmp
-xVars %>%
-  select(-c(codeStem, code, size, species, barkthick, density)) %>%
-  filter(!is.na(waterperc)) -> envVars
+traits.stem <- trait.means_byStem_new(stemSamples)
+
+# remove traits that are highly correlated with others
+exclude <- c("Glucose","Xylose") # don't get rid of C
+traits.stem %>%
+  select(-exclude) -> traits.stem
+
+# remove observations w/o C fract data
+traits.stem %>%
+  filter(!is.na(Arabinose)) -> traits.stem.tmp
+
+# remove density and barkthickness from stem data
+traits.stem.tmp %>%
+  select(-c("barkthick","density")) -> traits.stem.tmp
+
+traits.stem.tmp %>%
+  filter(!is.na(P)) %>%
+  filter(!is.na(waterperc)) %>%
+  filter(!is.na(Arabinose)) -> traits.stem.tmp
+
+# scale all the traits
+traits.stem.tmp %>%
+  select(waterperc, N, P,C, perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose) -> mat
+traits.stem.tmp %>%
+  select(codeStem) -> tmp
+traits.stem.tmp.s <- data.frame(tmp, scale(mat[,-1]))
+traits.stem.tmp.s
+
+colnames(traits.stem.tmp.s)
+envVars <- traits.stem.tmp.s
 
 # remove communities with missing waterperc data
 mat.otu <- sub.comm.otu <- comm.otu[row.names(comm.otu) %in% envVars$codeStem,]
 dim(mat.otu)
 dim(envVars)
+
 # transform otu tab
 mat.otu.t<-decostand(mat.otu, 'hellinger')
 
 # extract the unconstrained and constrained mod
  # unconstrained mod
+
 mod0 <- capscale(mat.otu.t ~ 1, data = envVars[,-1], distance='bray')
   # constrained mod
 modfull <- capscale(mat.otu.t ~ ., data=envVars[,-1], distance='bray')
@@ -523,14 +621,28 @@ modfull <- capscale(mat.otu.t ~ ., data=envVars[,-1], distance='bray')
 # model selection
 modstep <- ordistep(mod0, scope=formula(modfull))
   
-  # summary table for the best model
-  df <- data.frame(term=row.names(modstep$anova), modstep$anova)
-  df %>%
+# summary table for the best model
+df <- data.frame(term=row.names(modstep$anova), modstep$anova)
+df %>%
     separate(term, into=c("drop","term")) %>%
     select(-drop) %>%
     rename('pval'=`Pr..F.`) -> df
-  df
-  write.csv(df, file = "output/constrained_bestmodelsummaryAllTraits.csv")
+df
+write.csv(df, file = "output/constrained_bestmodelsummaryAllTraits.csv")
+
+envVars %>%
+  select(waterperc, N, P,C) -> orig.traits
+envVars %>%
+  select(perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose) -> C.fract
+
+endo.var <- varpart(vegdist(mat.otu.t, distance = 'bray'),
+                        ~ as.matrix(orig.traits),
+                        ~ as.matrix(C.fract))
+    var.fract <- endo.var$part
+    plot(endo.var)
+    
+    orig.traits
+    C.fract
 
 
 

@@ -54,7 +54,8 @@ decayfits <- read_csv("derived_data/decayfits.csv")
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits
-code.respVars <- list("k","t60","ne.r2", "alpha","beta","w.t60","w.r2") # weibull params: alpha = shape param, beta = scale param
+colnames(decayfits)
+code.respVars <- list("k","t50","ne.r2", "alpha","beta","w.t50","w.r2") # weibull params: alpha = shape param, beta = scale param
 
 # wood traits
 #trait.data.l <- mergeTraitData() # all trait data
@@ -66,9 +67,9 @@ traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 #trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
 
 # wood trait residuals (see `woodTraits_explainDecay.Rmd')
-result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code, code.respVars)
+result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code, code.respVars, use.cache = T)
 traitResiduals.code <- result.traitsDecay$traitResiduals.code
-result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem, stem.respVars)
+result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem, stem.respVars, use.cache = T)
 traitResiduals.stem <- result.traitsPMR$traitResiduals.stem
 
 #microbes
@@ -94,13 +95,27 @@ write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysumm
 
 #identify significant relationships
 result.list$pretty.df %>%
-  filter(term %in% c('mean','sizesmall','sizesmall:mean')) %>%
+  filter(term %in% c('mean','sizesmall:mean')) %>%
   gather(key = "respvar", value = "coef", -c(source, term)) %>%
   mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
   filter(signif == T)
+
+# make a df summary
+tmp <- result.list$pretty.df
+tmp %>%
+  filter(term %in% c('mean','sizesmall:mean')) %>%
+  gather(key = "respvar", value = "coef", -c(source, term)) %>%
+  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
+  mutate(model = "code") %>%
+  mutate(term.new = ifelse(term == "mean", "diversity", NA)) %>%
+  mutate(term.new = ifelse(term == "sizesmall:mean", "size:diversity", term.new)) %>%
+  select(-term) -> summ.code
+
+
+
 ```
 
-The only term that is significant in these models is size class. Small stems had significantly fewer oomycete taxa.
+None of the diversity metrics and decay parameters are significantly related.
 
 ## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay. 
 Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
@@ -113,12 +128,45 @@ write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversit
 
  #identify significant relationships
  result.list.stem$pretty.df %>%
-   filter(term %in% c('sizesmall','sizesmall:sub_rich','sub_rich')) %>%
+   filter(term %in% c('sizesmall:sub_rich','sub_rich')) %>%
    gather(key = "respvar", value = "coef", -c(source, term)) %>%
    mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
    filter(signif == T)
 
+
+# make a df summary
+tmp <- result.list.stem$pretty.df
+tmp %>%
+  filter(term %in% c('sub_rich','sizesmall:sub_rich')) %>%
+  gather(key = "respvar", value = "coef", -c(source, term)) %>%
+  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
+  mutate(model = "stem") %>%
+  mutate(term.new = ifelse(term == "sub_rich", "diversity", NA)) %>%
+  mutate(term.new = ifelse(term == "sizesmall:sub_rich", "size:diversity", term.new)) %>%
+  select(-term) -> summ.stem
+
+
+
 ```
+
+Make a summary table plot
+```{r}
+
+summ.code %>%
+  full_join(summ.stem) -> tmp
+  
+p1 <- ggplot(tmp, aes(y = respvar, x = term.new, fill = signif)) +
+  geom_tile(color = "black") +
+  facet_grid(~source) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Response variable") +
+  xlab("Term") +
+  ggtitle("Decay explained by diversity")
+p1
+
+
+```
+
 
 OTU richness and Shannon's H are associated with percent mass remaining at time25 and time37. Pathogen OTU richness is associated with pmr at time 37. In all cases, there is a negative interaction between stem size and diversity.
 
@@ -156,20 +204,22 @@ result.list$pretty.df %>%
   gather(key = "respvar", value = "coef", -c(source, term)) %>%
   mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
   filter(signif == T)
-result.list$pretty.df  
+
+# make a df summary
+tmp <- result.list$pretty.df
+tmp %>%
+  filter(term %in% c('mean','sizesmall:mean')) %>%
+  gather(key = "respvar", value = "coef", -c(source, term)) %>%
+  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
+  mutate(model = "code") %>%
+  mutate(term.new = ifelse(term == "mean", "diversity", NA)) %>%
+  mutate(term.new = ifelse(term == "sizesmall:mean", "size:diversity", term.new)) %>%
+  select(-term) -> summ.code
+
 
 ```
 
 Beyond wood trait data, saprotroph richness improves models for beta and t60. 
-
-Plot the relationship between Saprotroph richness and beta, t60
-```{r}
-makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars) # output/figures/supplementary/richness_sapro_decayResids.pdf
-
-```
-[](output/figures/supplementary/richness_sapro_decayResids.pdf)
-
-Higher saprotroph richness leads to smaller beta and t70 values (i.e. faster mass loss) than would be expected based on wood traits alone, especially in large stems.
 
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
@@ -184,9 +234,52 @@ result.list.stem$pretty.df %>%
   mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
   filter(signif == T)
 
+# make a df summary
+tmp <- result.list.stem$pretty.df
+tmp %>%
+  filter(term %in% c('sub_rich','sizesmall:sub_rich')) %>%
+  gather(key = "respvar", value = "coef", -c(source, term)) %>%
+  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
+  mutate(model = "stem") %>%
+  mutate(term.new = ifelse(term == "sub_rich", "diversity", NA)) %>%
+  mutate(term.new = ifelse(term == "sizesmall:sub_rich", "size:diversity", term.new)) %>%
+  select(-term) -> summ.stem
+
 ```
 
 Beyond wood trait data, overall and basidio OTU richness improve model estimates for percent mass remaining at 25 months. Pathotroph richness improves model estmates for pmr at 37 months.
+
+
+Make a summary table plot
+```{r}
+
+summ.code %>%
+  full_join(summ.stem) -> tmp
+  
+p2 <- ggplot(tmp, aes(y = respvar, x = term.new, fill = signif)) +
+  geom_tile(color = "black") +
+  facet_grid(~source) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  ylab("Response variable") +
+  xlab("Term") +
+  ggtitle("Decay residuals explained by diversity")
+
+pdf(file = "output/tables/diversitySummary.pdf", width = 8, height = 8)
+grid.arrange(p1, p2)
+dev.off()
+
+
+```
+
+
+Plot the relationship between Saprotroph richness and beta, t60
+```{r}
+makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars) # output/figures/supplementary/richness_sapro_decayResids.pdf
+
+```
+[](output/figures/supplementary/richness_sapro_decayResids.pdf)
+
+Higher saprotroph richness leads to smaller beta and t70 values (i.e. faster mass loss) than would be expected based on wood traits alone, especially in large stems.
 
 Plot the relationship between OTU richness, basidio richness and residuals of pmr at time25
 ```{r}

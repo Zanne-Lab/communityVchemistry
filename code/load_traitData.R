@@ -311,7 +311,6 @@ mergeTraitData_new<-function(){
     mutate(compositeSample = FALSE) %>%
     select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cfract.l
   
-  
   trait.data.l <- rbind(waterperc.l, densityNbarkthick.l, xrf.l, cn.l, cfract.l)
   
   return(trait.data.l)
@@ -411,7 +410,6 @@ trait.means_byCode_new <- function(stemSamples, fill.densitybark){
     }
     
   }
-  
   return(traitmeans.code)
   
 }

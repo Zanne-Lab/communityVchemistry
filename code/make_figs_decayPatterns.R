@@ -1,39 +1,49 @@
 
-makefig__compare_t50 <- function(decayfits){
+makefig__compare_t50_aic <- function(decayfits){
   
+  #(1) compare t50
   decayfits %>%
     select(species, size, t50, w.t50) %>%
     gather(key = "variable", value ="value", -c(species,size)) %>%
     mutate(value.round = round(value, digits = 1)) -> plot.df
   plot.df$variable <- recode(plot.df$variable, "t50" = "neg.exp", "w.t50" = "weibull")
   
-  ggplot(plot.df, aes(x = variable, y = reorder(species, value), 
+  plot.df %>%
+    group_by(species) %>%
+    summarize(val = mean(value)) %>%
+    arrange(-val) -> species.order
+  species.order$species
+  
+  p1 <- ggplot(plot.df, aes(x = variable, y = reorder(species, value), 
                       fill = value, label = value.round)) +
     geom_tile() +
     geom_text() +
     facet_grid(~size) +
     scale_fill_distiller(direction = 1) +
     theme_bw() +
-    xlab("Years to 50% mass loss") + ylab("") +
+    xlab("Years to 50% mass loss by model type") + ylab("") +
     guides(fill = F)
+  p1
+  #ggsave(filename = "output/figures/supplementary/compare_t50.pdf", width = 5, height = 6)
   
-  ggsave(filename = "output/figures/supplementary/compare_t50.pdf", width = 5, height = 6)
-  
-}
-
-makefig__compare_aic <- function(decayfits){
-  
+  #(2) compare aic
   decayfits %>%
     select(code, species, size, ne.aic, w.aic) %>%
-    mutate(diff.aic = ne.aic - w.aic) -> tmp
+    mutate(diff.aic = ne.aic - w.aic) %>%
+    mutate(species = factor(species, levels = rev(species.order$species))) -> tmp
   
-  ggplot(tmp, aes(y = reorder(species, diff.aic), x = diff.aic, color = size)) +
+  p2 <- ggplot(tmp, aes(y = species, x = diff.aic, color = size)) +
     geom_point() +
     geom_vline(xintercept = 0, linetype = 2) +
-    ylab("Code") + xlab("Delta AIC (>0 favors Weibull)") +
-    theme_bw()
+    ylab(" ") + xlab("Delta AIC (>0 favors Weibull)") +
+    theme_bw() + guides(color = F)
+  p2
   
-  ggsave(filename = "output/figures/supplementary/compare_aic.pdf", width = 5, height = 6)
+  #ggsave(filename = "output/figures/supplementary/compare_aic.pdf", width = 5, height = 6)
+  
+  pdf("output/figures/supplementary/compare_aic_t50.pdf", width=8, height=4)
+  grid.arrange(p1, p2, ncol = 2)
+  dev.off()
   
 }
 

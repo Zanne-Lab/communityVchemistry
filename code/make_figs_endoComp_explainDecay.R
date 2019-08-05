@@ -133,13 +133,15 @@ extractcoefs_wapls_score_time37 <- function(cvfit.results.stem, taxAndFunguild){
   
 }
 
-makefig__wapls_score_time37 <- function(cvfit.results.stem, taxAndFunguild){
+makefig__wapls_score_time37 <- function(comm.otu, pmr_byStem, stem.respVars, taxAndFunguild){
+  
+  cvfit.results.stem <- doAnalysis_endoComp_explainPMR(comm.otu, pmr_byStem, stem.respVars)
   
   coef.comp.ann <- extractcoefs_wapls_score_time37(cvfit.results.stem, taxAndFunguild)
   
-  #plot distribution of WA-PLS scores for each OTU
+  #(1) plot distribution of WA-PLS scores for each OTU
   quant <- quantile(coef.comp.ann$coefComp, c(.01, .99))
-  p <- ggplot(coef.comp.ann, aes(x = reorder(OTUId, coefComp), y = coefComp)) +
+  p1 <- ggplot(coef.comp.ann, aes(x = reorder(OTUId, coefComp), y = coefComp)) +
     geom_point(alpha = .5, pch = 16) +
     theme_bw() +
     theme(axis.text.x=element_blank(),
@@ -147,103 +149,53 @@ makefig__wapls_score_time37 <- function(cvfit.results.stem, taxAndFunguild){
     xlab("OTU identity") + ylab("WA-PLS score (pmr at time37)") +
     geom_hline(yintercept = quant[1], linetype = 2) +
     geom_hline(yintercept = quant[2], linetype = 2) 
+  p1
+  #ggsave(filename = "output/figures/supplementary/wapls_score_time37.pdf", plot = p, width = 4, height = 4)
   
-  ggsave(filename = "output/figures/supplementary/wapls_score_time37.pdf", plot = p, 
-         width = 4, height = 4)
-}
-
-maketab__wapls_score_time37_otuCats <- function(cvfit.results.stem, taxAndFunguild){
   
-  coef.comp.ann <- extractcoefs_wapls_score_time37(cvfit.results.stem, taxAndFunguild)
-  
-  quant <- quantile(coef.comp.ann$coefComp, c(.01, .99))
-  coef.comp.ann %>%
-    filter(coefComp < quant[1]) %>%
-    arrange(coefComp) %>%
-    select(OTUId, coefComp, kingdom, phylum, species, Trophic.Mode, Guild) %>%
-    mutate(quant = "bottom 1%") -> tmp.low
-  coef.comp.ann %>%
-    filter(coefComp > quant[2]) %>%
-    arrange(coefComp) %>%
-    select(OTUId, coefComp, kingdom, phylum, species, Trophic.Mode, Guild) %>%
-    mutate(quant = "top 1%") -> tmp.high
-  tmp <- rbind(tmp.low, tmp.high)
-  
-  tmp %>%
-    filter(species != "unclassified") %>%
-    select(quant, kingdom, phylum, species, Trophic.Mode, Guild) -> tmp
-  
-  # ggplot(tmp, aes(x= Trophic.Mode)) +
-  #   geom_bar(stat = "count") +
-  #   theme_bw() +
-  #   xlab("Trophic Mode") + ylab("Number of OTUs") +
-  #   facet_wrap(~quant, scales = "free") +
-  #   theme_bw() +
-  #   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  # #(2) plot by phylo and functional groupings
+  # #shorten x axis labels
+  # orgNames<-levels(factor(coef.comp.ann$Trophic.Mode))
+  # newNames<-gsub('troph', '', orgNames)
+  # coef.comp.ann %>% mutate(Trophic.Mode.short = factor(Trophic.Mode, labels = newNames)) -> coef.comp.ann
   # 
-  # ggplot(tmp, aes(x= Guild)) +
-  #   geom_bar(stat = "count") +
-  #   theme_bw() +
-  #   xlab("Guild") + ylab("Number of OTUs") +
-  #   facet_wrap(~quant, scales = "free") +
-  #   theme_bw() +
-  #   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+  # p.troph<-ggplot(coef.comp.ann, aes(x=Trophic.Mode.short, y=coefComp)) + 
+  #   geom_jitter(alpha=.5, pch=16) +
+  #   xlab("Trophic mode") + ylab("WA-PLS score (pmr at time37)") +
+  #   theme_classic() +
+  #   geom_hline(yintercept=0, linetype=2) +
+  #   theme(axis.text.x = element_text(angle = 70, hjust = 1))
+  # 
+  # p.king<-ggplot(coef.comp.ann, aes(x=kingdom, y=coefComp)) + 
+  #   geom_jitter(alpha=.5) + 
+  #   xlab("Kingdom") + ylab("Component coefficient estimate") +
+  #   theme_classic() +
+  #   geom_hline(yintercept=0, linetype=2) +
+  #   theme(axis.text.y = element_blank(), 
+  #         axis.ticks.y = element_blank(), 
+  #         axis.title.y = element_blank(),
+  #         plot.margin = unit(c(0,1,0,0), "lines"),
+  #         plot.background = element_blank(),
+  #         axis.text.x = element_text(angle = 70, hjust = 1))
+  # 
+  # p.phylum<-ggplot(coef.comp.ann, aes(x=phylum, y=coefComp)) + 
+  #   geom_jitter(alpha=.5) + 
+  #   xlab("Phylum") + ylab("Component coefficient estimate") +
+  #   theme_classic() +
+  #   geom_hline(yintercept=0, linetype=2) +
+  #   theme(axis.text.y = element_blank(), 
+  #         axis.ticks.y = element_blank(), 
+  #         axis.title.y = element_blank(),
+  #         plot.margin = unit(c(0,1,0,0), "lines"),
+  #         plot.background = element_blank(),
+  #         axis.text.x = element_text(angle = 70, hjust = 1))
+  # 
+  # #pdf("output/figures/supplementary/wapls_score_time37_otuCats.pdf", width=10, height=6)
+  # grid.newpage()
+  # grid.draw(cbind(ggplotGrob(p.troph), ggplotGrob(p.king), ggplotGrob(p.phylum), size = "last"))
+  # #dev.off()
   
-  return(tmp)
-  
-}
-
-makefig__wapls_score_time37_otuCats <- function(cvfit.results.stem, taxAndFunguild){
-  
-  coef.comp.ann <- extractcoefs_wapls_score_time37(cvfit.results.stem, taxAndFunguild)
-  
-  #shorten x axis labels
-  orgNames<-levels(factor(coef.comp.ann$Trophic.Mode))
-  newNames<-gsub('troph', '', orgNames)
-  coef.comp.ann %>% mutate(Trophic.Mode.short = factor(Trophic.Mode, labels = newNames)) -> coef.comp.ann
-  
-  p.troph<-ggplot(coef.comp.ann, aes(x=Trophic.Mode.short, y=coefComp)) + 
-    geom_jitter(alpha=.5, pch=16) +
-    xlab("Trophic mode") + ylab("WA-PLS score (pmr at time37)") +
-    theme_classic() +
-    geom_hline(yintercept=0, linetype=2) +
-    theme(axis.text.x = element_text(angle = 70, hjust = 1))
-  
-  p.king<-ggplot(coef.comp.ann, aes(x=kingdom, y=coefComp)) + 
-    geom_jitter(alpha=.5) + 
-    xlab("Kingdom") + ylab("Component coefficient estimate") +
-    theme_classic() +
-    geom_hline(yintercept=0, linetype=2) +
-    theme(axis.text.y = element_blank(), 
-          axis.ticks.y = element_blank(), 
-          axis.title.y = element_blank(),
-          plot.margin = unit(c(0,1,0,0), "lines"),
-          plot.background = element_blank(),
-          axis.text.x = element_text(angle = 70, hjust = 1))
-  
-  p.phylum<-ggplot(coef.comp.ann, aes(x=phylum, y=coefComp)) + 
-    geom_jitter(alpha=.5) + 
-    xlab("Phylum") + ylab("Component coefficient estimate") +
-    theme_classic() +
-    geom_hline(yintercept=0, linetype=2) +
-    theme(axis.text.y = element_blank(), 
-          axis.ticks.y = element_blank(), 
-          axis.title.y = element_blank(),
-          plot.margin = unit(c(0,1,0,0), "lines"),
-          plot.background = element_blank(),
-          axis.text.x = element_text(angle = 70, hjust = 1))
-  
-  pdf("output/figures/supplementary/wapls_score_time37_otuCats.pdf", width=10, height=6)
-  grid.newpage()
-  grid.draw(cbind(ggplotGrob(p.troph), ggplotGrob(p.king), ggplotGrob(p.phylum), size = "last"))
-  dev.off()
-  
-}
-
-makefig__wapls_score_time37_boral <- function(cvfit.results.stem, taxAndFunguild){
-  
-  coef.comp.ann <- extractcoefs_wapls_score_time37(cvfit.results.stem, taxAndFunguild)
-  
+  #(3) plot by OTU's boral scores
   # size was included as a roweffect in the boral model, so there are no OTU-specific estimates
   xVar.df<-read.csv("data/xVar_OTUcoefs.csv", row.names=1) #import wood trait coefs estimated by boral in the wooddecay repo
   xVar.df %>%
@@ -254,25 +206,35 @@ makefig__wapls_score_time37_boral <- function(cvfit.results.stem, taxAndFunguild
     select(OTUId, phylum, Trophic.Mode, coefComp, waterperc, P) %>%
     gather(key="trait", value="coefEst", -(1:4)) %>%
     arrange(-coefComp) -> tmp.df1
+  tmp.df1%>%
+    filter(trait == 'waterperc') -> tmp
   
-  p<-ggplot(tmp.df1, aes(x=coefComp, y=coefEst)) + 
-    geom_point() + theme_bw() +
-    ylab("Assoc. w/ more mass at 37 mo. (WA-PLS score)") + 
-    xlab("Wood trait response (boral coef estimate)") +
-    facet_grid(~ trait)
-  ggsave(filename = "output/figures/supplementary/wapls_score_time37_boral.pdf", plot = p, width = 6, height = 4)
+  p1 <- ggplot(tmp, aes(x = as.numeric(reorder(OTUId, coefComp)), y = coefComp)) +
+    geom_point() +
+    xlab("OTU identity") + ylab("WA-PLS score (pmr at time37)") +
+    theme(axis.text.x=element_blank(),
+                       axis.ticks.x=element_blank())
+  p1 
   
-  # #waterperc
-  # tmp.df1 %>%
-  #   filter(trait == "waterperc") -> tmp
-  # mod <- lm(coefEst ~ coefComp, data = tmp)
-  # #summary(mod)
-  # 
-  # #P
-  # tmp.df1 %>%
-  #   filter(trait == "P") -> tmp
-  # mod <- lm(coefEst ~ coefComp, data = tmp)
-  # #summary(mod)
+  p2<-ggplot(tmp, aes(y=coefComp, x=coefEst)) + 
+    geom_point() + 
+    ylab("") + 
+    xlab("Assoc. w/ water content (boral coef)")
+  p2
+  #ggsave(filename = "output/figures/supplementary/wapls_score_time37_boral.pdf", plot = p, width = 6, height = 4)
+  
+  #waterperc
+  tmp.df1 %>%
+    filter(trait == "waterperc") -> tmp
+  mod <- lm(coefEst ~ coefComp, data = tmp)
+  summary(mod)
+  
+  pdf("output/figures/supplementary/wapls_score_time37.pdf", width=8, height=4)
+  grid.newpage()
+  grid.draw(cbind(ggplotGrob(p1), ggplotGrob(p2), size = "last"))
+  dev.off()
+
+  
   
 }
 
@@ -414,25 +376,46 @@ doAnalysis_endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, us
   
 }
 
-makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
+makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, traits.stem, use.cache){
   
+  #(1) by code
   mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache)
   mod.nt.code <- mod.list$mod.nt.code
   mod.t.code <- mod.list$mod.t.code
-  
   # proportion of constrained variance (inertia)
   prop.constr.nt.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.code), digits=2))
   prop.constr.t.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.code), digits=2))
   
-  pdf("output/figures/supplementary/dbRDA_code.pdf", width=12, height=6)
+  
+  #(2) by stem
+  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
+  mod.nt.stem <- mod.list$mod.nt.stem
+  mod.t.stem <- mod.list$mod.t.stem
+  # proportion of constrained variance (inertia)
+  prop.constr.nt.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.stem), digits=2))
+  prop.constr.t.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.stem), digits=2))
+  
+  pdf("output/figures/supplementary/dbRDA_traits.pdf", width=12, height=6)
   par(mfrow=c(1,2))
-  plot(mod.nt.code, display = c("wa","bp")) # constrained with best model
-  mtext(prop.constr.nt.code, side=3, adj=0.9, line=-1.5, col=4)
-  title('Full community')
+  
+  # plot(mod.nt.code, display = c("wa","bp")) # constrained with best model
+  # mtext(prop.constr.nt.code, side=3, adj=0.9, line=-1.5, col=4)
+  # title('Full community')
+  
   plot(mod.t.code, display = c("wa","bp")) # constrained with best model
   mtext(prop.constr.t.code, side=3, adj=0.9, line=-1.5, col=4)
-  title('Trimmed community')
+  title('By code')
+  
+  # plot(mod.nt.stem, display = c("wa","bp")) # constrained with best model
+  # mtext(prop.constr.nt.stem, side=3, adj=0.9, line=-1.5, col=4)
+  # title('Full community')
+  
+  plot(mod.t.stem, display = c("wa","bp")) # constrained with best model
+  mtext(prop.constr.t.stem, side=3, adj=0.9, line=-1.5, col=4)
+  title('By stem')
+  
   dev.off()
+  
   
 }
 
@@ -490,28 +473,6 @@ doAnalysis_endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.st
                    mod.t.stem = mod.t.stem)
   
   return(mod.list)
-  
-}
-
-makefigs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem, use.cache){
-  
-  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
-  mod.nt.stem <- mod.list$mod.nt.stem
-  mod.t.stem <- mod.list$mod.t.stem
-  
-  # proportion of constrained variance (inertia)
-  prop.constr.nt.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.stem), digits=2))
-  prop.constr.t.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.stem), digits=2))
-  
-  pdf("output/figures/supplementary/dbRDA_stem.pdf", width=12, height=6)
-  par(mfrow=c(1,2))
-  plot(mod.nt.stem, display = c("wa","bp")) # constrained with best model
-  mtext(prop.constr.nt.stem, side=3, adj=0.9, line=-1.5, col=4)
-  title('Full community')
-  plot(mod.t.stem, display = c("wa","bp")) # constrained with best model
-  mtext(prop.constr.t.stem, side=3, adj=0.9, line=-1.5, col=4)
-  title('Trimmed community')
-  dev.off()
   
 }
 
