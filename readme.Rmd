@@ -314,10 +314,12 @@ traits.stem.sel %>%
   select(-c(Ca, Fe, K, Mn, N, P, waterperc, Zn)) %>%
   gather(key = "trait", value = "trait.val", -c(codeStem, species, size, code, unique, Stem)) -> tmp
 
-ggplot(tmp, aes(x = reorder(species, trait.val), y = trait.val)) +
+p <- ggplot(tmp, aes(x = reorder(species, trait.val), y = trait.val)) +
   geom_point() +
   facet_wrap(~trait, scales = "free_y") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggsave(p, filename = "output/cfract_univar.pdf")
 
 ```
 

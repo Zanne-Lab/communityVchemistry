@@ -5,26 +5,20 @@ date: "7/19/2019"
 output: pdf_document
 ---
 
-
 ```{r load}
 # load libraries and fxns
 
 #libraries
-library(knitr) #r markdown
-library(readr) #read/write
-library(magrittr) #data formatting
-library(tidyr) #data formatting
-library(dplyr) #data formatting
-library(ggplot2) #plotting
+library(tidyverse) #data formatting
 library(grid) #plotting
 library(gridExtra) #plotting
 library(corrplot) #plotting
 #devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
 #library(litterfitter) #fit decay models to timeseries
-library(lmtest) # for coxtest()
+#library(lmtest) # for coxtest()
 #library(vegan) #diversity metrics
 #library(rioja) #WA-PLS
-library(GGally)
+#library(GGally)
 
 #fxns
 source('code/helper_fxns.R')
@@ -32,257 +26,177 @@ sourceDir('code')
 
 ```
 
-## Repo outline
-
-### Main analyses
-
-1. How do wood species and sizes vary in decay?
-- script: *decayPatterns.Rmd*
-- summary: output/decayfits.pdf
-```{r load_massloss}
-
-#---------------------------#
-#data
-
-# stems in the study
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
-
-# stem mass
-initial_mass <- read_in_initial_mass()
-harvest_mass <- LoadHarvestFiles()
-pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
-pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
-stem.respVars <- list("time7", "time13", "time25", "time37","time59")
-
-# decay fits
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
-indx <- unique(stemSamples[,c("code","Binomial","size")])
-decayfits %>%
-  left_join(indx) -> decayfits
-code.respVars <- list("k","t60","ne.r2", "alpha","beta","w.t60","w.r2") # weibull params: alpha = shape param, beta = scale param
-
-#---------------------------#
-# main figures and tables
-
-#Fig 1
-makefig__decayfits(decayfits) # output/figures/maintext/decayfits.pdf
-
-#Fig 2
-makefig__pmr_byStem(pmr_byStem) # output/figures/maintext/pmr_byStem.pdf
-
-
-#---------------------------#
-# supplementary figures and tables
-
-#Fig S1
-makefig__compare_t60(decayfits) # output/figures/supplementary/compare_t60.pdf
-
-#Fig S2
-makefig__compare_aic(decayfits) # output/figures/supplementary/compare_aic.pdf
-
-```
-
-2. Do wood traits explain decay? 
-- script: *woodtraits_explainDecay.Rmd*
-- summary: 
-    - Fast decayers (alpha) have low density
-    - Samples with S-shaped trajectories (beta) have low N and high density
-    - Difficult to predict decayers (low r2) have low N, high density, and belong to the small size class
-    - Low water content predicts more mass remaining across all time points
-    - Low N and small size class predict more mass remaining at early-mid time points
-    - High C predicts more mass remaining at late time points
-```{r load_woodtraits}
-
-#---------------------------#
-#data
-
-#trait.data.l <- mergeTraitData() # all trait data
-traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
-#trait.sds_byCode(stemSamples) # within code variation
-#trait.n_byCode(stemSamples) # number of code samples that were aggregated
-traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
-#trait.sds_byStem(stemSamples) # within codeStem variation
-#trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
-
-#---------------------------#
-# main figures and tables
-
-#Fig 3
-makefig__traits_explain_decayParams(decayfits, traits.code) # output/figures/maintext/traits_explain_decayparams.pdf
-
-#Fig 4
-makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem) # output/figures/maintext/traits_explain_pmr.pdf
-
-#---------------------------#
-# supplementary figures and tables
-
-#Fig S3
-makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) # output/figures/supplementary/variation_densityNbarkthick.pdf
-
-#Table S1
-cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem); write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv")
-
-```
-
-3. Does endophyte composition explain decay?
-- script: *endoComp_explainDecay.Rmd*
-- summary: No. There is a relationship between composition and percent mass remaining after 37 months, but this is likely driven by the role of water content (and P?) on the microbial community and decay.
-```{r load_microbes}
-
-#---------------------------#
-#data
-
-# wood trait residuals (see `woodTraits_explainDecay.Rmd')
-result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code)
-traitResiduals.code <- result.traitsDecay$traitResiduals.code
-result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem)
-traitResiduals.stem <- result.traitsPMR$traitResiduals.stem
-
-#microbes
-microb.data <- load_MicrobeCollection(stemSamples)
-taxAndFunguild <- microb.data$taxAndFunguild
-comm.otu <- microb.data$comm.otu
-seqSamples <- microb.data$seqSamples
-
-#---------------------------#
-# main figures and tables
-
-#---------------------------#
-# supplementary figures and tables
-
-#Fig S4
-plot_sampleEffortCurves(comm.otu) # output/figures/supplementary/sampleEffortCurve.pdf; #this takes a while... uncomment if the data changes
-
-#Fig S5
-makefig__wapls_score_time37(cvfit.results.stem, taxAndFunguild) # output/figures/supplementary/wapls_score_time37.pdf
-makefig__wapls_score_time37_otuCats(cvfit.results.stem, taxAndFunguild) # output/figures/supplementary/wapls_score_time37_otuCats.pdf
-makefig__wapls_score_time37_boral(cvfit.results.stem, taxAndFunguild) # output/figures/supplementary/wapls_score_time37_boral.pdf
-#otucats <- maketab__wapls_score_time37_otuCats(cvfit.results.stem, taxAndFunguild)
-#write.csv(otucats, file = "output/tables/supplementary/wapls_score_time37_otuCats.csv")
-
-#Fig S6
-makefigs__endoComp_woodTraits(comm.otu, seqSamples, traits.code) # output/figures/supplementary/dbRDA_code.pdf
-tab.list <- maketabs__endoComp_woodTraits(comm.otu, seqSamples, traits.code)
-write.csv(tab.list$an.nt.code, file="output/tables/supplementary/dbRDAanova_nt_code.csv")
-write.csv(tab.list$an.t.code, file="output/tables/supplementary/dbRDAanova_t_code.csv")
-makefigs__endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem) # output/figures/supplementary/dbRDA_stem.pdf
-tab.list <- maketabs__endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem)
-write.csv(tab.list$an.nt.stem, file="output/tables/supplementary/dbRDAanova_nt_stem.csv")
-write.csv(tab.list$an.t.stem, file="output/tables/supplementary/dbRDAanova_t_stem.csv")
-
-#Table S2
-cvfit.results.code <- doAnalysis_endoComp_explainDecay(comm.otu, seqSamples, decayfits, code.respVars)
-cvfit.results.stem <- doAnalysis_endoComp_explainPMR(comm.otu, pmr_byStem, stem.respVars)
-commTab <- maketab_endoComp_explain(cvfit.results.code, cvfit.results.stem, code.respVars, stem.respVars)
-write.csv(commTab, file="output/tables/supplementary/commcompsummary.csv")
-
-#Table S3
-cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, code.respVars, traitResiduals.code)
-cvfit.results.stem <- doAnalysis_endoComp_explainPMRResids(comm.otu, pmr_byStem, stem.respVars, traitResiduals.stem)
-commTab <- maketab_endoComp_explain(cvfit.results.code, cvfit.results.stem, code.respVars, stem.respVars)
-write.csv(commTab, file="output/tables/supplementary/commcompsummary_traitresid.csv")
-
-```
-
-
-4. Does endophyte diversity explain decay? *
-- script: *endoDiv_explainDecay.Rmd*
-- summary:
-    - More saprotrophs leads to less mass remaining after 25 and 37 months, but only in small stems
-    - More pathotrophs leads to less mass remaining after 37 months, but only in small stems
-    - Higher saprotroph richness leads to faster decay than would be expected based on wood traits alone
-    - Higher saprotroph richness leads to trajectories that are less s-shaped than based on wood traits alone
-```{r load_microbesdiv}
-
-#---------------------------#
-# main figures and tables
-
-#---------------------------#
-# supplementary figures and tables
-
-#Fig S7
-makefig__RichShannonPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars) # output/figures/supplementary/richness_pmr.pdf
-
-#Fig S8
-makefig__pathoRichPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars) # output/figures/supplementary/richness_patho_pmr.pdf
-
-#Fig S9
-makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars) # output/figures/supplementary/richness_sapro_decayResids.pdf
-
-#Fig S10
-makefig__richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) # output/figures/supplementary/richness_PMRResids.pdf
-
-#Fig S11
-makefig__path_richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) # output/figures/supplementary/richness_patho_time37Resids.pdf
-
-#Table S4
-result.list <- doAnalysis_endoDiv_explainDecay(taxAndFunguild, comm.otu, decayfits, code.respVars)
-write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysummary_code.csv")
-
-#Table S5
-result.list.stem <- doAnalysis_endoDiv_explainPMR(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversitysummary_stem.csv")
-
-#Table S6
-result.list <- doAnalysis_endoDiv_explainDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
-write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysummary_code_traitresid.csv")
-
-#Table S7
-result.list.stem <- doAnalysis_endoDiv_explainPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversitysummary_stem_traitresid.csv")
-
-```
-
-
-
-### Other pieces
-
-- How does including t=0 points affect the decay model fit? Including it affects the liklihood and the model selection criteria, but the curve fits are identical.  Excluding t=0 leads to prefering simpler models, which is the same effect as increasing the penalty for model complexity -- *code/testing_time_zero.Rmd* 
-
-- Do endophyte community dissimilarities correlate with decay trajectory parameters? No relationships -- *code/initialDist_vs_decayDist_btwCode.Rmd*
-
-- Is there a relationship between the frequency of highly correlated (negative or positive) OTU pairs identified via boral and decay parameters? Nope -- *code/boralOTUpairs_vs_decay.Rmd*
-
-- Is there a relationship between initial microbial diversity WITHIN species+size categories and decay model R2? Nope -- *code/withinInitialDist_vs_decayR2.Rmd*
-
-- Exclude mycorrhizal fungi and animal-associated fungi that somehow made it into our OTU table -- *code/unexpectedTaxa.Rmd*
-
-
-### Need to continue incorporating C fract analyses into "woodTraits_explainDecay.Rmd"
-
-Check out correlations among C fractions and other traits. Exclude two samples for which there isn't waterperc data. Remember that there is no stem-level barkthick or density data for large stem samples.
+Load C fraction data
 ```{r}
-cfract.load<- load_Cfract()
-traits.stem %>%
-  left_join(cfract.load) %>%
-  filter(!is.na(Total)) %>%
-  select(-c(barkthick, density)) -> traits.stem.sel
 
-#two samples are missing waterperc data
-traits.stem.sel %>%
-  filter(is.na(waterperc)) %>%
-  select(codeStem, waterperc) 
+#load_Cfract<-function(){
+  
+  cfract <- read_csv(file = "data/Marissa_Chemistry_Data_export.csv")
+  cfract <- cfract[complete.cases(cfract),] # get rid of empty row from the excel file
+  
+  #I think there is a typo and JASC2 was entered twice instead of JASC3. My original datasheet that I sent included JASC3. 
+  #It would be good to double check this with Shawn's lab.
+  
+  # fix typo
+  cfract %>%
+    mutate(codeStem = ifelse(codeStem == "JASC2" &  labID %in% c(47,48), 
+                             "JASC3", 
+                             codeStem)) -> cfract
+  
+#plot
+num.out <- length(unique(cfract$labID))/2
+cfract %>%
+    mutate(rep = paste0("rep",rep(c(1,2), times = num.out))) %>%
+    select(codeStem, rep, perc.Total.lignin, Arabinose, Rhamnose, Galactose, Glucose, Xylose, Mannose, Total) %>%
+    gather(key = "type", value = "value", -c(codeStem, rep)) %>%
+    separate(codeStem, into = c("code","Stem"), sep = 4, remove = F) %>%
+    mutate(size = ifelse(code == tolower(code), "small","large")) %>%
+    rename('unique'=codeStem) -> tmp
 
-#remove them
-traits.stem.sel %>%
-  filter(!is.na(waterperc)) -> traits.stem.sel
+# order code by percTotal.lignin
+tmp %>%
+  filter(type == "perc.Total.lignin") %>%
+  group_by(code) %>%
+  summarize(mean = mean(value)) %>%
+  arrange(mean) -> code.order
+tmp$code <- factor(tmp$code, levels = code.order$code)
 
+p <- ggplot(tmp, aes(x = code, y = value, color = Stem)) +
+  geom_point() +
+  facet_wrap(~type, scales = "free_y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+p
+ggsave(p, filename = "cfract_distrb.pdf")
+
+```
+
+Check for analytical reps that are way different
+```{r}
+  
+  #Look for analytical reps that are way different
+  cfract %>%
+    mutate(rep = paste0("rep",rep(c(1,2), times = num.out))) %>%
+    select(codeStem, rep, perc.Total.lignin, Arabinose, Rhamnose, Galactose, Glucose, Xylose, Mannose, Total) %>%
+    gather(key = "type", value = "value", -c(codeStem, rep)) %>%
+    spread(key = rep, value = value) %>%
+    mutate(diff = abs(rep1 - rep2)) -> tmp
+  
+  #plot difference between analytical rep1 and rep2
+  ggplot(tmp, aes(x = codeStem, y = diff)) +
+    geom_point() +
+    facet_wrap(~type, scales = "free_y") +
+    theme_bw() +
+    ylab("Abs. diff between two analytical reps") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```  
+Go back and investigate the JASC/Arabinose and ACPA/Xylose outliers. For now, just average the analytical reps
+  
+```{r}
+  # average the 2 analytical reps
+  num.out <- length(unique(cfract$labID))/2
+  cfract %>%
+    mutate(rep = paste0("rep",rep(c(1,2), times = num.out))) %>%
+    select(codeStem, rep, perc.Total.lignin, Arabinose, Rhamnose, Galactose, Glucose, Xylose, Mannose, Total) %>%
+    gather(key = "type", value = "value", -c(codeStem, rep)) %>%
+    spread(key = rep, value = value) %>%
+    mutate(diff = abs(rep1 - rep2)) %>%
+    mutate(avg = (rep1 + rep2) / 2) %>%
+    select(codeStem, type, avg) %>%
+    spread(key = type, value = avg) -> cfract.w
+  
+  # add unique, code, size, Stem
+  cfract.w %>%
+    separate(codeStem, into = c("code","Stem"), sep = 4, remove = F) %>%
+    mutate(size = ifelse(code == tolower(code), "small","large")) %>%
+    rename('unique'=codeStem) -> cfract.wt
+  dim(cfract.wt)
+  
+#  return(cfract.wt)
+#}
+```
+
+Add existing trait data to this C fraction data. Exclude two samples for which there isn't waterperc data. Remember that there is no stem-level barkthick or density data for large stem samples.
+```{r}
+# load all trait data
+trait.data.l <- mergeTraitData()
+trait.data.l %>%
+  mutate(codeStem = paste0(code,Stem)) -> trait.data.l
+
+# subset by the codeStem ids with Cfract data
+select.codeStems <- unique(cfract.wt$unique)
+trait.data.l %>%
+  filter(codeStem %in% select.codeStems) -> select.trait.data.l
+
+# make the dataframe wide so that each trait is a column
+select.trait.data.l %>%
+  spread(key = trait, value = trait.val) -> tmp
+# need to create an average waterperc for each codeStem so that this data is aggregated at the same scale as the XRF trait data
+tmp %>%
+  group_by(codeStem) %>%
+  summarize(mean.waterperc = mean(waterperc, na.rm =T)) -> mean.waterperc
+tmp %>%
+  select(-waterperc) %>%
+  filter(!is.na(C)) %>%
+  left_join(mean.waterperc) -> select.trait.data.w
+dim(select.trait.data.w)
+
+# remove waterperc with NAs (2 codeStems)
+select.trait.data.w %>%
+  filter(!is.nan(mean.waterperc)) %>%
+  rename('waterperc' = 'mean.waterperc') -> select.trait.data.w
+dim(select.trait.data.w)
+
+# merge the C fract data with the other trait data
+select.trait.data.w %>%
+  left_join(cfract.wt) %>%
+  select(-c(Total, unique, compositeSample)) -> trait.data.w
+```
+
+Check out correlations among C fractions and other traits. 
+```{r}
 #grab just the matrix of traits
-traits.stem.sel %>%
-  select(-c(species, size, code, unique, Stem)) -> matonly
-matonly.s <- scale(as.matrix(matonly[,-1]))
+colnames(trait.data.w)
+trait.data.w %>%
+  select(-c(code, size, Stem, codeStem)) -> matonly
+matonly.s <- scale(as.matrix(matonly))
 
 # plot correlations
+pdf(file = "output/corplot.pdf")
 corrplot(cor(matonly.s), type = "lower")
+dev.off()
+
+cor(matonly.s)
+
 ```
 
-Check out samples in trait space
+Kick out traits that are highly correlated
+- C and perc.Total.lignin are highly positive correlated (0.8); keep perc.Total.lignin
+- Glucose+Xylose and perc.Total.lignin are highly negatively correlated (-.8, -.7); keep perc.Total.lignin.
 ```{r}
+#update
+trait.data.w %>%
+  select(-c(Glucose, Xylose, C)) -> trait.data.w.sel
+trait.data.w.sel %>%
+  select(-c(code, size, Stem, codeStem)) -> matonly
+matonly.s <- scale(as.matrix(matonly))
+
+# plot correlations again
+corrplot(cor(matonly.s), type = "lower")
+cor(matonly.s)
+
+```
+Note that waterperc and Mannose are negatively correlated (-0.62), but I'm leaving them in there.
+
+Visualize the codeStems in trait space
+```{r}
+
 pca <- prcomp(matonly.s)
-df <- data.frame(pca$x[,1:2], 
-                 traits.stem.sel[,c("codeStem","species","code","size")])
+summary(pca)
+
+# add back the sample info
+df <- data.frame(pca$x[,1:2], trait.data.w.sel[,c("codeStem","code","size","Stem")])
+
+#plot
 datapc <- data.frame(varnames=rownames(pca$rotation), pca$rotation[,1:2])
 mult <- min(
   (max(df[,"PC1"]) - min(df[,"PC2"])/(max(datapc[,"PC2"])-min(datapc[,"PC2"]))),
@@ -291,102 +205,77 @@ mult <- min(
 datapc <- transform(datapc,
                     v1 = .7 * mult * datapc$PC1,
                     v2 = .7 * mult * datapc$PC2)
-  
-plot_12 <- ggplot(data=datapc, aes(x=v1, y=v2, label=varnames)) + 
+p <- ggplot(data=datapc, aes(x=v1, y=v2, label=varnames)) + 
   geom_text(size=3, vjust=1, color=1) + 
   geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
                arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) + 
   coord_fixed() +
-  geom_point(mapping=aes(x=PC1, y=PC2, 
-                        color = species), data=df, inherit.aes = FALSE) +
-  theme_bw() + xlab("PC1") + ylab("PC2")
-#plot_12
-#ggsave(plot_12, filename = "output/stem_traitord.pdf")
-# for some reason this plot knit with more extra data points? it seems to work fine in ggsave
-
-summary(pca)
-```
-![](output/stem_traitord.pdf)
-
-Load new versions of trait data
-```{r}
-traits.code <- trait.means_byCode_new(stemSamples, fill.densitybark = T)
-traits.stem <- trait.means_byStem_new(stemSamples)
+  geom_text(mapping=aes(x=PC1, y=PC2, 
+                        color = code, label = codeStem), data=df, inherit.aes = FALSE) +
+  theme_bw() + xlab("PC1 (24%)") + ylab("PC2 (16%)") +
+  guides(color = F)
+p
+ggsave(p, filename = "output/stem_traitord.pdf")
 
 ```
 
-Do wood C fractions explain decay?
+How do wood C fractions contribute to explaining decay?
 
-(by code)
+(1) by codeStem
+
+Merge trait matrix with the percent mass loss data
 ```{r}
-#merge traits and response variables into 1 df
-decayfits %>%
-  select(code, species, size, 
-         ne.r2, k, t70, 
-         w.r2, alpha, beta, w.t70) %>%
-  left_join(traits.code) %>% 
-  filter(!is.na(P)) %>%
-  filter(!is.na(waterperc)) -> decayfits.traits
 
-# subset by wood fract data
-decayfits.traits %>%
-  filter(!is.na(Arabinose)) -> decayfits.traits
+# stem mass
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 
-#set up full models
-respVars <- list("k","t70","ne.r2", "alpha","beta","w.t70","w.r2")
-rhs <- "waterperc + N + Arabinose + Galactose + Glucose + Mannose + perc.Total.lignin + Rhamnose + Xylose" # got rid of size because only looking at large stems
-mod.full.list<-lapply(respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits) # summaryTable_fxns.R
-
-#do stepwise model selection #uncomment if data changes
-mod.select.list<-lapply(mod.full.list, function(x) {
-  x.updated<-update(x, . ~ ., data = model.frame(x))
-  mod.select<-step(x.updated, direction="backward")
-  return(mod.select)
-  })
-names(mod.select.list) <- respVars
-
-#plot
-sum.list<-lapply(mod.select.list, summary)
-coefs.df<-PullLmCoefs(sum.list, unlist(respVars))
-fitstat.df<-PullLmFitStats(sum.list, unlist(respVars))
-fitstat.df %>%
-  gather(key = "respvar", value = "value", -c(term)) %>%
-  filter(term == "r.squared") %>%
-  select(-term) %>%
-  rename('r.squared'=value) -> r2.df
-coefs.df %>%
-  left_join(r2.df) %>%
-  filter(respvar %in% c("alpha","beta","w.t70","w.r2")) -> coefs.df
-
-ggplot(coefs.df, aes(x = respvar, y = term, fill = r.squared)) +
-  geom_tile() + geom_text(aes(label = round(est, digits = 2))) +
-  xlab("Response variable") + ylab("Wood trait") +
-  theme_classic()
+#merge with trait data
+trait.data.w.sel %>%
+  left_join(pmr_byStem) -> pmr.trait.data
 
 ```
 
-- alpha: Codes that decay quickly have more Rhamnose
-- beta: Codes with s-shaped trajectories have low N, Mannose, and Glactose
-- w.r2: Codes with better model fits have more Rhamnose
-- w.t70: Codes with longer "half lives" have more Rhamnose and less N
-
-(by stem)
+Set up models
 ```{r}
-# create dataframes
-# stem-level waterperc, xrf, and CN and (small) species-level barkthickness and density
 
-respVars <- list("time7", "time13", "time25", "time37","time59")
-datasets<-lapply(respVars, function(x) {
-  result<-CreateTraitPMRpair(x, traits.stem, traits.code, pmr_byStem) #analysisDF_fxns.R
-  return(result)
-})
-names(datasets)<-respVars
+orig.x.vars <- c("Ca","Fe","K","Mn","N","P","Zn","waterperc")
+cfract.x.vars <- c("Arabinose","Galactose","Mannose","perc.Total.lignin","Rhamnose")
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
 
-#set up full models
-rhs <- "waterperc + N + Arabinose + Galactose + Glucose + Mannose + perc.Total.lignin + Rhamnose + Xylose"
-lhs <- "curr.pmr"
-mod.full.list<-lapply(datasets, function(x) {
-  result<-ModelFit_manyYs(y=lhs, rhs=rhs, curr.data=x)
+pmr.trait.data %>%
+  select(as.character(stem.respVars)) -> y.mat
+
+rhs.orig <- paste(orig.x.vars, collapse = " + ")
+rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
+```
+
+(1) Original traits: "Ca","Fe","K","Mn","N","P","Zn","waterperc" predict percent mass remaining (PMR) at each time point
+```{r}
+# rhs.orig model
+rhs.orig <- paste(orig.x.vars, collapse = " + ")
+rhs.mat <- pmr.trait.data[,colnames(pmr.trait.data) %in% orig.x.vars]
+rhs.mat.s <- scale(rhs.mat)
+
+ModelFit_fxn <- function(y, y.data, rhs, rhs.data){
+  
+  #merge data
+  data <- cbind(y.data, rhs.data)
+  
+  #create model formula
+  string <- paste(y, " ~ ", rhs)
+  fmla<-as.formula(string)
+  mod.full<-lm(formula=fmla, data=data)
+  
+  return(mod.full)
+}
+
+# set up all the models
+mod.full.list <- lapply(stem.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.orig, rhs.data = rhs.mat.s)
   return(result)
 })
 
@@ -397,10 +286,10 @@ mod.select.list<-lapply(mod.full.list, function(x) {
   return(mod.select)
   })
 
-#plot
+#pull coefs and r2s
 sum.list<-lapply(mod.select.list, summary)
-coefs.df<-PullLmCoefs(sum.list, unlist(respVars))
-fitstat.df<-PullLmFitStats(sum.list, unlist(respVars))
+coefs.df<-PullLmCoefs(sum.list, unlist(stem.respVars))
+fitstat.df<-PullLmFitStats(sum.list, unlist(stem.respVars))
 fitstat.df %>%
   gather(key = "respvar", value = "value", -c(term)) %>%
   filter(term == "r.squared") %>%
@@ -409,16 +298,66 @@ fitstat.df %>%
 coefs.df %>%
   left_join(r2.df) -> coefs.df
 
-coefs.df$respvar<- factor(coefs.df$respvar, levels = c("time7","time13","time25","time37","time59"))
-
-ggplot(coefs.df, aes(x = respvar, y = term, fill = r.squared)) +
-  geom_tile() + geom_text(aes(label = round(est, digits = 2))) +
-  xlab("Response variable") + ylab("Wood trait") +
-  theme_classic()
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.stem
 
 ```
 
-- Glucose and waterperc are important for explaining pmr at each time point. Stems with low glucose and waterperc tend to have more mass remaining.
-- High Rhamnose and low N are associated with more mass remaining after 25 months
+(2) Original traits plus C fractions...
+```{r}
+# rhs.orig model
+rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
+rhs.mat <- pmr.trait.data[,colnames(pmr.trait.data) %in% c(orig.x.vars, cfract.x.vars)]
+rhs.mat.s <- scale(rhs.mat)
 
+# set up all the models
+mod.full.list <- lapply(stem.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.plusC, rhs.data = rhs.mat.s)
+  return(result)
+})
+
+#do stepwise model selection
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x))
+  mod.select<-step(x.updated, direction="backward")
+  return(mod.select)
+  })
+
+#pull coefs and r2s
+sum.list<-lapply(mod.select.list, summary)
+coefs.df<-PullLmCoefs(sum.list, unlist(stem.respVars))
+fitstat.df<-PullLmFitStats(sum.list, unlist(stem.respVars))
+fitstat.df %>%
+  gather(key = "respvar", value = "value", -c(term)) %>%
+  filter(term == "r.squared") %>%
+  select(-term) %>%
+  rename('r.squared'=value) -> r2.df
+coefs.df %>%
+  left_join(r2.df) -> coefs.df
+
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.stem
+
+```
+
+....need to finish
 
