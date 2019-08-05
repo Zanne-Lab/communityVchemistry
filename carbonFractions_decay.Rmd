@@ -5,6 +5,11 @@ date: "7/19/2019"
 output: pdf_document
 ---
 
+```{r, include = F}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
+
 ```{r load}
 # load libraries and fxns
 
@@ -14,9 +19,9 @@ library(grid) #plotting
 library(gridExtra) #plotting
 library(corrplot) #plotting
 #devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
-#library(litterfitter) #fit decay models to timeseries
+library(litterfitter) #fit decay models to timeseries
 #library(lmtest) # for coxtest()
-#library(vegan) #diversity metrics
+library(vegan) #diversity metrics
 #library(rioja) #WA-PLS
 #library(GGally)
 
@@ -89,8 +94,9 @@ Check for analytical reps that are way different
     ylab("Abs. diff between two analytical reps") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```  
-Go back and investigate the JASC/Arabinose and ACPA/Xylose outliers. For now, just average the analytical reps
-  
+Go back and investigate the JASC/Arabinose and ACPA/Xylose outliers. 
+
+Average the analytical reps
 ```{r}
   # average the 2 analytical reps
   num.out <- length(unique(cfract$labID))/2
@@ -189,7 +195,6 @@ Note that waterperc and Mannose are negatively correlated (-0.62), but I'm leavi
 
 Visualize the codeStems in trait space
 ```{r}
-
 pca <- prcomp(matonly.s)
 summary(pca)
 
@@ -237,10 +242,10 @@ trait.data.w.sel %>%
   left_join(pmr_byStem) -> pmr.trait.data
 
 ```
+Remember there are 34 codeStems/observations.
 
 Set up models
 ```{r}
-
 orig.x.vars <- c("Ca","Fe","K","Mn","N","P","Zn","waterperc")
 cfract.x.vars <- c("Arabinose","Galactose","Mannose","perc.Total.lignin","Rhamnose")
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
@@ -252,7 +257,7 @@ rhs.orig <- paste(orig.x.vars, collapse = " + ")
 rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
 ```
 
-(1) Original traits: "Ca","Fe","K","Mn","N","P","Zn","waterperc" predict percent mass remaining (PMR) at each time point
+(a) Original traits: "Ca","Fe","K","Mn","N","P","Zn","waterperc" predict percent mass remaining (PMR) at each time point
 ```{r}
 # rhs.orig model
 rhs.orig <- paste(orig.x.vars, collapse = " + ")
@@ -298,8 +303,14 @@ fitstat.df %>%
 coefs.df %>%
   left_join(r2.df) -> coefs.df
 
+# which traits were included in the best models?
 coefs.df %>%
   filter(term != "(Intercept)") -> tmp
+p.stem <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.stem
+
+# what direction are the associations?
 p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
   geom_point() +
   geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
@@ -312,7 +323,66 @@ p.stem
 
 ```
 
-(2) Original traits plus C fractions...
+Visualize codeStems in trait space, add pmr vectors
+```{r}
+
+#create ordination
+pca <- prcomp(rhs.mat.s)
+summary(pca)
+
+#do envfit
+pca.envfit <- envfit(pca, y.mat, na.rm = T)
+
+# make plot
+ # collect site scores from mod.obj
+scrs <- as.data.frame(scores(pca, display = "sites"))
+scrs <- cbind(scrs, codeStem = pmr.trait.data$codeStem)
+scrs %>%
+  left_join(pmr.trait.data) -> scrs
+  
+# collect vector scores from envfit.obj
+spp.scrs <- as.data.frame(scores(pca.envfit, display = "vectors"))
+spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs), pval = pca.envfit$vectors$pvals)
+  
+# collect trait loadings
+datapc <- data.frame(varnames=rownames(pca$rotation), pca$rotation[,1:2])
+mult <- min(
+  (max(df[,"PC1"]) - min(df[,"PC2"])/(max(datapc[,"PC2"])-min(datapc[,"PC2"]))),
+  (max(df[,"PC2"]) - min(df[,"PC1"])/(max(datapc[,"PC1"])-min(datapc[,"PC1"])))
+)
+datapc <- transform(datapc,
+                    v1 = .7 * mult * datapc$PC1,
+                    v2 = .7 * mult * datapc$PC2)
+# plot
+mult <- 3 #multiplier for the arrows and text for envfit
+mult.text <- 3
+p <- ggplot(scrs) +
+  
+  # traits loadings
+  geom_text(data = datapc, aes(x=v1, y=v2, label = varnames), 
+            size=3, vjust=1, color=1) + 
+  geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
+               arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) +
+  
+  # sites
+  geom_point(data = scrs, mapping = aes(x = PC1, y = PC2, color = code), alpha = .5) +
+  coord_fixed() + ## need aspect ratio of 1!
+  
+  # envfit
+  geom_segment(data = spp.scrs,
+               aes(x = 0, xend = mult*PC1, y = 0, yend = mult*PC2),
+               arrow = arrow(length = unit(0.2, "cm")), color = 'red') +
+  geom_text(data = spp.scrs, 
+            aes(x = mult.text*PC1, y = mult.text*PC2, 
+                label = Species), 
+            size = 4, fontface = "bold", color = "red") +
+  xlab("PCoA 1") + ylab("PCoA 2")
+p
+ggsave(p, filename = "output/stem_pmr_traitord.pdf")
+
+```
+
+(b) Original traits plus C fractions...
 ```{r}
 # rhs.orig model
 rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
@@ -345,8 +415,25 @@ fitstat.df %>%
 coefs.df %>%
   left_join(r2.df) -> coefs.df
 
+# which traits were included in the best models?
 coefs.df %>%
   filter(term != "(Intercept)") -> tmp
+p.stem <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.stem
+
+# what direction are the associations?
+p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.stem
+
+
 p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
   geom_point() +
   geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
@@ -359,5 +446,463 @@ p.stem
 
 ```
 
-....need to finish
+Visualize codeStems in trait space, add pmr vectors
+```{r}
+
+#create ordination
+pca <- prcomp(rhs.mat.s)
+summary(pca)
+
+#do envfit
+pca.envfit <- envfit(pca, y.mat, na.rm = T)
+
+# make plot
+ # collect site scores from mod.obj
+scrs <- as.data.frame(scores(pca, display = "sites"))
+scrs <- cbind(scrs, codeStem = pmr.trait.data$codeStem)
+scrs %>%
+  left_join(pmr.trait.data) -> scrs
+  
+# collect vector scores from envfit.obj
+spp.scrs <- as.data.frame(scores(pca.envfit, display = "vectors"))
+spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs), pval = pca.envfit$vectors$pvals)
+  
+# collect trait loadings
+datapc <- data.frame(varnames=rownames(pca$rotation), pca$rotation[,1:2])
+mult <- min(
+  (max(df[,"PC1"]) - min(df[,"PC2"])/(max(datapc[,"PC2"])-min(datapc[,"PC2"]))),
+  (max(df[,"PC2"]) - min(df[,"PC1"])/(max(datapc[,"PC1"])-min(datapc[,"PC1"])))
+)
+datapc <- transform(datapc,
+                    v1 = .7 * mult * datapc$PC1,
+                    v2 = .7 * mult * datapc$PC2)
+# plot
+mult <- 3 #multiplier for the arrows and text for envfit
+mult.text <- 3
+p <- ggplot(scrs) +
+  
+  # traits loadings
+  geom_text(data = datapc, aes(x=v1, y=v2, label = varnames), 
+            size=3, vjust=1, color=1) + 
+  geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
+               arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) +
+  
+  # sites
+  geom_point(data = scrs, mapping = aes(x = PC1, y = PC2, color = code), alpha = .5) +
+  coord_fixed() + ## need aspect ratio of 1!
+  
+  # envfit
+  geom_segment(data = spp.scrs,
+               aes(x = 0, xend = mult*PC1, y = 0, yend = mult*PC2),
+               arrow = arrow(length = unit(0.2, "cm")), color = 'red') +
+  geom_text(data = spp.scrs, 
+            aes(x = mult.text*PC1, y = mult.text*PC2, 
+                label = Species), 
+            size = 4, fontface = "bold", color = "red") +
+  xlab("PCoA 1") + ylab("PCoA 2")
+p
+ggsave(p, filename = "output/stem_pmr_traitord_withCfract.pdf")
+
+```
+
+
+(2) by code
+
+Merge trait matrix with the decay parameters estimated by code
+```{r}
+
+# decay fits
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
+indx <- unique(stemSamples[,c("code","Binomial","size")])
+decayfits %>%
+  left_join(indx) -> decayfits
+code.respVars <- list("alpha","beta","w.t50","w.r2") # weibull params: alpha = shape param, beta = scale param
+
+#merge with trait data, first need to aggregate traits by code (currently at the codeStem level)
+trait.data.w.sel %>%
+  gather(key = "trait", value = "trait.val", -c(code, size, Stem, codeStem)) %>%
+  group_by(code, trait) %>%
+  summarize(mean.trait.val = mean(trait.val, na.rm = T)) %>%
+  spread(key = "trait", value = "mean.trait.val") -> trait.bycode.w
+# now merge
+trait.bycode.w %>%
+  left_join(decayfits) -> fits.trait.data
+
+dim(fits.trait.data) # only 12 codes/observations
+
+
+```
+Remember there are 12 codes/observations
+
+Set up models
+```{r}
+
+orig.x.vars <- c("K","N","P","waterperc")
+cfract.x.vars <- c("Arabinose","Galactose","Mannose","perc.Total.lignin","Rhamnose")
+code.respVars <- list("alpha","beta","w.t50","w.r2") # weibull params: alpha = shape param, beta = scale param
+
+fits.trait.data %>%
+  select(as.character(code.respVars)) -> y.mat
+y.mat <- y.mat[,-1]
+
+rhs.orig <- paste(orig.x.vars, collapse = " + ")
+rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
+```
+
+(a) Original traits: "K","N","P","waterperc" predict code-level decay parameters
+```{r}
+# rhs.orig model
+rhs.orig <- paste(orig.x.vars, collapse = " + ")
+rhs.mat <- fits.trait.data[,colnames(fits.trait.data) %in% orig.x.vars]
+rhs.mat.s <- scale(rhs.mat)
+
+# set up all the models
+mod.full.list <- lapply(code.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.orig, rhs.data = rhs.mat.s)
+  return(result)
+})
+
+#do stepwise model selection
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x))
+  mod.select<-step(x.updated, direction="backward")
+  return(mod.select)
+  })
+
+#pull coefs and r2s
+sum.list<-lapply(mod.select.list, summary)
+coefs.df<-PullLmCoefs(sum.list, unlist(code.respVars))
+fitstat.df<-PullLmFitStats(sum.list, unlist(code.respVars))
+
+fitstat.df %>%
+  gather(key = "respvar", value = "value", -c(term)) %>%
+  filter(term == "r.squared") %>%
+  select(-term) %>%
+  rename('r.squared'=value) -> r2.df
+coefs.df %>%
+  left_join(r2.df) -> coefs.df
+
+# which traits were included in the best models?
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.code <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.code
+
+# what direction are the associations?
+p.code <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.code
+
+```
+
+Visualize code in trait space, add decayfit vectors
+```{r}
+
+#create ordination
+pca <- prcomp(rhs.mat.s)
+summary(pca)
+
+#do envfit
+pca.envfit <- envfit(pca, y.mat, na.rm = T)
+
+# make plot
+ # collect site scores from mod.obj
+scrs <- as.data.frame(scores(pca, display = "sites"))
+scrs <- cbind(scrs, code = fits.trait.data$code)
+scrs %>%
+  left_join(fits.trait.data) -> scrs
+  
+# collect vector scores from envfit.obj
+spp.scrs <- as.data.frame(scores(pca.envfit, display = "vectors"))
+spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs), pval = pca.envfit$vectors$pvals)
+  
+# collect trait loadings
+datapc <- data.frame(varnames=rownames(pca$rotation), pca$rotation[,1:2])
+mult <- min(
+  (max(df[,"PC1"]) - min(df[,"PC2"])/(max(datapc[,"PC2"])-min(datapc[,"PC2"]))),
+  (max(df[,"PC2"]) - min(df[,"PC1"])/(max(datapc[,"PC1"])-min(datapc[,"PC1"])))
+)
+datapc <- transform(datapc,
+                    v1 = .7 * mult * datapc$PC1,
+                    v2 = .7 * mult * datapc$PC2)
+# plot
+mult <- 3 #multiplier for the arrows and text for envfit
+mult.text <- 3
+p <- ggplot(scrs) +
+  
+  # traits loadings
+  geom_text(data = datapc, aes(x=v1, y=v2, label = varnames), 
+            size=3, vjust=1, color=1) + 
+  geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
+               arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) +
+  
+  # sites
+  geom_point(data = scrs, mapping = aes(x = PC1, y = PC2, color = code), alpha = .5) +
+  coord_fixed() + ## need aspect ratio of 1!
+  
+  # envfit
+  geom_segment(data = spp.scrs,
+               aes(x = 0, xend = mult*PC1, y = 0, yend = mult*PC2),
+               arrow = arrow(length = unit(0.2, "cm")), color = 'red') +
+  geom_text(data = spp.scrs, 
+            aes(x = mult.text*PC1, y = mult.text*PC2, 
+                label = Species), 
+            size = 4, fontface = "bold", color = "red") +
+  xlab("PCoA 1") + ylab("PCoA 2")
+p
+ggsave(p, filename = "output/code_decayfits_traitord.pdf")
+
+```
+
+
+(b) Original traits plus C fractions...
+```{r}
+# rhs.orig model
+rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
+rhs.mat <- fits.trait.data[,colnames(fits.trait.data) %in% c(orig.x.vars, cfract.x.vars)]
+rhs.mat.s <- scale(rhs.mat)
+
+# set up all the models
+mod.full.list <- lapply(code.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.plusC, rhs.data = rhs.mat.s)
+  return(result)
+})
+
+#do stepwise model selection
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x))
+  mod.select<-step(x.updated, direction="backward")
+  return(mod.select)
+  })
+
+#pull coefs and r2s
+sum.list<-lapply(mod.select.list, summary)
+coefs.df<-PullLmCoefs(sum.list, unlist(code.respVars))
+fitstat.df<-PullLmFitStats(sum.list, unlist(code.respVars))
+fitstat.df %>%
+  gather(key = "respvar", value = "value", -c(term)) %>%
+  filter(term == "r.squared") %>%
+  select(-term) %>%
+  rename('r.squared'=value) -> r2.df
+coefs.df %>%
+  left_join(r2.df) -> coefs.df
+
+# which traits were included in the best models?
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.code <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.code
+
+# what direction are the associations?
+p.code <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.code
+
+p.code <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.code
+
+```
+
+Visualize code in trait space, add decayfit vectors
+```{r}
+
+#create ordination
+pca <- prcomp(rhs.mat.s)
+summary(pca)
+
+#do envfit
+pca.envfit <- envfit(pca, y.mat, na.rm = T)
+
+# make plot
+ # collect site scores from mod.obj
+scrs <- as.data.frame(scores(pca, display = "sites"))
+scrs <- cbind(scrs, code = fits.trait.data$code)
+scrs %>%
+  left_join(fits.trait.data) -> scrs
+  
+# collect vector scores from envfit.obj
+spp.scrs <- as.data.frame(scores(pca.envfit, display = "vectors"))
+spp.scrs <- cbind(spp.scrs, Species = rownames(spp.scrs), pval = pca.envfit$vectors$pvals)
+  
+# collect trait loadings
+datapc <- data.frame(varnames=rownames(pca$rotation), pca$rotation[,1:2])
+mult <- min(
+  (max(df[,"PC1"]) - min(df[,"PC2"])/(max(datapc[,"PC2"])-min(datapc[,"PC2"]))),
+  (max(df[,"PC2"]) - min(df[,"PC1"])/(max(datapc[,"PC1"])-min(datapc[,"PC1"])))
+)
+datapc <- transform(datapc,
+                    v1 = .7 * mult * datapc$PC1,
+                    v2 = .7 * mult * datapc$PC2)
+# plot
+mult <- 3 #multiplier for the arrows and text for envfit
+mult.text <- 3
+p <- ggplot(scrs) +
+  
+  # traits loadings
+  geom_text(data = datapc, aes(x=v1, y=v2, label = varnames), 
+            size=3, vjust=1, color=1) + 
+  geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
+               arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) +
+  
+  # sites
+  geom_point(data = scrs, mapping = aes(x = PC1, y = PC2, color = code), alpha = .5) +
+  coord_fixed() + ## need aspect ratio of 1!
+  
+  # envfit
+  geom_segment(data = spp.scrs,
+               aes(x = 0, xend = mult*PC1, y = 0, yend = mult*PC2),
+               arrow = arrow(length = unit(0.2, "cm")), color = 'red') +
+  geom_text(data = spp.scrs, 
+            aes(x = mult.text*PC1, y = mult.text*PC2, 
+                label = Species), 
+            size = 4, fontface = "bold", color = "red") +
+  xlab("PCoA 1") + ylab("PCoA 2")
+p
+ggsave(p, filename = "output/code_decayfits_traitord_withCfract.pdf")
+
+```
+
+
+(a-forward) Original traits but using forward selection instead of backward
+```{r}
+# rhs.orig model
+rhs.orig <- paste(orig.x.vars, collapse = " + ")
+rhs.mat <- fits.trait.data[,colnames(fits.trait.data) %in% orig.x.vars]
+rhs.mat.s <- scale(rhs.mat)
+
+# set up all the models
+mod.full.list <- lapply(code.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.orig, rhs.data = rhs.mat.s)
+  return(result)
+})
+
+#do stepwise model selection
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x))
+  mod.select<-step(x.updated, direction="forward")
+  return(mod.select)
+  })
+
+#pull coefs and r2s
+sum.list<-lapply(mod.select.list, summary)
+coefs.df<-PullLmCoefs(sum.list, unlist(code.respVars))
+fitstat.df<-PullLmFitStats(sum.list, unlist(code.respVars))
+
+fitstat.df %>%
+  gather(key = "respvar", value = "value", -c(term)) %>%
+  filter(term == "r.squared") %>%
+  select(-term) %>%
+  rename('r.squared'=value) -> r2.df
+coefs.df %>%
+  left_join(r2.df) -> coefs.df
+
+# which traits were included in the best models?
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.code <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.code
+
+# what direction are the associations?
+p.code <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.code
+
+```
+
+(b-forward) Original traits plus C fractions...
+```{r}
+# rhs.orig model
+rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
+rhs.mat <- fits.trait.data[,colnames(fits.trait.data) %in% c(orig.x.vars, cfract.x.vars)]
+rhs.mat.s <- scale(rhs.mat)
+
+# set up all the models
+mod.full.list <- lapply(code.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.plusC, rhs.data = rhs.mat.s)
+  return(result)
+})
+
+#do stepwise model selection
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x))
+  mod.select<-step(x.updated, direction="forward")
+  return(mod.select)
+  })
+
+#pull coefs and r2s
+sum.list<-lapply(mod.select.list, summary)
+coefs.df<-PullLmCoefs(sum.list, unlist(code.respVars))
+fitstat.df<-PullLmFitStats(sum.list, unlist(code.respVars))
+fitstat.df %>%
+  gather(key = "respvar", value = "value", -c(term)) %>%
+  filter(term == "r.squared") %>%
+  select(-term) %>%
+  rename('r.squared'=value) -> r2.df
+coefs.df %>%
+  left_join(r2.df) -> coefs.df
+
+# which traits were included in the best models?
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.code <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.code
+
+# what direction are the associations?
+p.code <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.code
+
+p.code <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.code
+
+```
 

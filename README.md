@@ -5844,7 +5844,8 @@ stem-level barkthick or density data for large stem samples.
     ## 5 PELI2           NA
     ## 6 PELI2           NA
 
-![](readme_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+    ## quartz_off_screen 
+    ##                 2
 
 Kick out traits that are highly correlated - C and perc.Total.lignin are
 highly positive correlated (0.81); keep perc.Total.lignin -
@@ -5909,8 +5910,10 @@ Glucose+Xylose and perc.Total.lignin are highly negatively correlated
     ## perc.Total.lignin -0.49399261
     ## Rhamnose           1.00000000
 
+Plot variation in C fractions w/in and between species
+
 Check out samples in trait space
-![](readme_files/figure-gfm/unnamed-chunk-4-1.png)<!-- -->
+![](readme_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
 
     ## Importance of components:
     ##                           PC1    PC2    PC3    PC4     PC5     PC6     PC7
@@ -6053,7 +6056,7 @@ micronutrients
     ## - N                  1   0.00773 0.06292 -49.010
     ## <none>                           0.05519 -48.582
     ## - Mannose            1   0.06626 0.12145 -41.118
-    ## - Rhamnose           1   0.08137 0.13657 -39.710
+    ## - Rhamnose           1   0.08138 0.13657 -39.710
     ## - P                  1   0.27854 0.33374 -28.988
     ## - perc.Total.lignin  1   0.43311 0.48831 -24.421
     ## 
@@ -6067,7 +6070,7 @@ micronutrients
     ## - Mannose            1   0.06854 0.12929 -42.367
     ## - Rhamnose           1   0.13555 0.19629 -37.357
     ## - P                  1   0.28858 0.34933 -30.440
-    ## - perc.Total.lignin  1   0.51621 0.57696 -24.419
+    ## - perc.Total.lignin  1   0.51622 0.57696 -24.419
     ## 
     ## Step:  AIC=-50.79
     ## alpha ~ N + P + perc.Total.lignin + Rhamnose + Mannose
@@ -6205,7 +6208,7 @@ micronutrients
     ## [4] "perc.Total.lignin" "Rhamnose"          "Mannose"          
     ## [7] "Arabinose"         "Galactose"         "waterperc"
 
-![](readme_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](readme_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
 
 (by stem) – I want to update this so that the traits values are scaled
 before running the
@@ -6607,7 +6610,7 @@ before running the
     ## 19 2.050969e-02     *    -0.17 +/- 0.069 *      0.63
     ## 20 5.274534e-05   ***  0.014 +/- 0.003 ***      0.63
 
-![](readme_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](readme_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 Visualize the relationship between wood C fractions and endophyte
 communities
@@ -6667,7 +6670,7 @@ communities
     ## MEDE2 -0.63518717  0.93883396
     ## MEDE3 -0.98771726  1.01475175
 
-![](readme_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
+![](readme_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
 Does adding C fraction data explain more variation in endophyte
 composition? How much? Doubles the unique info (with the caveat that I
@@ -6762,13 +6765,13 @@ perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose
     ##                     Df    AIC      F Pr(>F)   
     ## + C                  1 87.378 3.0934  0.005 **
     ## + perc.Total.lignin  1 87.821 2.6393  0.005 **
-    ## + Arabinose          1 88.834 1.6217  0.005 **
-    ## + Mannose            1 88.713 1.7417  0.020 * 
-    ## + N                  1 88.762 1.6934  0.025 * 
-    ## + waterperc          1 88.915 1.5419  0.050 * 
-    ## + Galactose          1 89.046 1.4128  0.055 . 
-    ## + P                  1 89.092 1.3677  0.085 . 
-    ## + Rhamnose           1 89.004 1.4547  0.095 . 
+    ## + Mannose            1 88.713 1.7417  0.015 * 
+    ## + N                  1 88.762 1.6934  0.015 * 
+    ## + Arabinose          1 88.834 1.6217  0.020 * 
+    ## + Rhamnose           1 89.004 1.4547  0.040 * 
+    ## + Galactose          1 89.046 1.4128  0.070 . 
+    ## + waterperc          1 88.915 1.5419  0.075 . 
+    ## + P                  1 89.092 1.3677  0.100 . 
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
@@ -6781,74 +6784,74 @@ perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose
     ## 
     ##                     Df    AIC      F Pr(>F)   
     ## + perc.Total.lignin  1 87.330 1.9243  0.005 **
-    ## + N                  1 87.532 1.7293  0.015 * 
-    ## + Arabinose          1 87.660 1.6064  0.035 * 
-    ## + Mannose            1 87.686 1.5814  0.035 * 
-    ## + waterperc          1 87.691 1.5767  0.040 * 
-    ## + Galactose          1 87.814 1.4594  0.060 . 
-    ## + Rhamnose           1 87.953 1.3266  0.085 . 
-    ## + P                  1 87.944 1.3349  0.105   
+    ## + N                  1 87.532 1.7293  0.020 * 
+    ## + Arabinose          1 87.660 1.6064  0.025 * 
+    ## + Mannose            1 87.686 1.5814  0.030 * 
+    ## + Galactose          1 87.814 1.4594  0.040 * 
+    ## + waterperc          1 87.691 1.5767  0.045 * 
+    ## + Rhamnose           1 87.953 1.3266  0.110   
+    ## + P                  1 87.944 1.3349  0.115   
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Step: mat.otu.t ~ C + perc.Total.lignin 
     ## 
     ##                     Df    AIC      F Pr(>F)   
-    ## - perc.Total.lignin  1 87.378 1.9243  0.010 **
+    ## - perc.Total.lignin  1 87.378 1.9243  0.005 **
     ## - C                  1 87.821 2.3559  0.005 **
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ##             Df    AIC      F Pr(>F)   
+    ## + Mannose    1 87.194 1.9452  0.005 **
     ## + N          1 87.303 1.8436  0.005 **
-    ## + Mannose    1 87.194 1.9452  0.010 **
-    ## + Arabinose  1 87.503 1.6561  0.040 * 
-    ## + waterperc  1 87.597 1.5685  0.045 * 
-    ## + Galactose  1 87.650 1.5194  0.070 . 
+    ## + Arabinose  1 87.503 1.6561  0.010 **
+    ## + Galactose  1 87.650 1.5194  0.035 * 
+    ## + waterperc  1 87.597 1.5685  0.040 * 
     ## + Rhamnose   1 87.887 1.3004  0.120   
-    ## + P          1 87.975 1.2198  0.225   
+    ## + P          1 87.975 1.2198  0.185   
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Step: mat.otu.t ~ C + perc.Total.lignin + N 
+    ## Step: mat.otu.t ~ C + perc.Total.lignin + Mannose 
     ## 
     ##                     Df    AIC      F Pr(>F)   
-    ## - perc.Total.lignin  1 87.532 2.0332  0.015 * 
-    ## - N                  1 87.330 1.8436  0.010 **
-    ## - C                  1 87.923 2.4038  0.005 **
+    ## - perc.Total.lignin  1 87.686 2.2814  0.010 **
+    ## - C                  1 87.812 2.4013  0.010 **
+    ## - Mannose            1 87.330 1.9452  0.005 **
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ##             Df    AIC      F Pr(>F)   
-    ## + Mannose    1 87.088 1.9520  0.010 **
-    ## + Arabinose  1 87.399 1.6695  0.015 * 
-    ## + Galactose  1 87.495 1.5833  0.030 * 
-    ## + waterperc  1 87.456 1.6188  0.035 * 
-    ## + Rhamnose   1 87.729 1.3739  0.105   
-    ## + P          1 87.836 1.2784  0.185   
+    ## + N          1 87.088 1.8535  0.010 **
+    ## + Arabinose  1 87.398 1.5733  0.035 * 
+    ## + Rhamnose   1 87.652 1.3453  0.110   
+    ## + Galactose  1 87.753 1.2553  0.140   
+    ## + P          1 87.810 1.2047  0.270   
+    ## + waterperc  1 87.856 1.1645  0.270   
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Step: mat.otu.t ~ C + perc.Total.lignin + N + Mannose 
+    ## Step: mat.otu.t ~ C + perc.Total.lignin + Mannose + N 
     ## 
     ##                     Df    AIC      F Pr(>F)   
-    ## - N                  1 87.194 1.8535  0.015 * 
-    ## - Mannose            1 87.303 1.9520  0.005 **
+    ## - N                  1 87.194 1.8535  0.010 **
+    ## - Mannose            1 87.303 1.9520  0.010 **
     ## - perc.Total.lignin  1 87.878 2.4803  0.005 **
     ## - C                  1 88.006 2.5986  0.005 **
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ##             Df    AIC      F Pr(>F)   
-    ## + Arabinose  1 87.011 1.7634  0.010 **
-    ## + Rhamnose   1 87.400 1.4247  0.080 . 
-    ## + Galactose  1 87.529 1.3133  0.145   
-    ## + P          1 87.615 1.2393  0.215   
-    ## + waterperc  1 87.677 1.1861  0.220   
+    ##             Df    AIC      F Pr(>F)  
+    ## + Arabinose  1 87.011 1.7634  0.025 *
+    ## + Rhamnose   1 87.400 1.4247  0.090 .
+    ## + Galactose  1 87.529 1.3133  0.135  
+    ## + P          1 87.615 1.2393  0.190  
+    ## + waterperc  1 87.677 1.1861  0.250  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Step: mat.otu.t ~ C + perc.Total.lignin + N + Mannose + Arabinose 
+    ## Step: mat.otu.t ~ C + perc.Total.lignin + Mannose + N + Arabinose 
     ## 
     ##                     Df    AIC      F Pr(>F)   
     ## - Arabinose          1 87.088 1.7634  0.025 * 
@@ -6861,17 +6864,17 @@ perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose
     ## 
     ##             Df    AIC      F Pr(>F)  
     ## + Rhamnose   1 87.215 1.4648  0.050 *
-    ## + P          1 87.326 1.3718  0.090 .
-    ## + Galactose  1 87.422 1.2923  0.180  
-    ## + waterperc  1 87.511 1.2181  0.215  
+    ## + P          1 87.326 1.3718  0.105  
+    ## + Galactose  1 87.422 1.2923  0.190  
+    ## + waterperc  1 87.511 1.2181  0.270  
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Step: mat.otu.t ~ C + perc.Total.lignin + N + Mannose + Arabinose +      Rhamnose 
+    ## Step: mat.otu.t ~ C + perc.Total.lignin + Mannose + N + Arabinose +      Rhamnose 
     ## 
     ##                     Df    AIC      F Pr(>F)   
-    ## - Rhamnose           1 87.011 1.4648  0.080 . 
-    ## - Arabinose          1 87.400 1.7924  0.020 * 
+    ## - Rhamnose           1 87.011 1.4648  0.040 * 
+    ## - Arabinose          1 87.400 1.7924  0.015 * 
     ## - Mannose            1 87.676 2.0265  0.005 **
     ## - N                  1 87.867 2.1905  0.005 **
     ## - perc.Total.lignin  1 88.260 2.5293  0.005 **
@@ -6880,19 +6883,19 @@ perc.Total.lignin, Rhamnose, Arabinose, Galactose, Mannose
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ##             Df    AIC      F Pr(>F)
-    ## + P          1 87.566 1.2923  0.175
-    ## + Galactose  1 87.637 1.2354  0.225
-    ## + waterperc  1 87.647 1.2273  0.240
+    ## + P          1 87.566 1.2923  0.140
+    ## + Galactose  1 87.637 1.2354  0.175
+    ## + waterperc  1 87.647 1.2273  0.195
 
     ##                          term Df      AIC        F  pval
     ## + C                         C  1 87.37781 3.093445 0.005
     ## + perc.Total.lignin      perc  1 87.33021 1.924283 0.005
-    ## + N                         N  1 87.30252 1.843572 0.005
-    ## + Mannose             Mannose  1 87.08773 1.951967 0.010
-    ## + Arabinose         Arabinose  1 87.01124 1.763354 0.010
+    ## + Mannose             Mannose  1 87.19417 1.945205 0.005
+    ## + N                         N  1 87.08773 1.853493 0.010
+    ## + Arabinose         Arabinose  1 87.01124 1.763354 0.025
     ## + Rhamnose           Rhamnose  1 87.21495 1.464816 0.050
 
-![](readme_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](readme_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
 
     ##      waterperc            N           P            C
     ## 1  -1.77337526 -0.135446490 -0.87473526 -1.439248918
