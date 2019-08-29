@@ -1,7 +1,8 @@
 #--------------------------------------#
 # code-level traits
 
-doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, use.cache){
+doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, 
+                                                  use.cache, save.cache){
   
   #isolate trait data and scale it
   traits.code %>%
@@ -35,7 +36,9 @@ doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.r
       return(mod.select)
       })
     names(mod.select.list) <- code.respVars
-    saveRDS(mod.select.list, file = "derived_data/modSelect.RData")
+    if(save.cache == T){
+      saveRDS(mod.select.list, file = "derived_data/modSelect.RData")
+    }
   }else{
     mod.select.list <- readRDS(file = "derived_data/modSelect.RData")
   }
@@ -59,13 +62,16 @@ doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.r
   
 }
 
-makefig__traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, use.cache, cfract){
+makefig__traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, 
+                                                use.cache, save.cache, cfract){
   
   #do analysis
   if(cfract == F){
-    result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code, code.respVars, traitVars, use.cache)
+    result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code, code.respVars, traitVars, 
+                                                                use.cache, save.cache)
   }else{
-    result.traitsDecay <- doAnalysis_cfract_explain_decayParams(decayfits, traits.code, code.respVars, traitVars, use.cache)
+    result.traitsDecay <- doAnalysis_cfract_explain_decayParams(decayfits, traits.code, code.respVars, traitVars, 
+                                                                use.cache, save.cache)
   }
   
   mod.select.list <- result.traitsDecay$mod.select.list
@@ -186,7 +192,8 @@ doAnalysis_variation_densityNbarkthick <- function(traits.stem, traits.code, pmr
   
 }
 
-doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, use.cache){
+doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, 
+                                          use.cache, save.cache){
   
   #set up full models
   rhsVars <- paste(c("size",traitVars.stem))
@@ -204,7 +211,9 @@ doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.ste
       mod.select<-step(x.updated, direction="backward")
       return(mod.select)
     })
-    saveRDS(mod.select.list, file = "derived_data/modSelect_stem.RData")
+    if(save.cache == T){
+      saveRDS(mod.select.list, file = "derived_data/modSelect_stem.RData")
+    }
   }else{
     mod.select.list <- readRDS(file = "derived_data/modSelect_stem.RData")
   }
@@ -226,10 +235,12 @@ doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.ste
   
 }
 
-makefig__traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, use.cache){
+makefig__traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, 
+                                        use.cache, save.cache){
   
   #do analysis
-  result.traitsPMR <- doAnalysis_traits_explain_pmr(datasets, stem.respVars, traitVars.stem, use.cache)
+  result.traitsPMR <- doAnalysis_traits_explain_pmr(datasets, stem.respVars, traitVars.stem, 
+                                                    use.cache, save.cache)
   mod.select.list <- result.traitsPMR$mod.select.list
   
   #set up plotting dataframe
@@ -265,7 +276,8 @@ makefig__traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem,
 #--------------------------------------#
 # code-level Cfractions
 
-doAnalysis_cfract_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, use.cache){
+doAnalysis_cfract_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, 
+                                                  use.cache, save.cache){
   
   #isolate trait data and scale it
   traits.code %>%
@@ -298,7 +310,9 @@ doAnalysis_cfract_explain_decayParams <- function(decayfits, traits.code, code.r
       return(mod.select)
     })
     names(mod.select.list) <- code.respVars
-    saveRDS(mod.select.list, file = "derived_data/modSelect_cfract.RData")
+    if(save.cache == T){
+      saveRDS(mod.select.list, file = "derived_data/modSelect_cfract.RData")
+    }
   }else{
     mod.select.list <- readRDS(file = "derived_data/modSelect_cfract.RData")
   }
@@ -359,8 +373,9 @@ CreateCfractPMRpair<-function(respVar, traits.stem.cfract, pmr_byStem, traitVars
   
 }
 
-doAnalysis_cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfract, use.cache){
-  
+doAnalysis_cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfract, 
+                                          use.cache, save.cache){
+    
   #set up full models
   rhsVars <- paste(c(traitVars.cfract))
   rhs <- paste(rhsVars, collapse = " + ")
@@ -377,7 +392,9 @@ doAnalysis_cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfr
       mod.select<-step(x.updated, direction="backward")
       return(mod.select)
     })
-    saveRDS(mod.select.list, file = "derived_data/modSelect_stem_cfract.RData")
+    if(save.cache == T){
+      saveRDS(mod.select.list, file = "derived_data/modSelect_stem_cfract.RData")
+    }
   }else{
     mod.select.list <- readRDS(file = "derived_data/modSelect_stem_cfract.RData")
   }
@@ -387,7 +404,7 @@ doAnalysis_cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfr
   #write.csv(prettyTab, "output/traitsummary_stem.csv")
   
   #extract and save the residuals
-  traitResiduals.stem <- ExtractResids(mod.list=mod.select.list, dataset.list=datasets, sampleName = "codeStem") # summaryTable_fxns.R
+  traitResiduals.stem <- ExtractResids(mod.list=mod.select.list, dataset.list=datasets, sampleName = "codeStem") # make_summaryTables.R
   
   result.traitsPMR <- list(
     datasets = datasets,
@@ -399,10 +416,12 @@ doAnalysis_cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfr
   
 }
 
-makefig__cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfract, use.cache){
+makefig__cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfract, 
+                                        use.cache, save.cache){
   
   #do analysis
-  result.traitsPMR <- doAnalysis_cfract_explain_pmr(datasets, stem.respVars, traitVars.cfract, use.cache)
+  result.traitsPMR <- doAnalysis_cfract_explain_pmr(datasets, stem.respVars, traitVars.cfract, 
+                                                    use.cache, save.cache)
   mod.select.list <- result.traitsPMR$mod.select.list
   
   #set up plotting dataframe

@@ -121,7 +121,7 @@ Use model selection to determine which traits to include and summarize the final
 ```{r}
 fig <- makefig__traits_explain_decayParams(decayfits, traits.code, 
                                             code.respVars, traitVars, 
-                                            use.cache = T, cfract = F) 
+                                            use.cache = T, save.cache = T, cfract = F) 
 
 fig$p
 fig$p.r2
@@ -259,7 +259,7 @@ Use model selection to determine which traits to include and summarize the final
 ```{r, results=FALSE}
 fig <- makefig__traits_explain_pmr(datasets, 
                                    stem.respVars, traitVars.stem, 
-                                   use.cache = T) # output/figures/maintext/traits_explain_pmr.pdf
+                                   use.cache = T, save.cache = T)
 fig$p
 fig$p.r2
 
@@ -267,7 +267,7 @@ fig$p.r2
 models_explainDecay.list[['traits.stem']] <- fig 
 resids_explainDecay.list[['traits.stem']] <- doAnalysis_traits_explain_pmr(datasets, 
                               stem.respVars, traitVars.stem, 
-                              use.cache = T)# this fxn is called in the makefig fxn above
+                              use.cache = T, save.cache = T)# this fxn is called in the makefig fxn above
 
 ```
 
@@ -319,7 +319,7 @@ fig <- makefig__traits_explain_decayParams(decayfits,
                                            traits.code = traits.code.cfract,
                                            code.respVars, 
                                            traitVars = traitVars.cfract, 
-                                            use.cache = T, cfract = T)
+                                           use.cache = T, save.cache = T, cfract = T)
 fig$p
 fig$p.r2
 
@@ -329,7 +329,7 @@ resids_explainDecay.list[['cfract.code']] <- doAnalysis_cfract_explain_decayPara
                                                                                    traits.code = traits.code.cfract, 
                                                                                    code.respVars, 
                                                                                    traitVars = traitVars.cfract, 
-                                                                                   use.cache = T)# this fxn is called in the makefig fxn above
+                                                                                   use.cache = T, save.cache = T)# this fxn is called in the makefig fxn above
 ```
 
 - Model fits: Over 50% of variance in decay R2 and time to 50% mass loss was explained by C fractions. Less more explanatory power for beta than alpha.
@@ -398,7 +398,7 @@ fig <- makefig__traits_explain_decayParams(decayfits,
                                            traits.code = traits.code.cfract,
                                            code.respVars, 
                                            traitVars = c("waterperc","Lignin","Rhamnose","Glucose","Ca"), 
-                                            use.cache = F, cfract = T) #
+                                           use.cache = F, save.cache = F, cfract = T) #
 fig$p
 fig$p.r2
 
@@ -487,16 +487,18 @@ names(datasets) <- stem.respVars
 
 # do analysis and make summary figure
 fig <- makefig__cfract_explain_pmr(datasets, 
-                                   stem.respVars, traitVars.cfract, 
-                                   use.cache = T)
+                                   stem.respVars, 
+                                   traitVars.cfract, 
+                                   use.cache = T, save.cache = T)
 fig$p
 fig$p.r2
 
 #save the model summary and residuals
 models_explainDecay.list[['cfract.stem']] <- fig 
-resids_explainDecay.list[['cfract.stem']] <- makefig__cfract_explain_pmr(datasets, 
-                                   stem.respVars, traitVars.cfract, 
-                                   use.cache = T)# this fxn is called in the makefig fxn above
+resids_explainDecay.list[['cfract.stem']] <- doAnalysis_cfract_explain_pmr(datasets,
+                                                                           stem.respVars,
+                                                                           traitVars.cfract,
+                                                                           use.cache = T, save.cache = T)# this fxn is called in the makefig fxn above
 
 ```
 
@@ -602,7 +604,7 @@ fig <- makefig__cfract_explain_pmr(datasets,
                                    stem.respVars, 
                                    traitVars.cfract = c("Lignin","Arabinose","Rhamnose",
                                                   "waterperc","Ca","N"), 
-                                   use.cache = F)
+                                   use.cache = F, save.cache = F)
 fig$p
 fig$p.r2
 
