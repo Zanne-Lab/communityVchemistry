@@ -58,7 +58,6 @@ load_waterPercent.perGwetmass<-function(){
            'Dry.mass.total.g'='Dry.mass.total..g.') -> covar.small
   
   # (1) calculate water content for each species, size class
-  # g water per g dry mass
   
   covar.big %>%
     mutate(waterperc = ((Fresh.mass.g - Dry.mass.g) / Fresh.mass.g) * 100) %>%
@@ -248,39 +247,8 @@ load_Cfract<-function(){
   return(cfract.wt)
 }
 
-mergeTraitData<-function(){
-  
-  #load raw trait datasets
-  waterperc <- load_waterPercent.perGwetmass() ##### this is in units of g water per g of wet mass x 100
-  densityNbarkthick <- load_densityNbarkthick()
-  xrf <- load_XRF()
-  cn <- load_CN()
-  
-  #make long
-  waterperc %>%
-    mutate(trait = "waterperc") %>%
-    rename('trait.val'='waterperc') %>%
-    mutate(compositeSample = FALSE) %>%
-    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> waterperc.l
-  densityNbarkthick %>%
-    gather(key = "trait", value = "trait.val", c(density, barkthick)) %>%
-    mutate(compositeSample = FALSE) %>%
-    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> densityNbarkthick.l
-  xrf %>%
-    gather(key = "trait", value = "trait.val", c(P, K, Ca, Mn, Fe, Zn)) %>%
-    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> xrf.l
-  cn %>%
-    gather(key = "trait", value = "trait.val", c(C, N)) %>%
-    select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cn.l
-  
-  trait.data.l <- rbind(waterperc.l, densityNbarkthick.l, xrf.l, cn.l)
-  
-  return(trait.data.l)
-  
-}
-
 # adds C fraction data
-mergeTraitData_new<-function(){
+mergeTraitData<-function(){
   
   #load raw trait datasets
   waterperc <- load_waterPercent.perGwetmass() ##### this is in units of g water per g of wet mass x 100
@@ -307,6 +275,7 @@ mergeTraitData_new<-function(){
     select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cn.l
   cfract %>%
     select(-Total) %>%
+    rename('Lignin'='perc.Total.lignin') %>%
     gather(key = "trait", value = "trait.val", -c(unique, code, Stem, size)) %>%
     mutate(compositeSample = FALSE) %>%
     select(unique, code, size, Stem, compositeSample, trait, trait.val) -> cfract.l
@@ -315,6 +284,21 @@ mergeTraitData_new<-function(){
   
   return(trait.data.l)
   
+}
+
+traitcol.order <- function(){
+  id.cols <- c("code","species","size")
+  phys.cols <- c("waterperc","density","barkthick")
+  nutr.cols <- c("C","N","P","K","Ca","Fe","Mn","Zn")
+  cfract.cols <- c("Arabinose","Galactose","Glucose", "Mannose", "Rhamnose","Xylose","Lignin")
+  stem.trait.cols <- c("waterperc","density_smspp","barkthick_smspp", nutr.cols)
+  trait.order <- list(id.cols = id.cols, 
+                      phys.cols = phys.cols, 
+                      nutr.cols = nutr.cols, 
+                      cfract.cols = cfract.cols,
+                      stem.trait.cols = stem.trait.cols)
+  
+  return(trait.order)
 }
 
 # code-level traits
@@ -336,53 +320,11 @@ trait.means_byCode <- function(stemSamples, fill.densitybark){
   traitmeans.code %>%
     left_join(samp.indx) -> traitmeans.code
   
-  if(fill.densitybark == TRUE){
-    # use species-level small-stem estimates of density and barkthick for large-stem samples
-    
-    #pull out the small-stem estimates
-    traitmeans.code %>%
-      filter(size == "small") %>%
-      select(code, density, barkthick) %>%
-      mutate(species = code) %>%
-      mutate(size = "large") -> filler.data
-    tmp <- data.frame(filler.data)
-    tmp %>%
-      select(-code) %>%
-      mutate(code = toupper(species)) -> filler.data
-    
-    #identify which species overlap in the large size class
-    fillcodes <- unique(filler.data$code)
-    allcodes <- unique(traitmeans.code$code)
-    
-    #loop through the large samples that can be filled in
-    CODE <- allcodes[allcodes %in% fillcodes]
-    for(i in 1:length(CODE)){
-      fill.vals <- filler.data[filler.data$code == CODE[i], c("density","barkthick")]
-      traitmeans.code[traitmeans.code$code == CODE[i], c("density","barkthick")] <- fill.vals
-    }
-    
-  }
-  
-  return(traitmeans.code)
-  
-}
-
-# adds C fraction data
-trait.means_byCode_new <- function(stemSamples, fill.densitybark){
-  
-  #load trait data
-  trait.data.l <- mergeTraitData_new()
-  
-  #summarize
-  trait.data.l %>%
-    group_by(code, trait) %>%
-    summarize(val = mean(trait.val, na.rm=T)) %>%
-    spread(key = trait, value = val) -> traitmeans.code
-  
-  #add species and size
-  samp.indx <- unique(stemSamples[,c("code","species","size")])
+  #reorder the columns
+  order <- traitcol.order()
+  trait.order <- c(order$id.cols, order$phys.cols, order$nutr.cols, order$cfract.cols)
   traitmeans.code %>%
-    left_join(samp.indx) -> traitmeans.code
+    select(trait.order) -> traitmeans.code
   
   if(fill.densitybark == TRUE){
     # use species-level small-stem estimates of density and barkthick for large-stem samples
@@ -430,6 +372,12 @@ trait.sds_byCode <- function(stemSamples){
   traitsds.code %>%
     left_join(samp.indx) -> traitsds.code
 
+  #reorder the columns
+  order <- traitcol.order()
+  trait.order <- c(order$id.cols, order$phys.cols, order$nutr.cols, order$cfract.cols)
+  traitsds.code %>%
+    select(trait.order) -> traitsds.code
+  
   return(traitsds.code)
   
 }
@@ -449,6 +397,12 @@ trait.n_byCode <- function(stemSamples){
   samp.indx <- unique(stemSamples[,c("code","species","size")])
   traitn.code %>%
     left_join(samp.indx) -> traitn.code
+  
+  #reorder the columns
+  order <- traitcol.order()
+  trait.order <- c(order$id.cols, order$phys.cols, order$nutr.cols, order$cfract.cols)
+  traitn.code %>%
+    select(trait.order) -> traitn.code
   
   return(traitn.code)
   
@@ -474,37 +428,16 @@ trait.means_byStem <- function(stemSamples){
   traitmeans.stem %>%
     left_join(samp.indx) -> traitmeans.stem
   
-  #note
-  #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
-  # acpa2 and lepa4
-  # manually fill in the species and size column for these samples
-  tmp <- traitmeans.stem
-  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
-  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
-  traitmeans.stem <- tmp
-  
-  return(traitmeans.stem)
-  
-}
+  #reorder the columns
+  order <- traitcol.order()
+  trait.order <- c(order$id.cols, order$phys.cols, order$nutr.cols, order$cfract.cols)
+  if(sum(!trait.order %in% colnames(traitmeans.stem)) == 0){
+    traitmeans.stem %>%
+      select(c("codeStem", trait.order)) -> traitmeans.stem
+  }else{
+    print("warning: trait columns are out of order")
+  }
 
-trait.means_byStem_new <- function(stemSamples){
-  
-  #load trait data
-  trait.data.l <- mergeTraitData_new()
-  
-  #summarize
-  trait.data.l %>%
-    filter(!is.na(Stem)) %>%
-    mutate(codeStem = paste0(code, Stem)) %>%
-    group_by(codeStem, trait) %>%
-    summarize(val = mean(trait.val, na.rm=T)) %>%
-    spread(key = trait, value = val) -> traitmeans.stem
-  
-  #add species and size
-  samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
-  traitmeans.stem %>%
-    left_join(samp.indx) -> traitmeans.stem
-  
   #note
   #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
   # acpa2 and lepa4
@@ -536,6 +469,16 @@ trait.sds_byStem <- function(stemSamples){
   traitsds.stem %>%
     left_join(samp.indx) -> traitsds.stem
   
+  #reorder the columns
+  order <- traitcol.order()
+  trait.order <- c(order$id.cols, order$phys.cols, order$nutr.cols, order$cfract.cols)
+  if(sum(!trait.order %in% colnames(traitsds.stem)) == 0){
+    traitsds.stem %>%
+      select(c("codeStem", trait.order)) -> traitsds.stem
+  }else{
+    print("warning: trait columns are out of order")
+  }
+  
   #note
   #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df
   # acpa2 and lepa4
@@ -566,6 +509,16 @@ trait.n_byStem <- function(stemSamples){
   samp.indx <- unique(stemSamples[,c("codeStem","species","size","code")])
   traitn.stem %>%
     left_join(samp.indx) -> traitn.stem
+  
+  #reorder the columns
+  order <- traitcol.order()
+  trait.order <- c(order$id.cols, order$phys.cols, order$nutr.cols, order$cfract.cols)
+  if(sum(!trait.order %in% colnames(traitn.stem)) == 0){
+    traitn.stem %>%
+      select(c("codeStem", trait.order)) -> traitn.stem
+  }else{
+    print("warning: trait columns are out of order")
+  }
   
   #note
   #there are 2 stem-level samples that are in the traits df and endophytes df but we're in the deployment df

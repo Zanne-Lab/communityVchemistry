@@ -10,8 +10,8 @@ output: github_document
 knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 ```
 
-Load libraries, functions, data
-```{r load}
+Load libraries and functions
+```{r loadlib}
 
 #---------------------------#
 #libraries
@@ -29,17 +29,20 @@ library(lmtest) # for coxtest()
 #library(vegan) #diversity metrics
 #library(rioja) #WA-PLS
 library(GGally)
+library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
+#library(car) # anova type II tests
 
 #---------------------------#
 #fxns
 source('code/helper_fxns.R')
 sourceDir('code')
 
+```
+
+Load decay data and wood trait data
+```{r loaddata}
 #---------------------------#
 #data
-
-# stems in the study
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 
 # stem mass
 initial_mass <- read_in_initial_mass()
@@ -49,66 +52,166 @@ pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
 
 # decay fits
-decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
-write_csv(decayfits,"derived_data/decayfits2.csv")
-decayfits <- read_csv("derived_data/decayfits2.csv")
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data change; for each species+size
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits
-code.respVars <- list("k","t50","ne.r2", "alpha","beta","w.t50","w.r2") # weibull params: alpha = shape param, beta = scale param
+code.respVars <- list("w.t50","alpha","beta","w.r2") # weibull params: alpha = shape param, beta = scale param
 
 # wood traits
-#trait.data.l <- mergeTraitData() # all trait data
-traits.code <- trait.means_byCode_new(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
 #trait.sds_byCode(stemSamples) # within code variation
 #trait.n_byCode(stemSamples) # number of code samples that were aggregated
-traits.stem <- trait.means_byStem_new(stemSamples) # averaged by codeStem
+traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 #trait.sds_byStem(stemSamples) # within codeStem variation
 #trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
 
+trait.order <- traitcol.order()
+traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars.stem <- trait.order$stem.trait.cols
+traitVars.cfract <- trait.order$cfract.cols
+
 ```
 
-Check out correlations among traits and produce bivariate plots. Exclude C fraction data...
+Initalize lists to store results
 ```{r}
-cfract.traits <- c("Arabinose","Galactose","Glucose","Mannose","perc.Total.lignin","Rhamnose","Xylose")
-traits.code %>%
-  select(-cfract.traits) %>%
-  filter(!is.na(C)) -> traits.code.noc
-matonly <- traits.code.noc[,!colnames(traits.code.noc) %in% c("code", "species", "size")]
-matonly.s <- scale(as.matrix(matonly[,-1]))
-corrplot(cor(matonly.s), type = "lower", diag = F)
-ggpairs(data = matonly)
+
+# save the bivariate predictor plots
+bivariate_explainDecay.list <- list()
+#ggsave(filename = "output/figures/supplementary/traits_bivariate.pdf", plot = p,
+#       width = 10, height = 10)
+
+# save the objects that come out of makefig__...
+models_explainDecay.list <- list() 
+# ggsave(filename = "output/figures/maintext/traits_explain_decayparams.pdf", 
+#        plot = fig.code$p, 
+#        width = 5, height = 6)
+
+# save residuals from the best models that use traits/C fractions to explain decay
+resids_explainDecay.list <- list()
+
+# save the plots that dig into models summary results
+plots_explainDecay.list <- list()
+
 
 ```
 
-Include C fraction data and exclude samples w/o this information
-```{r}
-traits.code %>%
-  filter(!is.na(Arabinose)) -> traits.code.c
-matonly <- traits.code.c[,!colnames(traits.code.c) %in% c("code", "species", "size")]
-matonly.s <- scale(as.matrix(matonly[,-1]))
-corrplot(cor(matonly.s), type = "lower", diag = F)
-ggpairs(data = matonly)
-
-```
+# Slice 1: Exclude C fraction data
 
 We expect initial wood traits will explain varitation in species+size decay rate (k and t70), species+size lagginess (alpha), and stem-level percent mass remaining at 7, 13, 25, and 37 months of decay. Specifically, we expect samples with (a) high water percent, (b) low density and total C, (c) high macro and micro nutrients, and (d) thicker bark (potential mech: limiting microbial colonization) to have faster decay and less lagginess. 
 
 ## *Hyp (species+size-level)* Species+size-level initial wood traits will predict variation decay rates and lagginess.
+
+Compile "code-level" trait data. Check out correlations among traits and produce bivariate plots.
 ```{r}
-makefig__traits_explain_decayParams(decayfits, traits.code,code.respVars,use.cache = F) # output/figures/maintext/traits_explain_decayparams.pdf
+traits.code %>%
+  select(-c(trait.order$cfract.cols)) %>%
+  filter(!is.na(C)) -> traits.code.noc
+matonly <- traits.code.noc[,!colnames(traits.code.noc) %in% c(trait.order$id.cols)]
+matonly.s <- scale(as.matrix(matonly))
 
-#save the resulting object that contains residual values
-#result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code) # this fxn is called in the makefig fxn above
+#save the bivariate plot
+bivariate_explainDecay.list[['traits.code']] <- ggpairs(data = as.data.frame(matonly.s))
 ```
-![](output/figures/maintext/traits_explain_decayparams.pdf)
 
-Variation in w.t70 and beta (shape param) were best explained by traits (high r2); whereas traits explained much less variation in alpha (scale) and w.r2.
+Use model selection to determine which traits to include and summarize the final models.
+```{r}
+fig <- makefig__traits_explain_decayParams(decayfits, traits.code, 
+                                            code.respVars, traitVars, 
+                                            use.cache = T, cfract = F) 
 
-- alpha: Samples that decay fast have low density. Other fast-decay attributes include: thin bark, low C, high N, and belonging to the large size class.
-- beta: Samples with a stronger S-shaped decay trajectory have low N and high density. Other attributes include: thick bark, high C, and belonging to the large size class.
-- w.r2: Samples with tightly-fitting decay models have high N, low density, and belong to the large size class.
-- w.t70: Samples with long wait times to 70% mass remaining have low N and belong to the large size class. Other attributes include: thick bark, high C, and low water content.
+fig$p
+fig$p.r2
+
+#save the model summary and residuals
+models_explainDecay.list[['traits.code']] <- fig 
+resids_explainDecay.list[['traits.code']] <- doAnalysis_traits_explain_decayParams(decayfits,
+                                                                                   traits.code,
+                                                            code.respVars, traitVars,
+                                                            use.cache = T) # this fxn is called in the makefig fxn above, but need to save residuals
+```
+
+- Model fits: The best fitting models used traits to explain k, t50, beta, w.t50 (all with R2 > 0.70). The worst fitting model used traits to explain ne.r2 with R2 = 0.46.
+- Water content was the most influential trait on time to 50% mass loss; more water was associated with short wait times. The role of water mainly appeared to influence the shape parameter; more water led to less s-shaped decay trajectories.
+```{r}
+decayfits %>%
+  select("code","species","size","w.t50","alpha","beta") -> sel.decay
+traits.code %>%
+  select("code","species","size","waterperc") %>%
+  left_join(sel.decay) %>%
+  gather(key = "respvar", value = "value", -c("code","species","size","waterperc")) -> tmp
+
+# plot Years to 50% mass remaining
+tmp %>%
+  filter(respvar == "w.t50") -> tmp.wt50
+p.wt50<- ggplot(tmp.wt50, aes(x = waterperc, y = value, color = size)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("Years until 50% mass loss") + xlab("Water content (% in fresh wood)")
+
+# plot weibull parameters
+tmp %>%
+  filter(respvar != "w.t50") -> tmp.params
+p.params <- ggplot(tmp.params, aes(x = waterperc, y = value, color = size)) +
+  geom_point() +
+  theme_classic() +
+  facet_grid(~respvar) + 
+  geom_smooth(method = "lm") +
+  ylab("Decay parameter value") + xlab("Water content (% in fresh wood)")
+
+grid.arrange(p.wt50, p.params)
+plots.water <- list(p.wt50, p.params)
+```
+
+- Ca concentration had a large influence on the shape parameter; more Ca led to more S-shaped decay trajectories. The model also suggests that more N led to less S-shaped trajectories (albeit N accounted for a smaller proportion of total variance explained than Ca)
+```{r}
+decayfits %>%
+  select("code","species","size","w.t50","alpha","beta") -> sel.decay
+traits.code %>%
+  select("code","species","size","Ca", "waterperc","N") %>%
+  left_join(sel.decay) -> tmp
+
+p.ca <- ggplot(tmp, aes(x = Ca, y = beta, label = code)) +
+  geom_point() +
+  geom_text() + 
+  theme_classic() +
+  ylab("Beta") + xlab("Ca (%)")
+p.n <- ggplot(tmp, aes(x = N, y = beta, label = code)) +
+  geom_point() +
+  geom_text() + 
+  theme_classic() +
+  ylab("Beta") + xlab("N (%)")
+
+grid.arrange(p.ca, p.n, ncol = 2)
+plots.beta = list(p.ca, p.n)
+```
+
+- The largest influence on alpha was diameter size; large sized stems tended to decay at a faster rate, but see EUSC and EUTE. Also note the influence of the shape parameter in the decay model means that large stems take more time to lose 50% mass (opposite of what you'd expect)
+```{r}
+decayfits %>%
+  select("code","species","size","alpha") -> sel.decay
+
+p.size <- ggplot(sel.decay, aes(x = size, y = alpha, label = code)) +
+  geom_point() +
+  geom_text() + 
+  theme_classic() +
+  facet_wrap(~species) +
+  ylab("Alpha") + xlab("Size")
+p.size
+plots.size <- list(p.size)
+```
+
+Save the plots
+```{r}
+plots_explainDecay.list[['traits.code']] <- list(plots.water = plots.water,
+                                                 plots.beta = plots.beta,
+                                                 plots.size = plots.size)
+
+```
 
 
 ## *Hyp (stem-level)* Stem-level initial wood traits will predict variation in percent mass loss at each time step.
@@ -120,67 +223,588 @@ Plot the small-sized stem-level measures of density and barkthick
 makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) # output/figures/supplementary/variation_densityNbarkthick.pdf
 
 ```
-![](output/figures/supplementary/variation_densityNbarkthick.pdf)
 
 A few species have a relatively large amount of within-species variation in density (i.e. alli) and barkthickness (i.e. leer and cota).
 
 Compare model fits (r2) using stem and species-level data to identify how much information about percent mass remaining is lost by using species-level estimates.
 ```{r}
-cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) 
+cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem, stem.respVars) 
 cox.df
 write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv")
 
 ```
 
-- For density -- Stem-level data (relative to code-level data) improves estimates of pmr after 7 and 59 months.
+Remember M1 = stem and M2 = code
+- For density -- Stem-level data (M1) improves estimates of pmr after 7 and 59 months
 - For barkthickness -- Stem-level data (relative to code-level data) does not improve estimates of pmr at any time point.
 
-Compile a "stem-level" dataframe with (a) stem-level percent mass remaining values, (b) stem-level traits including waterperc and chemistry along, and (c) small species-level density and bark thickness data. Use model selection to determine which traits to include.
-```{r, results=FALSE}
-
-makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem) # output/figures/maintext/traits_explain_pmr.pdf
-
-#save the resulting object that contains residual values
-#result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem) # this fxn is called in the makefig fxn above
-
-```
-![](output/figures/maintext/traits_explain_pmr.pdf)
-
-Visualize stem samples in trait space
+Compile "stem-level" trait data using (a) stem-level traits including waterperc and chemistry and (b) small species-level density and bark thickness data. Check out correlations among traits and produce bivariate plots. 
 ```{r}
-pca <- prcomp(matonly.s)
-df <- data.frame(pca$x[,1:2], 
-                 traits.code.c[,c("species","code","size")])
-datapc <- data.frame(varnames=rownames(pca$rotation), pca$rotation[,1:2])
-mult <- min(
-  (max(df[,"PC1"]) - min(df[,"PC2"])/(max(datapc[,"PC2"])-min(datapc[,"PC2"]))),
-  (max(df[,"PC2"]) - min(df[,"PC1"])/(max(datapc[,"PC1"])-min(datapc[,"PC1"])))
-)
-datapc <- transform(datapc,
-                    v1 = .7 * mult * datapc$PC1,
-                    v2 = .7 * mult * datapc$PC2)
-  
-plot_12 <- ggplot(data=datapc, aes(x=v1, y=v2, label=varnames)) + 
-  geom_text(size=3, vjust=1, color=1) + 
-  geom_segment(data=datapc, aes(x=0, y=0, xend=v1, yend=v2),
-               arrow=arrow(length=unit(0.2,"cm")), alpha=0.75, color=1) + 
-  coord_fixed() +
-  geom_point(mapping=aes(x=PC1, y=PC2, 
-                        color = species), data=df, inherit.aes = FALSE) +
-  theme_bw() + xlab("PC1") + ylab("PC2")
-plot_12
+# this creates a list of dataframes where each dataframe is for a separate model with a unique response variable
+datasets<-lapply(stem.respVars, function(x) {
+  result<-CreateTraitPMRpair(x, traits.stem, traits.code, pmr_byStem, traitVars.stem) #analysisDF_fxns.R
+  return(result)
+})
+names(datasets) <- stem.respVars
 
-summary(pca)
+# should be able to extract just the scaled trait data from one of these dataframes
+df <- datasets[[1]]
+matonly.s <- df[,colnames(df) %in% trait.order$stem.trait.cols]
+
+#save the bivariate plot
+bivariate_explainDecay.list[['traits.stem']] <- ggpairs(data = matonly.s)
+```
+
+Use model selection to determine which traits to include and summarize the final models.
+```{r, results=FALSE}
+fig <- makefig__traits_explain_pmr(datasets, 
+                                   stem.respVars, traitVars.stem, 
+                                   use.cache = T) # output/figures/maintext/traits_explain_pmr.pdf
+fig$p
+fig$p.r2
+
+#save the model summary and residuals
+models_explainDecay.list[['traits.stem']] <- fig 
+resids_explainDecay.list[['traits.stem']] <- doAnalysis_traits_explain_pmr(datasets, 
+                              stem.respVars, traitVars.stem, 
+                              use.cache = T)# this fxn is called in the makefig fxn above
+
+```
+
+- Model fits: Models at mid time points tend to fit better, all models had R2 ~ 50%
+- Water content was the most influential trait, especially for explaining mass loss at mid to late decay stages (25-59 months); More water led to lower percent mass remaining
+- Size was also influential, especially for explaining mass loss at earlier decay stages (7 and 13 months); large stems had greater percent mass remaining during early time points
+```{r}
+df <- list_to_df(datasets)
+df$source <- factor(df$source, levels = c("time7","time13","time25","time37","time59"))
+p <- ggplot(df, aes(x = waterperc, y = curr.pmr, color = size)) +
+  geom_point() +
+  facet_grid(~source) +
+  geom_smooth(method = "lm") +
+  xlab("Water content (scaled)") + ylab("% Mass remaining after X months") +
+  theme_classic()
+p
+plots <- list(p)
+```
+
+Save the plots
+```{r}
+plots_explainDecay.list[['traits.stem']] <- list(plots = plots)
 ```
 
 
-The explanatory power of wood traits were lowest for the first decay time point (7 months). Samples had more mass remaining...
+                                                 
 
-- All time points: Low water content
-- Early-to-mid time points: Low N and belonged to the small size class
-- Mid time points: High P and low Zn
-- Late time point: High C and thin bark
+# Slice 2: Include C fraction data (and exclude small stems)
 
+## *Hyp (species+size-level)* Species+size-level initial C fractions will predict variation decay rates and lagginess.
+
+Compile "code-level" C fraction trait data. Check out correlations among traits and produce bivariate plots. 
+```{r}
+traits.code %>%
+  select(c(trait.order$id.cols, trait.order$cfract.cols, "waterperc","N","Ca")) %>%
+  filter(!is.na(Arabinose)) -> traits.code.cfract
+sum(!complete.cases(traits.code.cfract)) # no missing trait data
+
+matonly <- traits.code.cfract[,!colnames(traits.code.cfract) %in% c(trait.order$id.cols)]
+matonly.s <- scale(as.matrix(matonly))
+
+#save the bivariate plot
+bivariate_explainDecay.list[['cfract.code']] <- ggpairs(data = as.data.frame(matonly.s))
+```
+
+Use model selection to determine which Cfracts to include and summarize the final models.
+```{r}
+fig <- makefig__traits_explain_decayParams(decayfits, 
+                                           traits.code = traits.code.cfract,
+                                           code.respVars, 
+                                           traitVars = traitVars.cfract, 
+                                            use.cache = T, cfract = T)
+fig$p
+fig$p.r2
+
+#save the model summary and residuals
+models_explainDecay.list[['cfract.code']] <- fig 
+resids_explainDecay.list[['cfract.code']] <- doAnalysis_cfract_explain_decayParams(decayfits, 
+                                                                                   traits.code = traits.code.cfract, 
+                                                                                   code.respVars, 
+                                                                                   traitVars = traitVars.cfract, 
+                                                                                   use.cache = T)# this fxn is called in the makefig fxn above
+```
+
+- Model fits: Over 50% of variance in decay R2 and time to 50% mass loss was explained by C fractions. Less more explanatory power for beta than alpha.
+- Lignin was the most influential trait, especially for model fit; less lignin led to better fitting models. More lignin led to longer wait times, slower decay rates (alpha), and more S-shaped decay (beta).
+```{r}
+decayfits %>%
+  select("code","species","size","w.t50","alpha","beta","w.r2") -> sel.decay
+traits.code.cfract %>%
+  select("code","species","size","Lignin","Rhamnose","Glucose") %>%
+  left_join(sel.decay) %>%
+  rename("Years until 50% mass loss"="w.t50") %>%
+  rename("Decay model R2"="w.r2") %>%
+  gather(key = "respvar", value = "value", 
+         -c("code","species","size","Lignin","Rhamnose","Glucose")) -> tmp
+
+# plot
+p.l <- ggplot(tmp, aes(x = Lignin, y = value)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  facet_wrap(~respvar, scales = "free_y") +
+  ylab("Decay response") + xlab("Lignin %")
+p.l
+plots.l <- list(p.l)
+
+```
+
+- Rhamnose and Glucose were important in explaining variance in wait times and the shape parameter beta. More rhamanose and glucose led to longer wait times and more s-shaped decay trajectories.
+```{r}
+
+halfway <- quantile(tmp$Lignin, .5)
+tmp %>%
+  mutate(Lignin.cat = ifelse(Lignin > halfway, "High","Low")) %>%
+  filter(respvar %in% c("beta","Years until 50% mass loss")) -> tmp1
+
+# plot
+p.rh <- ggplot(tmp1, aes(x = Rhamnose, y = value, color = Lignin.cat)) +
+  geom_point() +
+  theme_classic() +
+  facet_wrap(~respvar, scales = "free_y") +
+  geom_smooth(method = "lm") +
+  ylab("Decay response") + xlab("Rhamnose %")
+
+p.gl <- ggplot(tmp1, aes(x = Glucose, y = value, color = Lignin.cat)) +
+  geom_point() +
+  theme_classic() +
+  facet_wrap(~respvar, scales = "free_y") +
+  geom_smooth(method = "lm") +
+  ylab("Decay response") + xlab("Glucose %")
+
+grid.arrange(p.rh, p.gl, ncol = 1)
+plots.rhgl <- list(p.rh, p.gl)
+
+```
+
+Save the plots
+```{r}
+plots_explainDecay.list[['cfract.code']] <- list(plots.l = plots.l,
+                                                 plots.rhgl = plots.rhgl)
+```
+
+
+Investigate what happens if I just include waterperc, lignin, and rhamnose, and glucose; use model selection to determine which to include and summarize the final models.
+```{r}
+fig <- makefig__traits_explain_decayParams(decayfits, 
+                                           traits.code = traits.code.cfract,
+                                           code.respVars, 
+                                           traitVars = c("waterperc","Lignin","Rhamnose","Glucose","Ca"), 
+                                            use.cache = F, cfract = T) #
+fig$p
+fig$p.r2
+
+```
+
+- Contribution of water content and lignin to explaining variation in wait time and the shape parameter beta
+```{r}
+
+decayfits %>%
+  select("code","species","size","w.t50","alpha","beta","w.r2") -> sel.decay
+traits.code.cfract %>%
+  select("code","species","size","Lignin","Rhamnose","Glucose","waterperc","Ca") %>%
+  left_join(sel.decay) %>%
+  rename("Years until 50% mass loss"="w.t50") %>%
+  rename("Decay model R2"="w.r2") %>%
+  gather(key = "respvar", value = "value", 
+         -c("code","species","size","Lignin","Rhamnose","Glucose","waterperc","Ca")) -> tmp
+
+# plot
+tmp %>%
+  filter(respvar == "Years until 50% mass loss") -> tmp1
+p.w <- ggplot(tmp1, aes(x = waterperc, y = value)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("Years until 50% mass loss") + xlab("Water %")
+
+p.l <- ggplot(tmp1, aes(x = Lignin, y = value)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("Years until 50% mass loss") + xlab("Lignin %")
+
+tmp %>%
+  filter(respvar == "beta") -> tmp2
+p.w2 <- ggplot(tmp2, aes(x = waterperc, y = value)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("Beta") + xlab("Water %")
+
+p.l2 <- ggplot(tmp2, aes(x = Lignin, y = value)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("Beta") + xlab("Lignin %")
+
+p.wl <- ggplot(tmp1, aes(x = waterperc, y = Lignin)) +
+  geom_point() +
+  theme_classic() +
+  ylab("Lignin %") + xlab("Water %")
+
+grid.arrange(p.w, p.l,
+             p.w2, p.l2,
+             p.wl, ncol = 2)
+
+```
+
+## *Hyp (stem-level)* Stem-level initial C fractions will predict variation in percent mass loss at each time step.
+
+Compile "stem-level" C fraction trait data. Check out correlations among traits and produce bivariate plots. 
+```{r}
+
+traits.stem %>%
+  select(c(trait.order$id.cols, "codeStem", trait.order$cfract.cols)) %>%
+  filter(!is.na(Arabinose)) -> traits.stem.cfract
+sum(!complete.cases(traits.stem.cfract)) # no missing trait data
+
+matonly <- traits.stem.cfract[,!colnames(traits.stem.cfract) %in% c(trait.order$id.cols, "codeStem")]
+matonly.s <- scale(as.matrix(matonly))
+
+#save the bivariate plot
+bivariate_explainDecay.list[['cfract.stem']] <- ggpairs(data = as.data.frame(matonly.s))
+```
+
+Use model selection to determine which Cfracts to include and summarize the final models.
+```{r}
+
+# this creates a list of dataframes where each dataframe is for a separate model with a unique response variable
+datasets<-lapply(stem.respVars, function(x) {
+  result<-CreateCfractPMRpair(x, traits.stem.cfract, 
+                             pmr_byStem, traitVars.cfract) #analysisDF_fxns.R
+  return(result)
+})
+names(datasets) <- stem.respVars
+
+# do analysis and make summary figure
+fig <- makefig__cfract_explain_pmr(datasets, 
+                                   stem.respVars, traitVars.cfract, 
+                                   use.cache = T)
+fig$p
+fig$p.r2
+
+#save the model summary and residuals
+models_explainDecay.list[['cfract.stem']] <- fig 
+resids_explainDecay.list[['cfract.stem']] <- makefig__cfract_explain_pmr(datasets, 
+                                   stem.respVars, traitVars.cfract, 
+                                   use.cache = T)# this fxn is called in the makefig fxn above
+
+```
+
+- Model fits: Relatively poor model fits. Maximum R2 is 0.45 and that is for time25. Minimum R2 is .17 which is for time7
+
+- Arabinose is the only influential fraction for time7; more arabinose led to less mass remaining. Looking at the plot, this is could be driven by the high arabinose low mass remaining point...
+```{r}
+df <- list_to_df(datasets)
+df$source <- factor(df$source, levels = c("time7","time13","time25","time37","time59"))
+
+df %>%
+  filter(source == "time7") -> tmp1
+p.early <- ggplot(tmp1, aes(x = Arabinose, y = curr.pmr)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Arabinose") + ylab("% Mass remaining after 7 months") +
+  theme_classic()
+p.early
+
+plots.early <- list(p.early)
+```
+
+- Xylose is the most influential fraction for time25; more xylose led to less mass remaining. Rhamnose was also influential at this time point; more rhamnose led to more mass remaining.
+```{r}
+df %>%
+  filter(source == "time25") -> tmp1
+p.x <- ggplot(tmp1, aes(x = Xylose, y = curr.pmr, size = Galactose)) +
+  geom_point() +
+  xlab("Xylose") + ylab("% Mass remaining after 25 months") +
+  theme_classic()
+
+p.r <- ggplot(tmp1, aes(x = Rhamnose, y = curr.pmr)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Rhamnose") + ylab("% Mass remaining after 25 months") +
+  theme_classic()
+
+grid.arrange(p.x, p.r, ncol = 2)
+plots.mid <- list(p.x, p.r)
+
+```
+
+- Mannose was the most influential fraction for time 37; more mannose led to more mass remaining.
+```{r}
+
+df %>%
+  filter(source == "time25") -> tmp1
+
+p.man <- ggplot(tmp1, aes(x = Mannose, y = curr.pmr)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Mannose") + ylab("% Mass remaining after 25 months") +
+  theme_classic() 
+p.man
+
+plots.man <- list(p.man)
+```
+
+- Lignin was the most influential fraction for time59 (and was generally more informative at the last two time points); more lignin led to more mass remaining.
+```{r}
+df %>%
+  filter(source %in% c("time37","time59")) -> tmp1
+
+p.l <- ggplot(df, aes(x = Lignin, y = curr.pmr)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab("Lignin") + ylab("% Mass remaining after X months") +
+  theme_classic() +
+  facet_grid(~source)
+
+plots.l <- list(p.l)
+
+```
+
+Save the plots
+```{r}
+plots_explainDecay.list[['cfract.stem']] <- list(plots.early = plots.early,
+                                                 plots.mid = plots.mid,
+                                                 plots.man = plots.man,
+                                                 plots.l = plots.l)
+```
+
+Investigate what happens if I just include waterperc, lignin, arabinose, and rhamnose; use model selection to determine which to include and summarize the final models.
+```{r}
+
+# this creates a list of dataframes where each dataframe is for a separate model with a unique response variable
+traits.stem %>%
+  select(code, species, size, codeStem, waterperc, Ca, N) -> tmp
+traits.stem.cfract %>%
+  left_join(tmp) -> traits.tmp
+
+datasets<-lapply(stem.respVars, function(x) {
+  result<-CreateCfractPMRpair(x, traits.stem.cfract = traits.tmp, 
+                             pmr_byStem, 
+                             traitVars.cfract = c("Lignin","Arabinose","Rhamnose",
+                                                  "waterperc","Ca","N")) #analysisDF_fxns.R
+  return(result)
+})
+names(datasets) <- stem.respVars
+
+# do analysis and make summary figure
+fig <- makefig__cfract_explain_pmr(datasets, 
+                                   stem.respVars, 
+                                   traitVars.cfract = c("Lignin","Arabinose","Rhamnose",
+                                                  "waterperc","Ca","N"), 
+                                   use.cache = F)
+fig$p
+fig$p.r2
+
+```
+
+- Contribution of water content and arabinose at time7
+```{r}
+df <- list_to_df(datasets)
+df$source <- factor(df$source, levels = c("time7","time13","time25","time37","time59"))
+colnames(df)
+
+# plot
+df %>%
+  filter(source == "time7") -> tmp1
+p.a <- ggplot(tmp1, aes(x = Arabinose, y = curr.pmr)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("% Mass remaining after 7 months") + xlab("Arabinose %")
+
+p.w <- ggplot(tmp1, aes(x = waterperc, y = curr.pmr)) +
+  geom_point() +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("% Mass remaining after 7 months") + xlab("Water %")
+
+p.aw <- ggplot(tmp1, aes(x = Arabinose, y = waterperc)) +
+  geom_point() +
+  theme_classic() +
+  ylab("Water %") + xlab("Arabinose %")
+
+grid.arrange(p.a, p.w, p.aw, ncol = 2)
+
+```
+
+- Contribution of water content and lignin at time 37 and 59
+```{r}
+
+# plot
+df %>%
+  filter(source %in% c("time37","time59")) -> tmp1
+p.l <- ggplot(tmp1, aes(x = Lignin, y = curr.pmr)) +
+  geom_point() +
+  facet_grid(~source) +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("% Mass remaining after X months") + xlab("Lignin %")
+
+p.w <- ggplot(tmp1, aes(x = waterperc, y = curr.pmr)) +
+  geom_point() +
+  facet_grid(~source) +
+  theme_classic() +
+  geom_smooth(method = "lm") +
+  ylab("% Mass remaining after X months") + xlab("Water %")
+
+tmp1 %>%
+  filter(source == "time37") -> tmp2
+p.lw <- ggplot(tmp2, aes(x = Lignin, y = waterperc)) +
+  geom_point() +
+  theme_classic() +
+  ylab("Lignin %") + xlab("Water %")
+
+grid.arrange(p.l, p.w, p.lw, ncol = 2)
+
+```
+
+
+# Print results
+
+Save bivariate predictor plots
+```{r}
+# save the bivariate predictor plots
+names(bivariate_explainDecay.list)
+#uncomment if data change
+# ggsave(filename = "output/figures/supplementary/bivariate_traits-code.pdf", 
+#        plot = bivariate_explainDecay.list$traits.code, width = 10, height = 10)
+# ggsave(filename = "output/figures/supplementary/bivariate_traits-stem.pdf", 
+#        plot = bivariate_explainDecay.list$traits.stem, width = 10, height = 10)
+# ggsave(filename = "output/figures/supplementary/bivariate_cfract-code.pdf", 
+#        plot = bivariate_explainDecay.list$cfract.code, width = 10, height = 10)
+# ggsave(filename = "output/figures/supplementary/bivariate_cfract-stem.pdf", 
+#        plot = bivariate_explainDecay.list$cfract.code, width = 10, height = 10)
+```
+
+Save best model summaries
+```{r}
+# save the objects that come out of makefig__...
+names(models_explainDecay.list)
+
+#traits.code
+ggsave(filename = "output/figures/maintext/traits-code_explainDecay.pdf", 
+       plot = models_explainDecay.list$traits.code$p, width = 5, height = 6)
+models_explainDecay.list$traits.code$p.r2
+
+#traits.stem
+ggsave(filename = "output/figures/maintext/traits-stem_explainDecay.pdf", 
+       plot = models_explainDecay.list$traits.stem$p, width = 5, height = 6)
+models_explainDecay.list$traits.stem$p.r2
+
+#cfract.code
+ggsave(filename = "output/figures/maintext/cfract-code_explainDecay.pdf", 
+       plot = models_explainDecay.list$cfract.code$p, width = 5, height = 6)
+models_explainDecay.list$cfract.code$p.r2
+
+#cfract.stem
+ggsave(filename = "output/figures/maintext/cfract-stem_explainDecay.pdf", 
+       plot = models_explainDecay.list$cfract.stem$p, width = 5, height = 6)
+models_explainDecay.list$cfract.stem$p.r2
+
+```
+
+Save plots to explore model results
+```{r}
+# save the plots that dig into models summary results
+names(plots_explainDecay.list)
+```
+
+traits.code
+```{r}
+#traits.code
+names(plots_explainDecay.list$traits.code)
+
+## water
+pdf(file = "output/unknown/traits-code_explainDecay_water.pdf")
+grid.arrange(plots_explainDecay.list$traits.code$plots.water[[1]],
+             plots_explainDecay.list$traits.code$plots.water[[2]], ncol = 1)
+dev.off()
+
+### beta
+pdf(file = "output/unknown/traits-code_explainDecay_beta.pdf")
+grid.arrange(plots_explainDecay.list$traits.code$plots.beta[[1]],
+             plots_explainDecay.list$traits.code$plots.beta[[2]], ncol = 2)
+dev.off()
+
+## size
+pdf(file = "output/unknown/traits-code_explainDecay_size.pdf")
+plots_explainDecay.list$traits.code$plots.size[[1]]
+dev.off()
+
+```
+
+traits.stem
+```{r}
+names(plots_explainDecay.list$traits.stem)
+
+### water
+pdf(file = "output/unknown/traits-stem_explainDecay_water.pdf")
+plots_explainDecay.list$traits.stem$plots[[1]]
+dev.off()
+```
+
+cfract.code
+```{r}
+names(plots_explainDecay.list$cfract.code)
+
+## lignin
+pdf(file = "output/unknown/cfract-code_explainDecay_lignin.pdf")
+plots_explainDecay.list$cfract.code$plots.l[[1]]
+dev.off()
+
+## rhgl
+pdf(file = "output/unknown/cfract-code_explainDecay_rhgl.pdf")
+grid.arrange(plots_explainDecay.list$cfract.code$plots.rhgl[[1]],
+             plots_explainDecay.list$cfract.code$plots.rhgl[[2]], ncol = 1)
+dev.off()
+
+```
+
+cfract.stem
+```{r}
+names(plots_explainDecay.list$cfract.stem)
+
+## early
+pdf(file = "output/unknown/cfract-stem_explainDecay_early.pdf")
+plots_explainDecay.list$cfract.stem$plots.early[[1]]
+dev.off()
+
+## mid
+pdf(file = "output/unknown/cfract-stem_explainDecay_mid.pdf")
+grid.arrange(plots_explainDecay.list$cfract.stem$plots.mid[[1]],
+             plots_explainDecay.list$cfract.stem$plots.mid[[2]], ncol = 2)
+dev.off()
+
+## mannose
+pdf(file = "output/unknown/cfract-stem_explainDecay_mannose.pdf")
+plots_explainDecay.list$cfract.stem$plots.man[[1]]
+dev.off()
+
+## lignin
+pdf(file = "output/unknown/cfract-stem_explainDecay_lignin.pdf")
+plots_explainDecay.list$cfract.stem$plots.l[[1]]
+dev.off()
+
+```
+
+Save model residuals
+```{r}
+# save residuals from the best models that use traits/C fractions to explain decay
+names(resids_explainDecay.list)
+saveRDS(resids_explainDecay.list, file = "derived_data/resids_explainDecay_list.RData")
+
+```
 
 
 

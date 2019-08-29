@@ -4,15 +4,20 @@
 #########
 # LM summary stats
 
-PullLmCoefs<-function(sum.list, respvars){
+PullLmCoefs<-function(mod.list, respvars){
   
+  # extract summary table from model object
+  sum.list<-lapply(mod.list, summary)
+  
+  # extract coefs from summary table
   coefs.list<-lapply(sum.list, function(x){
     df<-data.frame(term=row.names(x$coefficients), x$coefficients)
     colnames(df)<-c("term","est","se","t.value","pval")
     return(df)
   })
-  names(coefs.list)<-respvars
-  coefs.df<-bind_rows(coefs.list, .id="respvar")
+  coefs.df <- list_to_df(coefs.list)
+  coefs.df %>%
+    rename('respvar'='source') -> coefs.df
   #add pval stars
   coefs.df$stars<-""
   coefs.df[coefs.df$pval < 0.05, "stars"]<-"*"
@@ -26,8 +31,12 @@ PullLmCoefs<-function(sum.list, respvars){
   return(coefs.df)
 }
 
-PullLmFitStats<-function(sum.list, respvars){
+PullLmFitStats<-function(mod.list, respvars){
   
+  # extract summary table from model object
+  sum.list<-lapply(mod.list, summary)
+  
+  # extract model fit stats
   fitstats.list<-lapply(sum.list, function(x){
     df<-data.frame(Fstat = round(x$fstatistic['value'], digits=2),
                    numdf = x$fstatistic['numdf'],
@@ -35,16 +44,71 @@ PullLmFitStats<-function(sum.list, respvars){
                    r.squared = round(x$r.squared, digits=2))
     return(df)
   })
-  names(fitstats.list)<-respvars
-  fitstats.df<-bind_rows(fitstats.list)
-  row.names(fitstats.df)<-respvars
+  fitstats.df <- list_to_df(fitstats.list)
   fitstat.df<-data.frame(t(fitstats.df))
   fitstat.df$term<-row.names(fitstat.df)
+  fitstat.df %>%
+    filter(term != 'source') -> fitstat.df
   
   return(fitstat.df)
 }
 
-MakeLmSummaryTable<-function(respvars, mod.list){
+PullAnova<-function(mod.list, respvars){
+  
+  # extract anova table (type II) and eta.sq for each predictor variable
+  #require(sjstats) #this should already be loaded
+  #Eta^2 (or Eta-sqr) is the proportion of variance variance associated with one of more main effects
+  #Eta^2 = SSeffect / SStotal
+  anova.list <- lapply(mod.list, function(x){
+    df <- anova_stats(car::Anova(x, type = 2))
+    df %>%
+      select(term, sumsq, df, statistic, p.value, etasq)-> df
+    return(df)
+  })
+  
+  # turn into a df and filter for selected respvars
+  anova.df <- list_to_df(anova.list)
+  anova.df %>%
+    rename('respvar'='source') %>%
+    filter(respvar %in% unlist(respvars)) -> anova.df
+  
+  return(anova.df)
+}
+
+MakeLm_plottingDF <- function(mod.list, respvars){
+  
+  # extract model R2
+  fitstat.df<-PullLmFitStats(mod.list, unlist(respvars))
+  fitstat.df %>%
+    gather(key = "respvar", value = "value", -c(term)) %>%
+    filter(term == "r.squared") %>%
+    select(-term) %>%
+    rename('r.squared'=value) -> r2.df
+  
+  # extract model coefs
+  coefs.df<-PullLmCoefs(mod.list, unlist(respvars))
+  coefs.df %>%
+    left_join(r2.df) %>%
+    select(respvar, term, est, se) %>%
+    filter(term != "(Intercept)")-> coefs.df
+  
+  # extract anova table (type II) and eta.sq for each predictor variable
+  anova.df<-PullAnova(mod.list, unlist(respvars))
+  anova.df %>%
+    select(respvar, term, p.value, etasq) %>%
+    filter(term != "Residuals") %>%
+    mutate(term = ifelse(term == "size", "sizesmall", term)) -> anova.df
+  
+  # combine model coefs and anova
+  coefs.df %>%
+    full_join(anova.df) -> plotting.df
+
+  result <- list(plotting.df = plotting.df, r2.df = r2.df)
+  return(result)
+  
+}
+
+MakeLmSummaryTable<-function(mod.list, respvars){
   
   #summarize
   sum.list<-lapply(mod.list, summary)

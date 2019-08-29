@@ -47,9 +47,6 @@ sourceDir('code')
 #---------------------------#
 #data
 
-# stems in the study
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
-
 # stem mass
 initial_mass <- read_in_initial_mass()
 harvest_mass <- LoadHarvestFiles()
@@ -58,9 +55,10 @@ pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
 
 # decay fits
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
+#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data change; for each species+size
 #write_csv(decayfits,"derived_data/decayfits.csv")
 decayfits <- read_csv("derived_data/decayfits.csv")
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 indx <- unique(stemSamples[,c("code","Binomial","size")])
 decayfits %>%
   left_join(indx) -> decayfits
@@ -87,6 +85,7 @@ makefig__compare_t50_aic(decayfits) # output/figures/supplementary/compare_t50.p
 
 2. Do wood traits explain decay? 
 - script: *woodtraits_explainDecay.Rmd*
+*** revisit this - scale trait matrix, varpart for each trait, add C fracts ***
 - summary: 
     - Fast decayers (alpha) have low density
     - Samples with S-shaped trajectories (beta) have low N and high density
@@ -98,8 +97,7 @@ makefig__compare_t50_aic(decayfits) # output/figures/supplementary/compare_t50.p
 
 #---------------------------#
 #data
-
-#trait.data.l <- mergeTraitData() # all trait data
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
 #trait.sds_byCode(stemSamples) # within code variation
 #trait.n_byCode(stemSamples) # number of code samples that were aggregated
@@ -194,7 +192,7 @@ write.csv(commTab, file="output/tables/supplementary/commcompsummary_traitresid.
 
 4. Does endophyte diversity explain decay? *
 - script: *endoDiv_explainDecay.Rmd*
-- add bonferonni correction for multiple comparisons?
+*** revisit this - add bonferonni correction for multiple comparisons ***
 - summary:
     - More saprotrophs leads to less mass remaining after 25 and 37 months, but only in small stems
     - More pathotrophs leads to less mass remaining after 37 months, but only in small stems
