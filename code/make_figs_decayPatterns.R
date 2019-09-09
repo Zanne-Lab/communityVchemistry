@@ -36,7 +36,8 @@ makefig__compare_t50_aic <- function(decayfits){
     geom_point() +
     geom_vline(xintercept = 0, linetype = 2) +
     ylab(" ") + xlab("Delta AIC (>0 favors Weibull)") +
-    theme_bw() + guides(color = F)
+    theme_bw() + guides(color = F) +
+    scale_color_manual(values = c("darkgray","black"))
   p2
   
   #ggsave(filename = "output/figures/supplementary/compare_aic.pdf", width = 5, height = 6)
@@ -56,19 +57,26 @@ makefig__decayfits <- function(decayfits){
            mean1, lower1, upper1, mean2, lower2, upper2, 
            w.t50, w.aic, w.r2) -> decayfits.w
   
+  stemSamples <- load_stemSamples()
+  stemSamples %>%
+    select(code, Binomial) %>%
+    unique() -> tmp
+  decayfits.w %>%
+    left_join(tmp) -> decayfits.w
+  
   #order species by w.t60
   decayfits.w %>%
-    select(species, w.t50) %>%
-    group_by(species) %>%
+    select(Binomial, w.t50) %>%
+    group_by(Binomial) %>%
     summarize(mean = mean(w.t50,na.rm=TRUE)) %>%
     arrange(mean)-> binom.order
-  decayfits.w$species <- factor(decayfits.w$species, levels = as.character(binom.order$species))
+  decayfits.w$Binomial <- factor(decayfits.w$Binomial, levels = as.character(binom.order$Binomial))
   
   # plot
-  p.t50 <- ggplot(decayfits.w, aes(y = species, x = w.t50, 
+  p.t50 <- ggplot(decayfits.w, aes(y = Binomial, x = w.t50, 
                                    color = size)) +
     geom_point() +
-    scale_color_manual(values = c("black","darkgray")) +
+    scale_color_manual(values = c("darkgray","black")) +
     ylab("") + xlab("Years to 50% mass loss") +
     theme_bw() + guides(color = F)
   
@@ -76,7 +84,7 @@ makefig__decayfits <- function(decayfits){
     geom_point() +
     geom_errorbarh(aes(xmin = lower1, xmax = upper1)) +
     #geom_point(aes(x = mean1), shape = 2, alpha = .5, size = 3) +
-    scale_color_manual(values = c("black","darkgray")) +
+    scale_color_manual(values = c("darkgray","black")) +
     ylab("") + xlab("Scale parameter") +
     theme_bw() + guides(color = F)
   
@@ -84,7 +92,7 @@ makefig__decayfits <- function(decayfits){
     geom_point() +
     geom_errorbarh(aes(xmin = lower2, xmax = upper2)) +
     #geom_point(aes(x = mean2), shape = 2, alpha = .5, size = 3) +
-    scale_color_manual(values = c("black","darkgray")) +
+    scale_color_manual(values = c("darkgray","black")) +
     ylab("") + xlab("Shape parameter") +
     theme_bw() + guides(color = F)
   
@@ -98,7 +106,7 @@ makefig__decayfits <- function(decayfits){
                  theme(axis.line=element_blank(),
                        axis.text.y=element_blank(),
                        axis.title.y=element_blank()),
-               ncol=3, widths=c(2,1,1)
+               ncol=3, widths=c(1.75,1,1)
   )
   dev.off()
   
@@ -129,16 +137,16 @@ makefig__pmr_byStem <- function(pmr_byStem){
   p.pmrBystem <- ggplot(pmr.byStem.df, 
                         aes(x=timeNum/12, y=mean.pmr*100, 
                             group=codeStem,
-                            linetype=size)) + 
+                            color = size)) + 
     geom_line() + 
     geom_point(inherit.aes = F, data = pmr.tmp, 
-               aes(x= timeNum/12, y = pmr*100), 
-               alpha = .2, pch = 16) +
+               aes(x= timeNum/12, y = pmr*100, color = size), pch = 16, size = 1) +
     facet_wrap(~species) +
     xlab("Time (years)") + ylab("Mass remaining (%)") + 
-    theme_bw() +
-    scale_linetype_manual(values=c(2,1)) + 
-    guides(linetype=FALSE)
+    theme_classic() +
+    scale_color_manual(name = "Size", values=c("darkgray","black")) +
+    guides(color = F, linetype = F)
+  p.pmrBystem
   
   ggsave(filename = "output/figures/maintext/pmr_byStem.pdf", plot = p.pmrBystem, width=6, height=6)
   

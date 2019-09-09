@@ -1,103 +1,121 @@
 #--------------------------------------#
 # code-level traits
 
-doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, 
-                                                  use.cache, save.cache){
+doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, cfract){
   
   #isolate trait data and scale it
   traits.code %>%
-    select(c("code","species","size",traitVars)) -> select.traits.code
-  select.traits.code <- select.traits.code[complete.cases(select.traits.code),]
-  matonly <- select.traits.code[,!colnames(select.traits.code) %in% c("code", "species", "size")]
-  matonly.s <- scale(as.matrix(matonly))
-  select.traits.code<- data.frame(select.traits.code[,c("code","species","size")], matonly.s)
+    ungroup(code) %>%
+    select(c("code","species","size",traitVars)) %>%
+    na.omit %>%
+    mutate_at(vars(traitVars), list(s = scale2)) -> select.traits.code  # see helper_fxns.R
   
   #isolate decay data
-  vars <- c("code","species","size", unlist(code.respVars))
   decayfits %>%
-    select(vars) -> select.decayfits
+    select(c("code","species","size", unlist(code.respVars))) -> select.decayfits
   
   #merge traits and response variables into 1 df
   select.decayfits %>%
-    left_join(select.traits.code) %>% 
-    filter(!is.na(P)) %>%
-    filter(!is.na(waterperc)) -> decayfits.traits
+    left_join(select.traits.code) %>%
+    na.omit -> decayfits.traits
+  #remove the na.action attribute so that it does not interfere with prediction downstream
+  attr(decayfits.traits, "na.action") <- NULL
   
   #set up full models
-  rhsVars <- paste(c(traitVars))
+  scaled.traitvars <- paste(traitVars,"s",sep = "_")
+  if(cfract == FALSE){
+    rhsVars <- paste(c("size",scaled.traitvars))
+  }else{
+    rhsVars <- paste(c(scaled.traitvars))
+  }
   rhs <- paste(rhsVars, collapse = " + ")
-  mod.full.list<-lapply(code.respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits) # summaryTable_fxns.R
+  print(rhs)
+  
+  # fit models
+  code.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs, data = decayfits.traits)) -> mod.full.list  # see helper_fxns.R
   
   #do stepwise model selection
-  if(use.cache == F){
-    mod.select.list<-lapply(mod.full.list, function(x) {
-      x.updated<-update(x, . ~ ., data = model.frame(x))
-      mod.select<-step(x.updated, direction="backward")
-      return(mod.select)
-      })
-    names(mod.select.list) <- code.respVars
-    if(save.cache == T){
-      saveRDS(mod.select.list, file = "derived_data/modSelect.RData")
-    }
-  }else{
-    mod.select.list <- readRDS(file = "derived_data/modSelect.RData")
-  }
-
-  #make table
-  #prettyTab <- MakeLmSummaryTable(respvars=unlist(respVars), mod.list=mod.select.list) # summaryTable_fxns.R
-  #write.csv(prettyTab, "output/traits_explain_decayparams.csv")
+  mod.full.list %>%
+    map(~backward_selection(.x, data = decayfits.traits)) -> mod.select.list  # see helper_fxns.R
   
   #extract and save the residuals
-  dataset.list <- rep(list(decayfits.traits), length(code.respVars))
-  names(mod.select.list) <- code.respVars
-  traitResiduals.code<-ExtractResids(mod.list=mod.select.list, dataset.list=dataset.list, sampleName = "code") # summaryTable_fxns.R
+  mod.select.list %>%
+    map(~residuals(.x)) %>%
+    map(~data.frame(resid=.x, code = decayfits.traits$code)) %>%
+    bind_rows(.id = "resp") -> residuals
   
+  #create prediction dataframes for each trait and model
+  scaled.traitvars %>%
+    purrr::set_names() %>%
+    map(~preddat_fun_bysize_allmodels(models = mod.select.list,
+                                      data = decayfits.traits, # see helper_fxns.R
+                                      curr.traitVar = .x,
+                                      data.list = F)) -> preddat
+  
+  #save model fit stats
+  mod.select.list %>%
+    map(~summary(.x)) %>%
+    map(~data.frame(Fstat = round(.x$fstatistic['value'], digits=2),
+                    numdf = .x$fstatistic['numdf'],
+                    dendf = .x$fstatistic['dendf'],
+                    r.squared = round(.x$r.squared, digits=2))) %>%
+    list_to_df() %>%
+    select(-source) %>%
+    t() -> fitstats
+  
+
   result.traitsDecay <- list(
-       decayfits.traits = decayfits.traits,
-       respVars = code.respVars,
-       mod.select.list = mod.select.list,
-       traitResiduals.code = traitResiduals.code)
+    data = decayfits.traits,
+    respVars = code.respVars,
+    models = mod.select.list,
+    residuals = residuals,
+    preddat = preddat,
+    fitstats = fitstats)
   
   return(result.traitsDecay)
   
 }
 
-makefig__traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, 
-                                                use.cache, save.cache, cfract){
-  
-  #do analysis
-  if(cfract == F){
-    result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code, code.respVars, traitVars, 
-                                                                use.cache, save.cache)
-  }else{
-    result.traitsDecay <- doAnalysis_cfract_explain_decayParams(decayfits, traits.code, code.respVars, traitVars, 
-                                                                use.cache, save.cache)
-  }
-  
-  mod.select.list <- result.traitsDecay$mod.select.list
+makefig__traits_explain_decayParams <- function(result.list, traitVars, cfract){
   
   #set up plotting dataframe
-  plot.obj <- MakeLm_plottingDF(mod.list = mod.select.list, respvars = result.traitsDecay$respVars)
+  plot.obj <- MakeLm_plottingDF(mod.list = result.list$models, 
+                                respvars = result.list$respVars)
   #plot.obj$plotting.df
   #plot.obj$r2.df
   
   #define wood trait levels
-  trait.levels <- c("sizesmall", traitVars)
-  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, levels = rev(trait.levels))
+  if(cfract == F){
+    trait.levels <- c("sizesmall", paste(traitVars, "s", sep = "_"))
+    trait.labels <- c("sizesmall", traitVars)
+  }else{
+    trait.levels <- c(paste(traitVars, "s", sep = "_"))
+    trait.labels <- c(traitVars)
+  }
+  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, 
+                                      levels = rev(trait.levels),
+                                      labels = rev(trait.labels))
   
   #define response variable levels
   respvar.levels <- c("w.t50","alpha","beta","w.r2","t50","k","ne.r2")
+  respvar.labels <- c("Years to 50%\nmass loss","Scale param.","Shape param.","Weibull R2",
+                      "t50","k","ne.r2")
   plot.obj$plotting.df %>%
     filter(respvar %in% respvar.levels) %>%
-    mutate(respvar = factor(respvar, levels = respvar.levels)) -> plot.obj$plotting.df
+    mutate(respvar = factor(respvar, levels = respvar.levels, 
+                            labels = respvar.labels)) -> plot.obj$plotting.df
   
   #plot
   p <- ggplot(plot.obj$plotting.df, aes(x = respvar, y = term, fill = etasq)) +
     geom_tile(color = "black") + 
-    geom_text(aes(label = round(est, digits = 2))) +
+    geom_text(aes(label = round(est, digits = 2)), size = 3) +
     xlab("Response variable") + ylab("Wood trait") +
     theme_classic() +
-    scale_fill_distiller(direction = 1)
+    scale_fill_distiller(direction = 1) +
+    scale_y_discrete(limits = rev(trait.labels)) +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1))
   p
   
   result <- list(p = p, p.r2 = plot.obj$r2.df)
@@ -166,11 +184,23 @@ doAnalysis_variation_densityNbarkthick <- function(traits.stem, traits.code, pmr
   
   db.df <- makeDF_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem)
   
-  #set up models
-  mod.stem_density.list <- lapply(stem.respVars, ModelFit_manyYs, rhs="density_stem", curr.data=db.df) # summaryTable_fxns.R
-  mod.code_density.list <- lapply(stem.respVars, ModelFit_manyYs, rhs="density_code", curr.data=db.df) # summaryTable_fxns.R
-  mod.stem_barkthick.list <- lapply(stem.respVars, ModelFit_manyYs, rhs="barkthick_stem", curr.data=db.df) # summaryTable_fxns.R
-  mod.code_barkthick.list <- lapply(stem.respVars, ModelFit_manyYs, rhs="barkthick_code", curr.data=db.df) # summaryTable_fxns.R
+  # set up models
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "density_stem", data = db.df)) -> mod.stem_density.list  # see helper_fxns.R
+  
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "density_code", data = db.df)) -> mod.code_density.list  # see helper_fxns.R
+  
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "barkthick_stem", data = db.df)) -> mod.stem_barkthick.list  # see helper_fxns.R
+  
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "barkthick_code", data = db.df)) -> mod.code_barkthick.list  # see helper_fxns.R
+  
   
   #cox test to compare non-nested models
   # if the first model (M1) contains the correct set of regressors, then a fit of the regressors from the second model (M2) to the fitted values from M1 should have no further explanatory value. But if it has, it can be concluded that M1 does not contain the correct set of regressors
@@ -192,82 +222,144 @@ doAnalysis_variation_densityNbarkthick <- function(traits.stem, traits.code, pmr
   
 }
 
-doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, 
-                                          use.cache, save.cache){
+CreateTraitPMRpair<-function(respVar, traits.stem, traits.code, pmr_byStem, traitVars.stem){
+  
+  #make a dataframe using the current time point's pmr and remove NAs
+  pmr_byStem %>%
+    select("codeStem", respVar) %>%
+    rename("curr.pmr" = respVar) %>%
+    filter(!is.na(curr.pmr)) -> pmr.noNAs
+  #subset the trait matrix using these unique codeStems
+  traits.stem %>%
+    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
+  #make sure there are no NAs in waterperc or chemistry data
+  curr.traits %>%
+    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
+  
+  #add species-level traits
+  traits.code %>%
+    select(code, barkthick, density) %>%
+    rename('barkthick_smspp'='barkthick',
+           'density_smspp'='density')-> select.traits.code
+  curr.traits %>%
+    left_join(select.traits.code) -> curr.traits
+  
+  #get rid of pmr rows for which there is missing trait data
+  pmr.noNAs %>%
+    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
+  
+  #merge the dataframes
+  curr.df<-left_join(curr.pmr, curr.traits) 
+  #add code and species and size
+  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
+  curr.df$species<-tolower(curr.df$code)
+  curr.df$size<-"large"
+  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
+  
+  return(curr.df)
+  
+}
+
+doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, cfract){
+  
+  #isolate trait data and scale it
+  datasets %>%
+    map(~ungroup(.x, codeStem)) %>%
+    map(~mutate_at(.x, vars(traitVars.stem), list(s = scale2))) -> datasets.s # see helper_fxns.R
   
   #set up full models
-  rhsVars <- paste(c("size",traitVars.stem))
+  scaled.traitvars <- paste(traitVars.stem ,"s",sep = "_")
+  if(cfract == F){
+    rhsVars <- paste(c("size",scaled.traitvars))
+  }else{
+    rhsVars <- paste(c(scaled.traitvars))
+  }
   rhs <- paste(rhsVars, collapse = " + ")
+  print(rhs)
   lhs <- "curr.pmr"
-  mod.full.list<-lapply(datasets, function(x){
-    result <- ModelFit_manyYs(y = lhs, rhs=rhs, curr.data=x)
-    return(result)
-  })
+  
+  # fit models
+  datasets.s %>%
+    map(~fit.lm(y = lhs, rhs, data = .x)) -> mod.full.list  # see helper_fxns.R
   
   #do stepwise model selection
-  if(use.cache == F){
-    mod.select.list<-lapply(mod.full.list, function(x) {
-      x.updated<-update(x, . ~ ., data = model.frame(x))
-      mod.select<-step(x.updated, direction="backward")
-      return(mod.select)
-    })
-    if(save.cache == T){
-      saveRDS(mod.select.list, file = "derived_data/modSelect_stem.RData")
-    }
-  }else{
-    mod.select.list <- readRDS(file = "derived_data/modSelect_stem.RData")
-  }
-  
-  #make table
-  #prettyTab <- MakeLmSummaryTable(respvars=unlist(stem.respVars), mod.list=mod.select.list) # summaryTable_fxns.R
-  #write.csv(prettyTab, "output/traitsummary_stem.csv")
+  map2(.x = mod.full.list, 
+       .y = datasets.s, ~backward_selection(.x, data = .y)) -> mod.select.list  # see helper_fxns.R
   
   #extract and save the residuals
-  traitResiduals.stem <- ExtractResids(mod.list=mod.select.list, dataset.list=datasets, sampleName = "codeStem") # summaryTable_fxns.R
+  mod.select.list %>%
+    map(~residuals(.x)) %>%
+    map2(.y = datasets.s, 
+         ~data.frame(resid=.x, codeStem = .y$codeStem)) %>%
+    bind_rows(.id = "resp") -> residuals
   
+  #create prediction dataframes for each trait and model
+  scaled.traitvars %>%
+    purrr::set_names() %>%
+    map(~preddat_fun_bysize_allmodels(models = mod.select.list,
+                                      data = datasets.s, # see helper_fxns.R
+                                      curr.traitVar = .x,
+                                      data.list = T)) -> preddat
+  
+  #save model fit stats
+  mod.select.list %>%
+    map(~summary(.x)) %>%
+    map(~data.frame(Fstat = round(.x$fstatistic['value'], digits=2),
+                    numdf = .x$fstatistic['numdf'],
+                    dendf = .x$fstatistic['dendf'],
+                    r.squared = round(.x$r.squared, digits=2))) %>%
+    list_to_df() %>%
+    select(-source) %>%
+    t() -> fitstats
+
   result.traitsPMR <- list(
-    datasets = datasets,
+    data = datasets,
     respVars = stem.respVars,
-    mod.select.list = mod.select.list,
-    traitResiduals.stem = traitResiduals.stem)
+    models = mod.select.list,
+    residuals = residuals,
+    preddat = preddat,
+    fitstats = fitstats)
   
   return(result.traitsPMR)
   
 }
 
-makefig__traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, 
-                                        use.cache, save.cache){
-  
-  #do analysis
-  result.traitsPMR <- doAnalysis_traits_explain_pmr(datasets, stem.respVars, traitVars.stem, 
-                                                    use.cache, save.cache)
-  mod.select.list <- result.traitsPMR$mod.select.list
+makefig__traits_explain_pmr <- function(result.list, traitVars.stem, cfract){
   
   #set up plotting dataframe
-  plot.obj <- MakeLm_plottingDF(mod.list = mod.select.list, respvars = result.traitsPMR$respVars)
+  plot.obj <- MakeLm_plottingDF(mod.list = result.list$models, respvars = result.list$respVars)
   #plot.obj$plotting.df
   #plot.obj$r2.df
   
   #define wood trait levels
-  trait.levels <- c("sizesmall", traitVars.stem)
-  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, levels = rev(trait.levels))
+  traitVars.stem.s <- c(paste(traitVars.stem, "s", sep = "_"))
+  if(cfract == F){
+    trait.levels <- c("sizesmall", traitVars.stem.s)
+    trait.labels <- c("sizesmall", traitVars.stem)
+  }else{
+    trait.levels <- c(traitVars.stem.s)
+    trait.labels <- c(traitVars.stem)
+  }
+  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, 
+                                      levels = rev(trait.levels),
+                                      labels = rev(trait.labels))
   
   #define response variable levels
-  respvar.levels <- unlist(result.traitsPMR$respVars)
+  respvar.levels <- unlist(result.list$respVars)
   plot.obj$plotting.df %>%
     filter(respvar %in% respvar.levels) %>%
     mutate(respvar = factor(respvar, levels = respvar.levels)) -> plot.obj$plotting.df
   
   #plot
+  plot.obj$plotting.df
   p <- ggplot(plot.obj$plotting.df, aes(x = respvar, y = term, fill = etasq)) +
     geom_tile(color = "black") + 
-    geom_text(aes(label = round(est, digits = 2))) +
+    geom_text(aes(label = round(est, digits = 2)), size = 3) +
     xlab("Response variable") + ylab("Wood trait") +
     theme_classic() +
-    scale_fill_distiller(direction = 1)
+    scale_fill_distiller(direction = 1) +
+    scale_y_discrete(limits = rev(trait.labels))
   p
-  #ggsave(filename = "output/figures/maintext/traits_explain_pmr.pdf", width = 5, height = 6)
-  
   
   result <- list(p = p, p.r2 = plot.obj$r2.df)
   return(result)
@@ -276,61 +368,7 @@ makefig__traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem,
 #--------------------------------------#
 # code-level Cfractions
 
-doAnalysis_cfract_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, 
-                                                  use.cache, save.cache){
-  
-  #isolate trait data and scale it
-  traits.code %>%
-    select(c("code","species","size",traitVars)) -> select.traits.code
-  select.traits.code <- select.traits.code[complete.cases(select.traits.code),]
-  matonly <- select.traits.code[,!colnames(select.traits.code) %in% c("code", "species", "size")]
-  matonly.s <- scale(as.matrix(matonly))
-  select.traits.code<- data.frame(select.traits.code[,c("code","species","size")], matonly.s)
-  
-  #isolate decay data
-  vars <- c("code","species","size", unlist(code.respVars))
-  decayfits %>%
-    select(vars) -> select.decayfits
-  
-  #merge traits and response variables into 1 df
-  select.decayfits %>%
-    left_join(select.traits.code) -> decayfits.traits
-  decayfits.traits <- decayfits.traits[complete.cases(decayfits.traits),]
-  
-  #set up full models
-  rhsVars <- paste(c(traitVars))
-  rhs <- paste(rhsVars, collapse = " + ")
-  mod.full.list<-lapply(code.respVars, ModelFit_manyYs, rhs, curr.data=decayfits.traits) # summaryTable_fxns.R
-  
-  #do stepwise model selection
-  if(use.cache == F){
-    mod.select.list<-lapply(mod.full.list, function(x) {
-      x.updated<-update(x, . ~ ., data = model.frame(x))
-      mod.select<-step(x.updated, direction="backward")
-      return(mod.select)
-    })
-    names(mod.select.list) <- code.respVars
-    if(save.cache == T){
-      saveRDS(mod.select.list, file = "derived_data/modSelect_cfract.RData")
-    }
-  }else{
-    mod.select.list <- readRDS(file = "derived_data/modSelect_cfract.RData")
-  }
-  
-  #extract and save the residuals
-  dataset.list <- rep(list(decayfits.traits), length(code.respVars))
-  names(mod.select.list) <- code.respVars
-  traitResiduals.code <- ExtractResids(mod.list=mod.select.list, dataset.list=dataset.list, sampleName = "code") # summaryTable_fxns.R
-  
-  result.traitsDecay <- list(
-    decayfits.traits = decayfits.traits,
-    respVars = code.respVars,
-    mod.select.list = mod.select.list,
-    traitResiduals.code = traitResiduals.code)
-  
-  return(result.traitsDecay)
-  
-}
+
 
 #--------------------------------------#
 # stem-level Cfractions
@@ -361,97 +399,7 @@ CreateCfractPMRpair<-function(respVar, traits.stem.cfract, pmr_byStem, traitVars
   curr.df$size<-"large"
   curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
   
-  #isolate trait data and scale it
-  curr.df %>%
-    select(c("codeStem","code","species","curr.pmr","size", traitVars.cfract)) -> select.traits
-  select.traits <- select.traits[complete.cases(select.traits),]
-  matonly <- select.traits[,!colnames(select.traits) %in% c("codeStem","code", "species", "curr.pmr","size")]
-  matonly.s <- scale(as.matrix(matonly))
-  result <- data.frame(select.traits[,c("codeStem","code", "species", "curr.pmr","size")], matonly.s)
-  
-  return(result)
+  return(curr.df)
   
 }
-
-doAnalysis_cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfract, 
-                                          use.cache, save.cache){
-    
-  #set up full models
-  rhsVars <- paste(c(traitVars.cfract))
-  rhs <- paste(rhsVars, collapse = " + ")
-  lhs <- "curr.pmr"
-  mod.full.list<-lapply(datasets, function(x){
-    result <- ModelFit_manyYs(y = lhs, rhs=rhs, curr.data=x)
-    return(result)
-  })
-  
-  #do stepwise model selection
-  if(use.cache == F){
-    mod.select.list<-lapply(mod.full.list, function(x) {
-      x.updated<-update(x, . ~ ., data = model.frame(x))
-      mod.select<-step(x.updated, direction="backward")
-      return(mod.select)
-    })
-    if(save.cache == T){
-      saveRDS(mod.select.list, file = "derived_data/modSelect_stem_cfract.RData")
-    }
-  }else{
-    mod.select.list <- readRDS(file = "derived_data/modSelect_stem_cfract.RData")
-  }
-  
-  #make table
-  #prettyTab <- MakeLmSummaryTable(respvars=unlist(stem.respVars), mod.list=mod.select.list) # summaryTable_fxns.R
-  #write.csv(prettyTab, "output/traitsummary_stem.csv")
-  
-  #extract and save the residuals
-  traitResiduals.stem <- ExtractResids(mod.list=mod.select.list, dataset.list=datasets, sampleName = "codeStem") # make_summaryTables.R
-  
-  result.traitsPMR <- list(
-    datasets = datasets,
-    respVars = stem.respVars,
-    mod.select.list = mod.select.list,
-    traitResiduals.stem = traitResiduals.stem)
-  
-  return(result.traitsPMR)
-  
-}
-
-makefig__cfract_explain_pmr <- function(datasets, stem.respVars, traitVars.cfract, 
-                                        use.cache, save.cache){
-  
-  #do analysis
-  result.traitsPMR <- doAnalysis_cfract_explain_pmr(datasets, stem.respVars, traitVars.cfract, 
-                                                    use.cache, save.cache)
-  mod.select.list <- result.traitsPMR$mod.select.list
-  
-  #set up plotting dataframe
-  plot.obj <- MakeLm_plottingDF(mod.list = mod.select.list, respvars = result.traitsPMR$respVars)
-  #plot.obj$plotting.df
-  #plot.obj$r2.df
-  
-  #define wood trait levels
-  trait.levels <- c(traitVars.cfract)
-  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, levels = rev(trait.levels))
-  
-  #define response variable levels
-  respvar.levels <- unlist(result.traitsPMR$respVars)
-  plot.obj$plotting.df %>%
-    filter(respvar %in% respvar.levels) %>%
-    mutate(respvar = factor(respvar, levels = respvar.levels)) -> plot.obj$plotting.df
-  
-  #plot
-  p <- ggplot(plot.obj$plotting.df, aes(x = respvar, y = term, fill = etasq)) +
-    geom_tile(color = "black") + 
-    geom_text(aes(label = round(est, digits = 2))) +
-    xlab("Response variable") + ylab("Wood trait") +
-    theme_classic() +
-    scale_fill_distiller(direction = 1)
-  p
-  #ggsave(filename = "output/figures/maintext/traits_explain_pmr.pdf", width = 5, height = 6)
-  
-  
-  result <- list(p = p, p.r2 = plot.obj$r2.df)
-  return(result)
-}
-
 

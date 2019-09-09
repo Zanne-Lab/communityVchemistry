@@ -1,51 +1,8 @@
 
+
+
 #########
 # Create response + predictor dataframes
-CreateTraitPMRpair<-function(respVar, traits.stem, traits.code, pmr_byStem, traitVars.stem){
-  
-  #make a dataframe using the current time point's pmr and remove NAs
-  pmr_byStem %>%
-    select("codeStem", respVar) %>%
-    rename("curr.pmr" = respVar) %>%
-    filter(!is.na(curr.pmr)) -> pmr.noNAs
-  #subset the trait matrix using these unique codeStems
-  traits.stem %>%
-    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
-  #make sure there are no NAs in waterperc or chemistry data
-  curr.traits %>%
-    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
-  
-  #add species-level traits
-  traits.code %>%
-    select(code, barkthick, density) %>%
-    rename('barkthick_smspp'='barkthick',
-           'density_smspp'='density')-> select.traits.code
-  curr.traits %>%
-    left_join(select.traits.code) -> curr.traits
-  
-  #get rid of pmr rows for which there is missing trait data
-  pmr.noNAs %>%
-    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
-
-  #merge the dataframes
-  curr.df<-left_join(curr.pmr, curr.traits) 
-  #add code and species and size
-  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
-  curr.df$species<-tolower(curr.df$code)
-  curr.df$size<-"large"
-  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
-  
-  #isolate trait data and scale it
-  curr.df %>%
-    select(c("codeStem","code","species","curr.pmr","size", traitVars.stem)) -> select.traits
-  select.traits <- select.traits[complete.cases(select.traits),]
-  matonly <- select.traits[,!colnames(select.traits) %in% c("codeStem","code", "species", "curr.pmr","size")]
-  matonly.s <- scale(as.matrix(matonly))
-  result <- data.frame(select.traits[,c("codeStem","code", "species", "curr.pmr","size")], matonly.s)
-  
-  return(result)
-  
-}
 
 reformatMatrix<-function(commmat){
   newmat<-matrix(as.numeric(as.matrix(commmat)), ncol=dim(commmat)[2], nrow=dim(commmat)[1])
@@ -56,8 +13,8 @@ CreateCommPMRpair<-function(respVar, comm.mat, pmr_byStem){
   
   #make a dataframe using the current time point's pmr and remove NAs
   pmr_byStem %>%
-    select_("codeStem", respVar) %>%
-    rename_("curr.time"= respVar) %>%
+    select(c("codeStem", respVar)) %>%
+    rename("curr.time"= respVar) %>%
     filter(!is.na(curr.time)) -> pmr.noNAs
   
   #subset the community matrix using these unique codeStems
@@ -157,7 +114,7 @@ CreateCommTraitpair <- function(comm.otu, traits, sampleName){
   #identify the column with the unique row info (sampleName)
   excludeCols<-c("codeStem","code","species")
   traits %>%
-    rename_("sampleName"=sampleName) -> traits
+    rename("sampleName"=sampleName) -> traits
   traits<-traits[,!colnames(traits) %in% excludeCols]
   
   # match the no-nas trait data with community data
@@ -185,18 +142,18 @@ CreateCommTraitpair <- function(comm.otu, traits, sampleName){
 #########
 # Model formulation
 
-ModelFit_manyYs<-function(y, rhs, curr.data){
-  
-  #create model formula
-  string<-paste(y, " ~ ", rhs)
-  fmla<-as.formula(string)
-  
-  #fit full model
-  mod.full<-lm(formula=fmla, data=curr.data)
-  
-  #return a list with the best model for each response var
-  return(mod.full)
-}
+# ModelFit_manyYs<-function(y, rhs, curr.data){
+#   
+#   #create model formula
+#   string<-paste(y, " ~ ", rhs)
+#   fmla<-as.formula(string)
+#   
+#   #fit full model
+#   mod.full<-lm(formula=fmla, data=curr.data)
+#   
+#   #return a list with the best model for each response var
+#   return(mod.full)
+# }
 
 fitNcrossval_WAPLS<-function(curr.comm, curr.respVar){
   fit<-WAPLS(y=curr.comm, x=curr.respVar)

@@ -11,16 +11,18 @@ plot_sampleEffortCurves<-function(mat.otu){
   
 }
 
-calc_codeOTUabund <- function(comm.otu, seqSamples, use.cache){
+calc_codeOTUabund <- function(comm.otu, seqSamples, use.cache, save.cache){
   
   comm.otu.trimmed <- removeRareOTUs(comm.otu)
   
   #average OTU abundances by code
   if(use.cache == F){
     codeOTUabund <- AverageOTUabund_byCode(comm.otu=comm.otu, seqSamples=seqSamples) #analysisDF_fxns.R... this take a while
-    write.csv(codeOTUabund, file="derived_data/codeOTUabund.csv")
     codeOTUabund.trim <- AverageOTUabund_byCode(comm.otu=comm.otu.trimmed, seqSamples=seqSamples) #analysisDF_fxns.R
-    write.csv(codeOTUabund.trim, file="derived_data/codeOTUabund_trim.csv")
+    if(save.cache == T){
+      write.csv(codeOTUabund.trim, file="derived_data/codeOTUabund_trim.csv")
+      write.csv(codeOTUabund, file="derived_data/codeOTUabund.csv")
+    }
   }else{
     codeOTUabund<-read.csv("derived_data/codeOTUabund.csv", row.names=1)
     codeOTUabund.trim<-read.csv("derived_data/codeOTUabund_trim.csv", row.names=1)
@@ -38,12 +40,17 @@ calc_codeOTUabund <- function(comm.otu, seqSamples, use.cache){
   
 }
 
-doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, code.respVars, use.cache){
+
+#--------------------------------------#
+# comm-decay.code
+
+doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, code.respVars, 
+                                             use.cache, save.cache){
   
   require(rioja)
   
   # calculate code-level OTU abundances w/ and w/o trimming the OTU table
-  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache)
+  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache, save.cache)
   codeOTUabund <- codeOTU.list$codeOTUabund
   codeOTUabund.trim <- codeOTU.list$codeOTUabund.trim
   
@@ -76,8 +83,12 @@ doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, co
   
 }
 
+
+#--------------------------------------#
+# comm-decay.stem
+
 doAnalysis_endoComp_explainPMR <- function(comm.otu, pmr_byStem, stem.respVars){
-  
+
   require(rioja)
   
   comm.otu.trimmed <- removeRareOTUs(comm.otu)
@@ -111,14 +122,6 @@ doAnalysis_endoComp_explainPMR <- function(comm.otu, pmr_byStem, stem.respVars){
   
 }
 
-maketab_endoComp_explain <- function(cvfit.results.code, cvfit.results.stem, code.respVars, stem.respVars){
-  # merge code and stem-level summary tables
-  tmp <- left_join(cvfit.results.code$prettyTabs, cvfit.results.stem$prettyTabs)
-  commTab <- tmp[,c("trim","stat", unlist(code.respVars), unlist(stem.respVars))]
-  
-  return(commTab)
-}
-
 extractcoefs_wapls_score_time37 <- function(cvfit.results.stem, taxAndFunguild){
   
   #extract the significant component coefficients
@@ -133,9 +136,7 @@ extractcoefs_wapls_score_time37 <- function(cvfit.results.stem, taxAndFunguild){
   
 }
 
-makefig__wapls_score_time37 <- function(comm.otu, pmr_byStem, stem.respVars, taxAndFunguild){
-  
-  cvfit.results.stem <- doAnalysis_endoComp_explainPMR(comm.otu, pmr_byStem, stem.respVars)
+makefig__wapls_score_time37 <- function(cvfit.results.stem, taxAndFunguild){
   
   coef.comp.ann <- extractcoefs_wapls_score_time37(cvfit.results.stem, taxAndFunguild)
   
@@ -214,36 +215,43 @@ makefig__wapls_score_time37 <- function(comm.otu, pmr_byStem, stem.respVars, tax
     xlab("OTU identity") + ylab("WA-PLS score (pmr at time37)") +
     theme(axis.text.x=element_blank(),
                        axis.ticks.x=element_blank())
-  p1 
+  p1
   
   p2<-ggplot(tmp, aes(y=coefComp, x=coefEst)) + 
     geom_point() + 
     ylab("") + 
     xlab("Assoc. w/ water content (boral coef)")
   p2
-  #ggsave(filename = "output/figures/supplementary/wapls_score_time37_boral.pdf", plot = p, width = 6, height = 4)
-  
+
   #waterperc
   tmp.df1 %>%
     filter(trait == "waterperc") -> tmp
   mod <- lm(coefEst ~ coefComp, data = tmp)
   summary(mod)
   
-  pdf("output/figures/supplementary/wapls_score_time37.pdf", width=8, height=4)
-  grid.newpage()
-  grid.draw(cbind(ggplotGrob(p1), ggplotGrob(p2), size = "last"))
-  dev.off()
+  # pdf("output/figures/supplementary/wapls_score_time37.pdf", width=8, height=4)
+  # grid.newpage()
+  # grid.draw(cbind(ggplotGrob(p1), ggplotGrob(p2), size = "last"))
+  # dev.off()
 
-  
+  result <- list(p1 = p1, p2 = p2)
+  return(result)
   
 }
 
-doAnalysis_endoComp_explainDecayResids <- function(comm.otu, seqSamples, decayfits, code.respVars, traitResiduals.code, use.cache){
+
+#--------------------------------------#
+# comm-decayResidtraits/cfract.code
+
+doAnalysis_endoComp_explainDecayResids <- function(comm.otu, seqSamples, decayfits, 
+                                                   code.respVars, 
+                                                   traitResiduals.code, 
+                                                   use.cache, save.cache){
   
   require(rioja)
   
   # calculate code-level OTU abundances w/ and w/o trimming the OTU table
-  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache)
+  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache, save.cache)
   codeOTUabund <- codeOTU.list$codeOTUabund
   codeOTUabund.trim <- codeOTU.list$codeOTUabund.trim
   
@@ -290,7 +298,12 @@ doAnalysis_endoComp_explainDecayResids <- function(comm.otu, seqSamples, decayfi
 
 }
 
-doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem, stem.respVars, traitResiduals.stem){
+#--------------------------------------#
+# comm-decayResidtraits/cfract.stem
+
+doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem, 
+                                                 stem.respVars, 
+                                                 traitResiduals.stem){
   
   require(rioja)
   
@@ -339,27 +352,41 @@ doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem, stem.resp
   
 }
 
-doAnalysis_endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
+#--------------------------------------#
+# comm-traits.code
+
+doAnalysis_endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, traitVars, 
+                                           use.cache, save.cache,
+                                           use.cache.ordi, save.cache.ordi,
+                                           cfract){
   
   # calculate code-level OTU abundances w/ and w/o trimming the OTU table
-  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache)
+  codeOTU.list <- calc_codeOTUabund(comm.otu, seqSamples, use.cache, save.cache)
   codeOTUabund <- codeOTU.list$codeOTUabund
   codeOTUabund.trim <- codeOTU.list$codeOTUabund.trim
   
-  # remove trait NAs
-  traits.code %>% 
-    filter(!is.na(waterperc) & !is.na(P)) -> traits.noNAs
+  # select traits and remove NAs
+  if(cfract == F){
+    traits.code %>% 
+      select("code","species","size",traitVars) -> select.traits
+  }else{
+    traits.code %>% 
+      select("code","species",traitVars) -> select.traits
+  }
+  traits.noNAs<- select.traits[complete.cases(select.traits),]
   
   # make pair of matching datasets with the community mat and the trait mat
   datasets.notrim.code<-CreateCommTraitpair(comm.otu = codeOTUabund, traits=traits.noNAs, sampleName = "code")
   datasets.trim.code<-CreateCommTraitpair(comm.otu = codeOTUabund.trim, traits=traits.noNAs, sampleName = "code")
   
   # choose a model by permutation tests in a constrained ordination
-  if(use.cache == F){
+  if(use.cache.ordi == F){
     mod.nt.code<-ordistep_wrapper(datasets=datasets.notrim.code) #this can take a while
-    saveRDS(mod.nt.code, file = "derived_data/modSelect_nt_code.RData")
     mod.t.code<-ordistep_wrapper(datasets=datasets.trim.code)
-    saveRDS(mod.t.code, file = "derived_data/modSelect_t_code.RData")
+    if(save.cache.ordi == T){
+      saveRDS(mod.nt.code, file = "derived_data/modSelect_nt_code.RData")
+      saveRDS(mod.t.code, file = "derived_data/modSelect_t_code.RData")
+    }
   }else{
     mod.nt.code <- readRDS(file = "derived_data/modSelect_nt_code.RData")
     mod.t.code <- readRDS(file = "derived_data/modSelect_t_code.RData")
@@ -370,71 +397,77 @@ doAnalysis_endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, us
   #vif.cca(mod.t.code)
   
   mod.list <- list(mod.nt.code = mod.nt.code,
-                   mod.t.code = mod.t.code)
+                   mod.t.code = mod.t.code,
+                   datasets.nt.code = datasets.notrim.code,
+                   datasets.t.code = datasets.trim.code)
   
   return(mod.list)
   
 }
 
-makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, traits.stem, use.cache){
-  
-  #(1) by code
-  mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache)
-  mod.nt.code <- mod.list$mod.nt.code
-  mod.t.code <- mod.list$mod.t.code
-  # proportion of constrained variance (inertia)
-  prop.constr.nt.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.code), digits=2))
-  prop.constr.t.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.code), digits=2))
-  
-  
-  #(2) by stem
-  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
-  mod.nt.stem <- mod.list$mod.nt.stem
-  mod.t.stem <- mod.list$mod.t.stem
-  # proportion of constrained variance (inertia)
-  prop.constr.nt.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.stem), digits=2))
-  prop.constr.t.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.stem), digits=2))
-  
-  pdf("output/figures/supplementary/dbRDA_traits.pdf", width=12, height=6)
-  par(mfrow=c(1,2))
-  
-  # plot(mod.nt.code, display = c("wa","bp")) # constrained with best model
-  # mtext(prop.constr.nt.code, side=3, adj=0.9, line=-1.5, col=4)
-  # title('Full community')
-  
-  plot(mod.t.code, display = c("wa","bp")) # constrained with best model
-  mtext(prop.constr.t.code, side=3, adj=0.9, line=-1.5, col=4)
-  title('By code')
-  
-  # plot(mod.nt.stem, display = c("wa","bp")) # constrained with best model
-  # mtext(prop.constr.nt.stem, side=3, adj=0.9, line=-1.5, col=4)
-  # title('Full community')
-  
-  plot(mod.t.stem, display = c("wa","bp")) # constrained with best model
-  mtext(prop.constr.t.stem, side=3, adj=0.9, line=-1.5, col=4)
-  title('By stem')
-  
-  dev.off()
-  
-  
-}
+# makefigs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, traits.stem, 
+#                                           use.cache, save.cache){
+#   
+#   #(1) by code
+#   mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache, save.cache)
+#   mod.nt.code <- mod.list$mod.nt.code
+#   mod.t.code <- mod.list$mod.t.code
+#   # proportion of constrained variance (inertia)
+#   prop.constr.nt.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.code), digits=2))
+#   prop.constr.t.code<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.code), digits=2))
+#   
+#   
+#   #(2) by stem
+#   mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
+#   mod.nt.stem <- mod.list$mod.nt.stem
+#   mod.t.stem <- mod.list$mod.t.stem
+#   # proportion of constrained variance (inertia)
+#   prop.constr.nt.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.nt.stem), digits=2))
+#   prop.constr.t.stem<-paste("prop. constr. =", round(extract_constrainedInertia_proport(mod.t.stem), digits=2))
+#   
+#   pdf("output/figures/supplementary/dbRDA_traits.pdf", width=12, height=6)
+#   par(mfrow=c(1,2))
+#   
+#   # plot(mod.nt.code, display = c("wa","bp")) # constrained with best model
+#   # mtext(prop.constr.nt.code, side=3, adj=0.9, line=-1.5, col=4)
+#   # title('Full community')
+#   
+#   plot(mod.t.code, display = c("wa","bp")) # constrained with best model
+#   mtext(prop.constr.t.code, side=3, adj=0.9, line=-1.5, col=4)
+#   title('By code')
+#   
+#   # plot(mod.nt.stem, display = c("wa","bp")) # constrained with best model
+#   # mtext(prop.constr.nt.stem, side=3, adj=0.9, line=-1.5, col=4)
+#   # title('Full community')
+#   
+#   plot(mod.t.stem, display = c("wa","bp")) # constrained with best model
+#   mtext(prop.constr.t.stem, side=3, adj=0.9, line=-1.5, col=4)
+#   title('By stem')
+#   
+#   dev.off()
+#   
+#   
+# }
 
-maketabs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
-  
-  mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache)
-  mod.nt.code <- mod.list$mod.nt.code
-  mod.t.code <- mod.list$mod.t.code
-  
-  #save summary tables
-  an.nt.code <- anova.margin.table(dbrda.obj=mod.nt.code)
-  an.t.code<-anova.margin.table(dbrda.obj=mod.t.code)
-  tab.list <- list(an.nt.code = an.nt.code,
-                   an.t.code = an.t.code)
-  
-  return(tab.list)
-}
+# maketabs__endoComp_woodTraits <- function(comm.otu, seqSamples, traits.code, use.cache){
+#   
+#   mod.list<- doAnalysis_endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache)
+#   mod.nt.code <- mod.list$mod.nt.code
+#   mod.t.code <- mod.list$mod.t.code
+#   
+#   #save summary tables
+#   an.nt.code <- anova.margin.table(dbrda.obj=mod.nt.code)
+#   an.t.code<-anova.margin.table(dbrda.obj=mod.t.code)
+#   tab.list <- list(an.nt.code = an.nt.code,
+#                    an.t.code = an.t.code)
+#   
+#   return(tab.list)
+# }
 
-doAnalysis_endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem, use.cache){
+#--------------------------------------#
+# comm-traits.stem
+
+doAnalysis_endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem){
   
   comm.otu.trimmed <- removeRareOTUs(comm.otu)
   
@@ -476,18 +509,18 @@ doAnalysis_endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.st
   
 }
 
-maketabs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem, use.cache){
-  
-  mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
-  mod.nt.stem <- mod.list$mod.nt.stem
-  mod.t.stem <- mod.list$mod.t.stem
-  
-  #save summary tables
-  an.nt.stem <- anova.margin.table(dbrda.obj=mod.nt.stem)
-  an.t.stem<-anova.margin.table(dbrda.obj=mod.t.stem)
-  tab.list <- list(an.nt.stem = an.nt.stem,
-                   an.t.stem = an.t.stem)
-  
-  return(tab.list)
-}
-
+# maketabs__endoComp_woodTraits.stem <- function(comm.otu, traits.code, traits.stem, use.cache){
+#   
+#   mod.list <- doAnalysis_endoComp_woodTraits.stem(comm.otu, traits.code, traits.stem, use.cache)
+#   mod.nt.stem <- mod.list$mod.nt.stem
+#   mod.t.stem <- mod.list$mod.t.stem
+#   
+#   #save summary tables
+#   an.nt.stem <- anova.margin.table(dbrda.obj=mod.nt.stem)
+#   an.t.stem<-anova.margin.table(dbrda.obj=mod.t.stem)
+#   tab.list <- list(an.nt.stem = an.nt.stem,
+#                    an.t.stem = an.t.stem)
+#   
+#   return(tab.list)
+# }
+# 

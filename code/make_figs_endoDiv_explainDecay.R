@@ -17,6 +17,11 @@ summarize_endoDiv <- function(taxAndFunguild, comm.otu){
 
 doAnalysis_endoDiv_explainDecay <- function(taxAndFunguild, comm.otu, decayfits, code.respVars){
   
+  # taxAndFunguild
+  # comm.otu
+  # decayfits
+  # code.respVars
+  
   richList <- summarize_endoDiv(taxAndFunguild, comm.otu)
   
   #create a set of richness and decay dataframes
@@ -40,6 +45,7 @@ doAnalysis_endoDiv_explainDecay <- function(taxAndFunguild, comm.otu, decayfits,
   names(richType.list) <- names(richList)
   
   #summarize
+  richType.list
   pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
   pretty.df <- list_to_df(pretty.list)
   

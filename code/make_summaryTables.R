@@ -103,7 +103,9 @@ MakeLm_plottingDF <- function(mod.list, respvars){
   coefs.df %>%
     full_join(anova.df) -> plotting.df
 
-  result <- list(plotting.df = plotting.df, r2.df = r2.df)
+  result <- list(plotting.df = plotting.df, 
+                 r2.df = r2.df)
+  
   return(result)
   
 }
