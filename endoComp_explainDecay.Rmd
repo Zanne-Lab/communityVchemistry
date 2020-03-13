@@ -63,6 +63,9 @@ microb.data <- load_MicrobeCollection(stemSamples)
 taxAndFunguild <- microb.data$taxAndFunguild
 comm.otu <- microb.data$comm.otu
 seqSamples <- microb.data$seqSamples
+colnames(taxAndFunguild)
+taxAndFunguild %>%
+  filter(kingdom != "Fungi")
 
 # residuals from 'woodTraits_explainDecay.Rmd'
 resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")

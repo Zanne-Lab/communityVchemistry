@@ -108,6 +108,7 @@ traits.code %>%
   filter(!is.na(C)) -> traits.code.noc
 matonly <- traits.code.noc[,!colnames(traits.code.noc) %in% c(trait.order$id.cols)]
 matonly.s <- scale(as.matrix(matonly))
+colnames(matonly.s)
 
 #save the bivariate plot
 bivariate_explainDecay.list[['traits.code']] <- ggpairs(data = as.data.frame(matonly.s))
@@ -242,6 +243,7 @@ stem.respVars %>%
 # should be able to extract just trait data from one of these dataframes
 tmp <- datasets[[1]]
 mat <- tmp[,colnames(tmp) %in% trait.order$stem.trait.cols]
+colnames(mat)
 
 #save the bivariate plot
 bivariate_explainDecay.list[['traits.stem']] <- ggpairs(data = mat)

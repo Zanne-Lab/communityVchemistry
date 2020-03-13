@@ -109,6 +109,8 @@ load_matotu <- function(){
 #copied from fungal_wood_endophtyes repo
 load_TaxAndFunguild <- function(comm.otu.tmp){
   
+  comm.otu.tmp <- comm.otu
+  
   # load fungal OTU info
   funguild <-read.delim('data/sequencing_T0/DP16_funguild.txt', stringsAsFactors = F)
   tax <-read.delim('data/sequencing_T0/DP16_tax.txt', stringsAsFactors = F)
@@ -160,6 +162,7 @@ load_TaxAndFunguild <- function(comm.otu.tmp){
   ooOTUs <- colnames(comm.otu.tmp)[grepl("ITSoo", colnames(comm.otu.tmp))]
   oo.df<-data.frame(OTUId=ooOTUs, kingdom="Protist")
   taxAndFunguild<-bind_rows(taxAndFunguild, oo.df)
+  sum(grepl("ITSoo", taxAndFunguild$OTUId))
   
   # identify OTUs from comm.otu not found in taxAndFunguild (probably plant DNA)
   taxAndFunguild %>%
@@ -172,13 +175,15 @@ load_TaxAndFunguild <- function(comm.otu.tmp){
     filter(!OTUId %in% nonfungalOTUs.df$OTUId) -> tmp
   # also delete OTUs with suspect coverage (probably nonfungal)
   tmp %>%
-    filter(coverage > 0.9) -> tmp2
+    filter(coverage > 0.9 | kingdom == "Protist") -> tmp2 # this is the step that accidently removed the oomycetes!!!!!
   taxAndFunguild <- tmp2
+  sum(grepl("ITSoo", taxAndFunguild$OTUId))
 
   # delete OTUs from taxAndFunguild if not found in comm.otu (only found in blanks, mock, or very infrequently)
   tmp <- comm.otu.tmp[, colnames(comm.otu.tmp) %in% taxAndFunguild$OTUId]
   dim(comm.otu.tmp); dim(tmp) # gets rid of more than 700 OTUs
   comm.otu.tmp <- tmp
+  sum(grepl("ITSoo", colnames(comm.otu.tmp)))
   
   # reorder taxAndFunguild to make OTU table
   o<-match(colnames(comm.otu.tmp), taxAndFunguild$OTUId)
@@ -262,6 +267,8 @@ load_TaxAndFunguild <- function(comm.otu.tmp){
                               OTUId_simp, species)) %>%
     select(-OTUId_simp) -> o.taxAndFunguild
   
+  sum(grepl("ITSoo", o.taxAndFunguild$OTUId))
+  
   return(o.taxAndFunguild)
 }
 
@@ -303,10 +310,15 @@ load_MicrobeCollection <- function(stemSamples){
   # OTU table
   comm.otu <- load_matotu()
   dim(comm.otu) # 3795 OTUs, includes oomycetes
+  sum(grepl("ITSoo", colnames(comm.otu)))
   
   # taxon table
   taxAndFunguild <- load_TaxAndFunguild(comm.otu)
   dim(taxAndFunguild) # 3021 OTUs because removed OTUs with suspect coverage, non-fungal?
+  
+  sum(grepl("ITSoo", taxAndFunguild$OTUId))
+  taxAndFunguild %>%
+    filter(kingdom == "Protist")
   
   # cleaning
   comm.otu <- clean_comm(comm.otu, taxAndFunguild) # need to also remove these OTUs from the OTU table
