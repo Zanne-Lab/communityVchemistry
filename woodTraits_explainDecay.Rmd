@@ -661,13 +661,9 @@ traits.code
 names(plots_explainDecay.list$traits.code)
 
 ## water
-pdf(file = "output/unknown/traits-code_explainDecay_water.pdf")
-plots_explainDecay.list$traits.code$plots.water[[1]]
-dev.off()
-
-### ca
-pdf(file = "output/unknown/traits-code_explainDecay_ca.pdf")
-plots_explainDecay.list$traits.code$plots.ca[[1]]
+pdf(file = "output/unknown/traits-code_explainDecay_waterCa.pdf")
+grid.arrange(plots_explainDecay.list$traits.code$plots.water[[1]] + guides(color = F, fill = F),
+             plots_explainDecay.list$traits.code$plots.ca[[1]] + guides(color = F, fill = F))
 dev.off()
 
 ## size

@@ -15,9 +15,10 @@ PullLmCoefs<-function(mod.list, respvars){
     colnames(df)<-c("term","est","se","t.value","pval")
     return(df)
   })
+  names(coefs.list) <- respvars
   coefs.df <- list_to_df(coefs.list)
   coefs.df %>%
-    rename('respvar'='source') -> coefs.df
+    dplyr::rename('respvar'='source') -> coefs.df
   #add pval stars
   coefs.df$stars<-""
   coefs.df[coefs.df$pval < 0.05, "stars"]<-"*"
@@ -32,6 +33,8 @@ PullLmCoefs<-function(mod.list, respvars){
 }
 
 PullLmFitStats<-function(mod.list, respvars){
+  
+  
   
   # extract summary table from model object
   sum.list<-lapply(mod.list, summary)

@@ -79,7 +79,7 @@ Check for analytical reps that are way different
 ```{r}
   
   #Look for analytical reps that are way different
-  cfract %>%
+cfract %>%
     mutate(rep = paste0("rep",rep(c(1,2), times = num.out))) %>%
     select(codeStem, rep, perc.Total.lignin, Arabinose, Rhamnose, Galactose, Glucose, Xylose, Mannose, Total) %>%
     gather(key = "type", value = "value", -c(codeStem, rep)) %>%
@@ -99,7 +99,7 @@ Go back and investigate the JASC/Arabinose and ACPA/Xylose outliers.
 Average the analytical reps
 ```{r}
   # average the 2 analytical reps
-  num.out <- length(unique(cfract$labID))/2
+num.out <- length(unique(cfract$labID))/2
   cfract %>%
     mutate(rep = paste0("rep",rep(c(1,2), times = num.out))) %>%
     select(codeStem, rep, perc.Total.lignin, Arabinose, Rhamnose, Galactose, Glucose, Xylose, Mannose, Total) %>%
@@ -238,7 +238,7 @@ pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass r
 pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
 
 #merge with trait data
-trait.data.w.sel %>%
+trait.data.w %>%
   left_join(pmr_byStem) -> pmr.trait.data
 
 ```
@@ -247,7 +247,8 @@ Remember there are 34 codeStems/observations.
 Set up models
 ```{r}
 orig.x.vars <- c("Ca","Fe","K","Mn","N","P","Zn","waterperc")
-cfract.x.vars <- c("Arabinose","Galactose","Mannose","perc.Total.lignin","Rhamnose")
+
+cfract.x.vars <- c("Arabinose","Galactose","Mannose","perc.Total.lignin","Rhamnose","Glucose", "Xylose")
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
 
 pmr.trait.data %>%
@@ -255,6 +256,7 @@ pmr.trait.data %>%
 
 rhs.orig <- paste(orig.x.vars, collapse = " + ")
 rhs.plusC <- paste(c(orig.x.vars, cfract.x.vars), collapse = " + ")
+rhs.Conly <- paste(c(cfract.x.vars), collapse = " + ")
 ```
 
 (a) Original traits: "Ca","Fe","K","Mn","N","P","Zn","waterperc" predict percent mass remaining (PMR) at each time point
@@ -390,6 +392,7 @@ rhs.mat <- pmr.trait.data[,colnames(pmr.trait.data) %in% c(orig.x.vars, cfract.x
 rhs.mat.s <- scale(rhs.mat)
 
 # set up all the models
+stem.respVars
 mod.full.list <- lapply(stem.respVars, function(x) {
   result <- ModelFit_fxn(y = x, y.data = y.mat,
                          rhs = rhs.plusC, rhs.data = rhs.mat.s)
@@ -405,13 +408,15 @@ mod.select.list<-lapply(mod.full.list, function(x) {
 
 #pull coefs and r2s
 sum.list<-lapply(mod.select.list, summary)
-coefs.df<-PullLmCoefs(sum.list, unlist(stem.respVars))
-fitstat.df<-PullLmFitStats(sum.list, unlist(stem.respVars))
+coefs.df<-PullLmCoefs(mod.select.list, unlist(stem.respVars))
+fitstat.df<-PullLmFitStats(mod.select.list, unlist(stem.respVars))
+
 fitstat.df %>%
   gather(key = "respvar", value = "value", -c(term)) %>%
   filter(term == "r.squared") %>%
   select(-term) %>%
   rename('r.squared'=value) -> r2.df
+r2.df
 coefs.df %>%
   left_join(r2.df) -> coefs.df
 
@@ -503,6 +508,71 @@ p <- ggplot(scrs) +
 p
 ggsave(p, filename = "output/stem_pmr_traitord_withCfract.pdf")
 
+```
+
+(c) Only C fractions
+```{r}
+rhs.Conly
+rhs.mat <- pmr.trait.data[,colnames(pmr.trait.data) %in% c(cfract.x.vars)]
+rhs.mat.s <- scale(rhs.mat)
+
+# set up all the models
+stem.respVars
+mod.full.list <- lapply(stem.respVars, function(x) {
+  result <- ModelFit_fxn(y = x, y.data = y.mat,
+                         rhs = rhs.Conly, rhs.data = rhs.mat.s)
+  return(result)
+})
+
+#do stepwise model selection
+mod.select.list<-lapply(mod.full.list, function(x) {
+  x.updated<-update(x, . ~ ., data = model.frame(x))
+  mod.select<-step(x.updated, direction="backward")
+  return(mod.select)
+  })
+
+#pull coefs and r2s
+sum.list<-lapply(mod.select.list, summary)
+coefs.df<-PullLmCoefs(mod.select.list, unlist(stem.respVars))
+fitstat.df<-PullLmFitStats(mod.select.list, unlist(stem.respVars))
+
+fitstat.df %>%
+  gather(key = "respvar", value = "value", -c(term)) %>%
+  filter(term == "r.squared") %>%
+  select(-term) %>%
+  rename('r.squared'=value) -> r2.df
+r2.df
+coefs.df %>%
+  left_join(r2.df) -> coefs.df
+
+# which traits were included in the best models?
+coefs.df %>%
+  filter(term != "(Intercept)") -> tmp
+p.stem <- ggplot(tmp, aes(x = respvar, y = term, fill = r.squared)) +
+  geom_tile(color = "black")
+p.stem
+
+# what direction are the associations?
+p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.stem
+
+
+p.stem <- ggplot(tmp, aes(x = est, y = term, color = stars)) +
+  geom_point() +
+  geom_errorbarh(aes(xmin = est - se, xmax = est + se)) +
+  facet_grid(~respvar, scales = "free_x") +
+  geom_vline(xintercept = 0, linetype = 2) +
+  scale_color_manual(values = c("gray","black","blue","red")) +
+  ylab("Predictor variable") +
+  xlab("Coef. estimate (+/- SE)")
+p.stem
 ```
 
 

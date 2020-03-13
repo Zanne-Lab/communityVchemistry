@@ -149,15 +149,33 @@ Is this because there is an underlying signature of wood traits on the initial m
 ```{r, message=FALSE, results = F}
 resids_explainDecay.list$traits.code
 
+
 cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, 
                                                              code.respVars, 
                                                              traitResiduals.code = resids_explainDecay.list$traits.code,
                                                              use.cache = T, save.cache = T)
 cvfit.results.code$prettyTabs
+cvfit.results.code
 
 models_explainDecay.list[['comm-decayResidtraits.code']] <- cvfit.results.code$prettyTabs
 
 ```
+
+## *Hyp (species+size-level)* After accounting for variation in decay due to C fractions, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
+```{r, message=FALSE, results = F}
+resids_explainDecay.list$cfract.code
+
+cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, 
+                                                             code.respVars, 
+                                                             traitResiduals.code = resids_explainDecay.list$cfract.code,
+                                                             use.cache = T, save.cache = T)
+cvfit.results.code$prettyTabs
+cvfit.results.code
+
+models_explainDecay.list[['comm-decayResidtraits.code']] <- cvfit.results.code$prettyTabs
+
+```
+
 
 Community data doesn't improve our understanding of decay rates (k, t70) or variation in decay rate (ne.r2) beyond what is known from the trait data.
 
@@ -329,25 +347,32 @@ wapls.df %>%
   left_join(traits.stem) %>%
   select(codeStem, wapls, waterperc) %>%
   left_join(pmr_byStem) %>%
-  select(codeStem, wapls, waterperc, time37) -> df
+  select(codeStem, size, wapls, waterperc, time37) -> df
   
-p1 <- ggplot(df, aes(x = wapls, y = time37)) +
+p1 <- ggplot(df, aes(x = wapls, y = time37, color = size)) +
   geom_point() +
   ylab("Percent mass remaining after 3 yrs") + 
   xlab("Endophyte Component 1") +
-  theme_classic()
-
-p2 <- ggplot(df, aes(x = wapls, y = waterperc)) +
+  theme_classic() +
+  scale_color_manual(values = c("darkgray","black")) +
+  guides(color = F)
+p1
+p2 <- ggplot(df, aes(x = wapls, y = waterperc, color = size)) +
   geom_point() +
   ylab("Wood water (%)") + 
   xlab("Endophyte Component 1") +
-  theme_classic()
-
-p3 <- ggplot(df, aes(x = waterperc, y = time37)) +
+  theme_classic() +
+  scale_color_manual(values = c("darkgray","black")) +
+  guides(color = F)
+p2
+p3 <- ggplot(df, aes(x = waterperc, y = time37, color = size)) +
   geom_point() +
   ylab("Percent mass remaining after 3 yrs") + 
   xlab("Wood water (%)") +
-  theme_classic()
+  theme_classic()+
+  scale_color_manual(values = c("darkgray","black")) +
+  guides(color = F)
+p3
 
 pdf(file = "output/figures/maintext/water-comm-pmr37.pdf")
 grid.arrange(p1, p3, p2, ncol = 2)
