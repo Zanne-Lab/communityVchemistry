@@ -109,11 +109,13 @@ traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 # main figures and tables
 
 #Fig 3
+# THIS DOESNT WORK
 makefig__traits_explain_decayParams(decayfits, traits.code, 
                                     code.respVars, use.cache = T) # output/figures/maintext/traits_explain_decayparams.pdf
 # remove color for R2 and just report that in the figure legend. make this into a horizontal bar plot to show the coef magnitudes
 
 #Fig 4
+# THIS DOESNT WORK
 makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem, 
                             stem.respVars, use.cache = T) # output/figures/maintext/traits_explain_pmr.pdf
 # see updates above
@@ -125,6 +127,7 @@ makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem,
 makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) # output/figures/supplementary/variation_densityNbarkthick.pdf
 
 #Table S1
+# THIS DOESNT WORK
 cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem, stem.respVars) 
 write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv")
 
@@ -134,6 +137,7 @@ write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv"
 - script: *endoComp_explainDecay.Rmd*
 - summary: No. There is a relationship between composition and percent mass remaining after 37 months, but this is likely driven by the role of water content on the microbial community and decay.
 ```{r load_microbes}
+# THIS DOESNT WORK
 
 #---------------------------#
 #data
@@ -199,7 +203,7 @@ write.csv(commTab, file="output/tables/supplementary/commcompsummary_traitresid.
     - Higher saprotroph richness leads to faster decay than would be expected based on wood traits alone
     - Higher saprotroph richness leads to trajectories that are less s-shaped than based on wood traits alone
 ```{r load_microbesdiv}
-
+# THIS DOESNT WORK
 #---------------------------#
 # main figures and tables
 

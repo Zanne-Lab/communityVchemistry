@@ -26,6 +26,7 @@ load_stemSamples <- function(){
 
 }
 
+# used inside of load_matotu()
 add_oomycetes <- function(fung.otu){
 
   # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
@@ -106,10 +107,8 @@ load_matotu <- function(){
   
 }
 
-#copied from fungal_wood_endophtyes repo
-load_TaxAndFunguild <- function(comm.otu.tmp){
-  
-  comm.otu.tmp <- comm.otu
+#modified from fungal_wood_endophtyes repo
+load_TaxAndFunguild <- function(){
   
   # load fungal OTU info
   funguild <-read.delim('data/sequencing_T0/DP16_funguild.txt', stringsAsFactors = F)
@@ -120,9 +119,34 @@ load_TaxAndFunguild <- function(comm.otu.tmp){
   tax %>%
     left_join(funguild) -> taxAndFunguild
   
+  return(taxAndFunguild)
+}
+  
+clean_TaxTab <- function(taxAndFunguild){
+  
+  # select cols
+  taxAndFunguild %>%
+    select(OTUId, taxonomy, kingdom, phylum, class, order, family, genus, species, 
+           Trophic.Mode, Guild, Confidence.Ranking) -> tmp
+  
+  # only use FUNGuild info with confidence ranking of Probable or Highly Probable
+  tmp %>%
+    mutate(Trophic.Mode = ifelse(Trophic.Mode %in% c("-","NULL"), "unclassified", Trophic.Mode)) %>%
+    mutate(Guild = ifelse(Guild %in% c("-","NULL"), "unclassified", Guild)) %>%
+    mutate(Trophic.Mode = ifelse(Confidence.Ranking %in% c("Probable","Highly Probable"), Trophic.Mode, "unclassified")) %>%
+    mutate(Guild = ifelse(Confidence.Ranking %in% c("Probable","Highly Probable"), Guild, "unclassified")) -> tmp
+  #unique(tmp$Trophic.Mode)
+  #unique(tmp$Guild)
+  
+  # is there an issue where a FUNGuild assignment hasn't been applied across everything in that genus?
+  tmp %>%
+    group_by(genus) %>%
+    summarize(uniq.TM = paste(unique(Trophic.Mode), collapse = "_"),
+              n.uniq.TM = length(unique(Trophic.Mode))) %>%
+    filter(n.uniq.TM > 1) # huh. there are a lot of these for some reason.
   # apply trophic assignment for 1 genus to all
+  taxAndFunguild <- tmp
   GENUS <- unique(taxAndFunguild$genus)
-  #i<-62
   for(i in 1:length(GENUS)){
     
     # isolate everything with the same genus
@@ -155,130 +179,67 @@ load_TaxAndFunguild <- function(comm.otu.tmp){
     }
   }
   
-  # currently there is not oomycete information in the taxAndFunguild table
-  sum(grepl("ITSoo", taxAndFunguild$OTUId))
-  
-  # add oomycete OTUs as rows
-  ooOTUs <- colnames(comm.otu.tmp)[grepl("ITSoo", colnames(comm.otu.tmp))]
-  oo.df<-data.frame(OTUId=ooOTUs, kingdom="Protist")
-  taxAndFunguild<-bind_rows(taxAndFunguild, oo.df)
-  sum(grepl("ITSoo", taxAndFunguild$OTUId))
-  
-  # identify OTUs from comm.otu not found in taxAndFunguild (probably plant DNA)
+  # check that there are no OTUs that are unclassified to genus but mysteriously have a FUNGuild assignment
   taxAndFunguild %>%
-    filter(is.na(coverage)) # the oomycetes don't have coverage data; everything else should
+    filter(is.na(genus)) %>%
+    filter(Trophic.Mode != "unclassified")
+  # why were these matched in FUNGuild?  I'm going to remove the FUNGuild designation
+  taxAndFunguild[is.na(taxAndFunguild$genus), c("Trophic.Mode","Guild")] <- "unclassified"
+  
+  # clean taxonomy data (replace NAs with "unclassified")
   taxAndFunguild %>%
-    filter(kingdom != "Protist") %>%
-    filter(!OTUId %in% colnames(comm.otu.tmp)) %>%
-    select(OTUId, kingdom) -> nonfungalOTUs.df
-  taxAndFunguild %>%
-    filter(!OTUId %in% nonfungalOTUs.df$OTUId) -> tmp
-  # also delete OTUs with suspect coverage (probably nonfungal)
-  tmp %>%
-    filter(coverage > 0.9 | kingdom == "Protist") -> tmp2 # this is the step that accidently removed the oomycetes!!!!!
-  taxAndFunguild <- tmp2
-  sum(grepl("ITSoo", taxAndFunguild$OTUId))
-
-  # delete OTUs from taxAndFunguild if not found in comm.otu (only found in blanks, mock, or very infrequently)
-  tmp <- comm.otu.tmp[, colnames(comm.otu.tmp) %in% taxAndFunguild$OTUId]
-  dim(comm.otu.tmp); dim(tmp) # gets rid of more than 700 OTUs
-  comm.otu.tmp <- tmp
-  sum(grepl("ITSoo", colnames(comm.otu.tmp)))
-  
-  # reorder taxAndFunguild to make OTU table
-  o<-match(colnames(comm.otu.tmp), taxAndFunguild$OTUId)
-  o.taxAndFunguild<-taxAndFunguild[o,]
-  sum(o.taxAndFunguild$OTUId != colnames(comm.otu.tmp)) #this need to be 0
-  
-  # only use FUNGuild info with confidence ranking of Probable or Highly Probable
-  criteria <- !o.taxAndFunguild$Confidence.Ranking %in% c("Probable","Highly Probable")
-  o.taxAndFunguild[criteria, c("Trophic.Mode","Guild")] <-"unclassified"
-  
-  # select cols 
-  o.taxAndFunguild %>%
-    select(OTUId, taxonomy, kingdom, phylum, family, genus, species, 
-           Trophic.Mode, Guild) -> o.taxAndFunguild
-  
-  # o.taxAndFunguild %>%
-  #   filter(genus == "unclassified") %>%
-  #   filter(Trophic.Mode != "unclassified")
-  
-  #clean Trophic.Mode
-  #unique(o.taxAndFunguild$Trophic.Mode)
-  
-  #clean Guild
-  unique(o.taxAndFunguild$Guild)
-  o.taxAndFunguild[o.taxAndFunguild$Guild=="NULL","Guild"]<-"unclassified"
+    mutate(phylum = ifelse(is.na(phylum), "unclassified", phylum)) %>%
+    mutate(family = ifelse(is.na(class), "unclassified", class)) %>%
+    mutate(family = ifelse(is.na(order), "unclassified", order)) %>%
+    mutate(family = ifelse(is.na(family), "unclassified", family)) %>%
+    mutate(genus = ifelse(is.na(genus), "unclassified", genus)) %>%
+    mutate(species = ifelse(is.na(species), "unclassified", species)) -> taxAndFunguild
   
   #clean oomycetes
-  o.taxAndFunguild[o.taxAndFunguild$kingdom=="Protist", c("taxonomy","phylum","family","genus")]<-"unclassified"
-  o.taxAndFunguild[o.taxAndFunguild$kingdom=="Protist", c("species")]<-"unclassified_Protist"
-  
-  #clean taxa
-  o.taxAndFunguild %>%
-    filter(is.na(genus)) %>%
-    filter(Trophic.Mode != "unclassified") -> tmp
-  dim(tmp) # why were these matched in FUNGuild?  I'm going to remove the FUNGuild designation
-  o.taxAndFunguild[is.na(o.taxAndFunguild$phylum), 'phylum'] <- 'unclassified'
-  o.taxAndFunguild[is.na(o.taxAndFunguild$family), 'family'] <- 'unclassified'
-  o.taxAndFunguild[is.na(o.taxAndFunguild$genus), 'genus'] <- 'unclassified'
-  o.taxAndFunguild[is.na(o.taxAndFunguild$species), 'species'] <- 'unclassified'
-  criteria <- o.taxAndFunguild$genus == "unclassified"
-  o.taxAndFunguild[criteria, c("Trophic.Mode","Guild")] <- "unclassified"
+  taxAndFunguild %>%
+    filter(kingdom == "Protist")
+  taxAndFunguild[taxAndFunguild$kingdom == "Protist", c("taxonomy","species")] <- "unclassified_Protist"
   
   #clean species
   #species column should have [genus]_sp if the genus is known
-  criteria <- o.taxAndFunguild$genus != "unclassified" & o.taxAndFunguild$species == "unclassified"
-  o.taxAndFunguild %>%
+  taxAndFunguild %>%
     mutate(species_fake = paste(genus, "sp", sep = "_")) %>%
     mutate(species_new = ifelse(genus != "unclassified" & species == "unclassified", 
                                 species_fake, species)) %>%
     select(-species_fake) %>%
     select(-species) %>%
-    rename('species'='species_new') -> o.taxAndFunguild
+    rename('species'='species_new') -> taxAndFunguild
   
   #fix weird characters in 'Montagnula_aloës'
-  o.taxAndFunguild[grep('Montagnula', o.taxAndFunguild$species), "species"] <- "Montagnula_aloes"
+  taxAndFunguild[grep('Montagnula', taxAndFunguild$species), "species"] <- "Montagnula_aloes"
   
   #add numbers to repeated names in species to indicate that they are different OTUs
-  o.taxAndFunguild %>%
+  taxAndFunguild %>%
     filter(grepl("_sp", species)) %>%
     group_by(species) %>%
     summarize(n = length(species)) %>%
     filter(n > 1) -> spfake_indx
   spfake_indx
-  
   for(i in 1:dim(spfake_indx)[1]){
     curr.sp <- as.character(spfake_indx[i,"species"])
-    curr.sp
-    sp.vec <- o.taxAndFunguild[o.taxAndFunguild$species == curr.sp, "species"]
-    sp.vec
+    sp.vec <- taxAndFunguild[taxAndFunguild$species == curr.sp, "species"]
     new.sp.vec <- paste(sp.vec, 1:length(sp.vec), sep="")
-    new.sp.vec
-    o.taxAndFunguild[o.taxAndFunguild$species == curr.sp, "species"] <- new.sp.vec
+    taxAndFunguild[taxAndFunguild$species == curr.sp, "species"] <- new.sp.vec
   }
   #simplify the OTUId and create an annotated OTUId column using species
-  o.taxAndFunguild %>%
+  taxAndFunguild %>%
     separate(OTUId, into=c("drop","drop1","OTUId_num"), remove = FALSE) %>%
     select(-drop) %>% select(-drop1) %>%
     mutate(OTUId_simp = paste("OTU", OTUId_num, sep="_")) %>%
     select(-OTUId_num) %>%
     mutate(OTUId_ann = ifelse(species == "unclassified",
                               OTUId_simp, species)) %>%
-    select(-OTUId_simp) -> o.taxAndFunguild
+    select(-OTUId_simp) -> taxAndFunguild
   
-  sum(grepl("ITSoo", o.taxAndFunguild$OTUId))
+  sum(grepl("ITSoo", taxAndFunguild$OTUId)) # oomycetes are still here
+  dim(taxAndFunguild) # 3301 OTUs
   
-  return(o.taxAndFunguild)
-}
-
-#copied from fungal_wood_endophtyes repo
-clean_comm<-function(comm.otu.tmp, taxAndFunguild){
-  
-  # delete OTUs from comm.otu not found in taxAndFunguild
-  comm.otu <- comm.otu.tmp[, colnames(comm.otu.tmp) %in% taxAndFunguild$OTUId]
-  
-  return(comm.otu)
+  return(taxAndFunguild)
 }
 
 #create sequence sample meta data table
@@ -305,24 +266,46 @@ load_seqSamples<-function(mat.otu, stemSamples){
   return(seqSamples)
 }
 
+#now works! and the oomycetes are in there!
 load_MicrobeCollection <- function(stemSamples){
   
   # OTU table
   comm.otu <- load_matotu()
   dim(comm.otu) # 3795 OTUs, includes oomycetes
-  sum(grepl("ITSoo", colnames(comm.otu)))
+  sum(grepl("ITSoo", colnames(comm.otu))) # 13 oomycete OTUs
   
   # taxon table
-  taxAndFunguild <- load_TaxAndFunguild(comm.otu)
-  dim(taxAndFunguild) # 3021 OTUs because removed OTUs with suspect coverage, non-fungal?
+  taxAndFunguild <- load_TaxAndFunguild()
+  dim(taxAndFunguild) # info for 5284 OTUs
   
+  # add oomycete info to the taxon table
+  sum(grepl("ITSoo", taxAndFunguild$OTUId)) # currently there is not oomycete information in the taxAndFunguild table
+  # add oomycete OTUs as rows
+  ooOTUs <- colnames(comm.otu)[grepl("ITSoo", colnames(comm.otu))]
+  oo.df <- data.frame(OTUId=ooOTUs, kingdom="Protist")
+  taxAndFunguild <- bind_rows(taxAndFunguild, oo.df) #warning is ok
   sum(grepl("ITSoo", taxAndFunguild$OTUId))
-  taxAndFunguild %>%
-    filter(kingdom == "Protist")
   
-  # cleaning
-  comm.otu <- clean_comm(comm.otu, taxAndFunguild) # need to also remove these OTUs from the OTU table
-  dim(comm.otu) # good. also 3021 OTUs
+  # identify OTUs in community matrix that are not found in the taxon table -- remove these.. likely plant OTUs
+  sum(colnames(comm.otu) %in% taxAndFunguild$OTUId) #3301 OTUs shared
+  sum(!colnames(comm.otu) %in% taxAndFunguild$OTUId) #494 OTUs in community matrix that are not in taxon matrix
+  rm.OTUs <- colnames(comm.otu)[!colnames(comm.otu) %in% taxAndFunguild$OTUId]
+  rm.OTUs # remove these 494 OTUs since they are probably non-fungal and non-oomycete
+  comm.otu <- comm.otu[,!colnames(comm.otu) %in% rm.OTUs]
+  dim(comm.otu) # 3301 OTUs, includes oomycetes
+  sum(grepl("ITSoo", colnames(comm.otu))) # 13 oomycete OTUs
+  
+  # remove OTUs from the taxon table that are not relevant (i.e. only found in blanks, mock, or very infrequently)
+  sum(!taxAndFunguild$OTUId %in% colnames(comm.otu)) # 1996 OTUs in taxon matrix that are not in the community matrix
+  rm.OTUs <- taxAndFunguild[!taxAndFunguild$OTUId %in% colnames(comm.otu),"OTUId"]
+  rm.OTUs # remove these 1996 OTUs from the taxon table since they are no longer in the cleaned community OTU matrix
+  taxAndFunguild <- taxAndFunguild[!taxAndFunguild$OTUId %in% rm.OTUs,]
+  dim(taxAndFunguild) # 3301 OTUs, includes oomycetes
+  sum(grepl("ITSoo", taxAndFunguild$OTUId)) # 13 oomycete OTUs
+  
+  # clean the taxon table
+  taxAndFunguild <- clean_TaxTab(taxAndFunguild = taxAndFunguild)
+  dim(taxAndFunguild)
   
   # sequencing sample look up table
   seqSamples <- load_seqSamples(comm.otu, stemSamples) #create sequence sample meta data table

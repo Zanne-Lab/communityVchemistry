@@ -60,6 +60,11 @@ code.respVars <- list("w.t50","alpha","beta","w.r2") # weibull params: alpha = s
 
 # microbes
 microb.data <- load_MicrobeCollection(stemSamples)
+
+
+
+
+
 taxAndFunguild <- microb.data$taxAndFunguild
 comm.otu <- microb.data$comm.otu
 seqSamples <- microb.data$seqSamples
