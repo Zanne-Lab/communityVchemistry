@@ -277,7 +277,6 @@ LoadHarvestFiles<-function(){
 Calc_massRemaining<-function(initial_mass, harvest_mass){
   
   mass.data<-bind_rows(initial_mass, harvest_mass)
-  
   mass.data %>%
     filter(time==0) %>%
     rename(timeZeroDensity=density) %>%
@@ -327,13 +326,13 @@ Calc_massRemaining<-function(initial_mass, harvest_mass){
     pause[pause$unique == UNIQ[i],"codeStem"] <- fill$codeStem
   }
   sum(is.na(pause$codeStem)) # if 0, then all samples have an assigned codeStem
-  return_df <- pause
+  return_df <- pause 
   
   return(return_df)
 }
 
 # average pmr for each stem and timepoint
-AvgPMR_byStem<-function(plotting_df){
+AvgPMR_byStem<-function(plotting_df, long.form){
   
   #average pmr by codeStem and time
   plotting_df %>%
@@ -357,8 +356,23 @@ AvgPMR_byStem<-function(plotting_df){
            'time25'=`25`,
            'time37'=`37`, 
            'time59'=`59`) -> pmr.byStem.df.w
+  
+  # make long
+  if(long.form == TRUE){
+    #make a long version of pmr.byStem.df.w
+    pmr.byStem.df.w %>%
+      gather(key="time",value="mean.pmr", 2:7, na.rm=TRUE) %>%
+      separate(time, into=c("drop","timeNum"), sep="time") %>%
+      mutate(timeNum=as.numeric(timeNum)) %>%
+      mutate(species=tolower(code)) %>%
+      mutate(size = case_when(code == species ~ "small", 
+                              code != species ~ "large")) %>%
+      select(-drop) -> pmr.byStem.df
+  }else{
+    pmr.byStem.df <- pmr.byStem.df.w
+  }
 
-  return(pmr.byStem.df.w)
+  return(pmr.byStem.df)
   
 }
 
@@ -407,7 +421,7 @@ time_to_prop_mass_remaining <- function(x, threshold.mass = 0.5){
   mod <- get(x$model)
   time.vec <- seq(0, max(x$time), 1e-04)
   mass.predict <- do.call(mod, c(list(time.vec), as.list(x$optimFit$par)))
-  
+
   if (all(mass.predict > threshold.mass)) {
     warning("Not predicted to reach threshold mass within the time range.")
     time.vec <- seq(0, max(x$time)+10, 1e-04)
@@ -419,7 +433,7 @@ time_to_prop_mass_remaining <- function(x, threshold.mass = 0.5){
 
 fit_all_curves<-function(df_in, stemSamples){
   
-  df_in <- pmr  #testing stuff
+  #df_in <- pmr  #testing stuff
   
   #negative expon fit
   ne_fits <- lapply(split(df_in, factor(df_in$code)),function(x){
@@ -452,12 +466,12 @@ fit_all_curves<-function(df_in, stemSamples){
     bootmat<-bootstrap_parameters(x, nboot=500) #1st and 2nd column are param 1 and 2, but what is in the third col?
     #plot(bootmat)
     #plot(bootmat, 2)
-    mean1<-mean(bootmat[,1])
+    mean1.beta<-mean(bootmat[,1])
     ci1<-quantile(bootmat[,1], c(.05, .95))
-    mean2<-mean(bootmat[,2])
+    mean2.alpha<-mean(bootmat[,2])
     ci2<-quantile(bootmat[,2], c(.05, .95))
-    result<-data.frame(mean1, lower1 = ci1[[1]], upper1 = ci1[[2]], 
-                       mean2, lower2 = ci2[[1]], upper2 = ci2[[2]])
+    result<-data.frame(mean1.beta, lower1.beta = ci1[[1]], upper1.beta = ci1[[2]], 
+                       mean2.alpha, lower2.alpha = ci2[[1]], upper2.alpha = ci2[[2]])
     return(result)
   })
   boot.w.df <- list_to_df(boot.w)
@@ -479,16 +493,16 @@ fit_all_curves<-function(df_in, stemSamples){
                    w.t50 = w.t50,
                    w.aic = w.aic,
                    w.r2 = w.r2,
-                   boot.w.df[,c("mean1", "lower1", "upper1", "mean2", "lower2", "upper2")])
+                   boot.w.df[,c("mean1.beta", "lower1.beta", "upper1.beta", "mean2.alpha", "lower2.alpha", "upper2.alpha")])
   spdf$code<-rownames(spdf)
   
   #annotate df with species, size
   stemSamples %>%
-    select(code, species, size) -> indx
+    select(Binomial, code, species, size) -> indx
   indx <- unique(indx)
   spdf %>%
     left_join(indx) -> spdf
-
+  
   return(spdf)
 }
 
@@ -499,31 +513,31 @@ comparePlot_ne_weibull <- function(decayfits){
   
   p <- ggplot(decayfits, aes(x=t50,y=w.t50, col=size))+
    geom_point()+
-   labs(x="Time to 60% mass loss (negative exponential)",
-        y="Time to 60% mass loss (Weibull)")+
+   labs(x="Time to 50% mass loss (negative exponential)",
+        y="Time to 50% mass loss (Weibull)")+
    geom_abline(slope=1,intercept=0,linetype="dashed") + theme_bw()
 
   return(p)
 
 }
 
-time_to_prop_mass_remaining<-function (x, threshold.mass = 0.5) 
-{
-  if (class(x) != "litfit") {
-    stop("Something went wrong -- litterfitter::steady_state takes a 'litfit' object")
-  }
-  mod <- get(x$model)
-  time.vec <- seq(0, max(x$time), 1e-04)
-  mass.predict <- do.call(mod, c(list(time.vec), as.list(x$optimFit$par)))
-  if (all(mass.predict > threshold.mass)) {
-    print("Warning: not predicted to reach threshold mass within the time range.")
-    time.vec2<-time.vec+2
-    mass.predict2 <- do.call(mod, c(list(time.vec2), as.list(x$optimFit$par)))
-    if (all(mass.predict2 > threshold.mass)) { return(NA) }
-    return(min(time.vec2[mass.predict2 < threshold.mass]))
-  }
-  return(min(time.vec[mass.predict < threshold.mass]))
-}
+# time_to_prop_mass_remaining<-function (x, threshold.mass = 0.5) 
+# {
+#   if (class(x) != "litfit") {
+#     stop("Something went wrong -- litterfitter::steady_state takes a 'litfit' object")
+#   }
+#   mod <- get(x$model)
+#   time.vec <- seq(0, max(x$time), 1e-04)
+#   mass.predict <- do.call(mod, c(list(time.vec), as.list(x$optimFit$par)))
+#   if (all(mass.predict > threshold.mass)) {
+#     print("Warning: not predicted to reach threshold mass within the time range.")
+#     time.vec2<-time.vec+2
+#     mass.predict2 <- do.call(mod, c(list(time.vec2), as.list(x$optimFit$par)))
+#     if (all(mass.predict2 > threshold.mass)) { return(NA) }
+#     return(min(time.vec2[mass.predict2 < threshold.mass]))
+#   }
+#   return(min(time.vec[mass.predict < threshold.mass]))
+# }
 
 
 neg.exp<-litterfitter:::neg.exp

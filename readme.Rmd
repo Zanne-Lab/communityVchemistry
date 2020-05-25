@@ -40,46 +40,9 @@ sourceDir('code')
 ### Main analyses
 
 1. How do wood species and sizes vary in decay?
-- script: *decayPatterns.Rmd*
-- summary: output/decayfits.pdf
-```{r load_massloss}
+- script: *1_decayPatterns.Rmd*
+```{r q1}
 
-#---------------------------#
-#data
-
-# stem mass
-initial_mass <- read_in_initial_mass()
-harvest_mass <- LoadHarvestFiles()
-pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
-pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
-stem.respVars <- list("time7", "time13", "time25", "time37","time59")
-
-# decay fits
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data change; for each species+size
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
-indx <- unique(stemSamples[,c("code","Binomial","size")])
-decayfits %>%
-  left_join(indx) -> decayfits
-code.respVars <- list("k","t50","ne.r2", "alpha","beta","w.t50","w.r2") # weibull params: alpha = shape param, beta = scale param
-
-#---------------------------#
-# main figures and tables
-
-#Fig 1
-makefig__decayfits(decayfits) # output/figures/maintext/decayfits.pdf
-# why are there no error bars for t50?
-
-#Fig 2
-makefig__pmr_byStem(pmr_byStem) # output/figures/maintext/pmr_byStem.pdf
-
-
-#---------------------------#
-# supplementary figures and tables
-
-#Fig S1
-makefig__compare_t50_aic(decayfits) # output/figures/supplementary/compare_t50.pdf
 
 ```
 

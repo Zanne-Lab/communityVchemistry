@@ -1,0 +1,158 @@
+---
+title: "How do wood species and sizes vary in decay?"
+author: "Marissa Lee"
+date: "12/2/2018"
+output: github_document
+---
+```{r, include = F}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+```
+
+Load libraries, functions
+```{r load}
+
+#---------------------------#
+#libraries
+library(tidyverse)
+library(gridExtra)
+library(litterfitter) #fit decay models to timeseries
+
+#---------------------------#
+#fxns
+source('code/helper_fxns.R')
+sourceDir('code')
+# make_figs_decayPatterns.R
+
+```
+
+Load data
+```{r}
+# stems in the study
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+
+# stem mass
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+
+# decay fits
+#decayfits <- fit_all_curves(df_in = pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data changes; for each species+size
+#write_csv(decayfits,"derived_data/decayfits.csv")
+decayfits <- read_csv("derived_data/decayfits.csv")
+
+# weibull params
+# beta = scale param = higher values mean slower decay
+# alpha = scale param = higher values mean more S-shaped
+
+```
+
+Weibull model:
+y = exp(-(x/Beta)^Alpha)
+```{r}
+p <- plot_weibull(pmr, decayfits)
+p
+```
+Beta is the scale paramter -- higher values (more negative) mean slower decay
+Alpha is the shape parameter -- higher values mean more S-shaped
+
+Compare the negative exp. vs weibull models by plotting time to 50% mass remaining (t50) for each species+size.
+*Fig S2* Plot (a) heatmap table of mean t50 and (b) delta AIC for each species+size given neg. exp and weibull model
+```{r}
+# see code/make_figs_decayPatterns.R
+p.a <- makefig__compare_t50_tab(decayfits) 
+p.a
+
+# see code/make_figs_decayPatterns.R
+p.b <- makefig__compare_t50_aic(decayfits) 
+p.b
+
+pdf(file = "output/figures/compare_t50.pdf", width = 6, height = 6)
+grid.arrange(p.a + ggtitle("a"), 
+             p.b + ggtitle("b"))
+dev.off()
+
+```
+
+*Fig 1.* Plot mean decay params (weibull model) for each species + size
+```{r}
+# see code/make_figs_decayPatterns.R
+p.list <- makefig__decayfits(decayfits) 
+names(p.list)
+
+pdf(file = "output/figures/decayfits.pdf", width = 8, height = 8)
+grid.arrange(p.list$p.t50,
+             p.list$p.1beta +
+               theme(axis.line=element_blank(),
+                     axis.text.y=element_blank(),
+                     axis.title.y=element_blank()), 
+             p.list$p.2alpha + 
+               theme(axis.line=element_blank(),
+                     axis.text.y=element_blank(),
+                     axis.title.y=element_blank()),
+             p.list$p.fit + 
+               theme(axis.line=element_blank(),
+                     axis.text.y=element_blank(),
+                     axis.title.y=element_blank()),
+             
+             ncol=4, widths=c(1.5,1,1,1)
+)
+dev.off()
+
+```
+
+*Fig S3.* Plot percent mass remaining (pmr) for each sample over time. Overlay the weibull model fit
+```{r}
+# see code/make_figs_decayPatterns.R
+p <- makefig__pmr_byStem(pmr, decayfits, param.labels = F) 
+p
+ggsave(filename = "output/figures/pmr_byStem.pdf", plot = p, width=6, height=6)
+```
+
+Plot alpha vs beta w/ indication of model fit
+```{r}
+# see code/make_figs_decayPatterns.R
+p <- makefig__scaleVshape(decayfits)
+p
+ggsave(filename = "output/figures/scaleVshape.pdf", plot = p, width=6, height=6)
+
+```
+
+```{r checkmissing}
+#load community data to check for missing samples
+#stemSamples <- load_stemSamples()
+#fung.otu <- load_matotu() 
+#comm.otu <- add_oomycetes(fung.otu) #add the oomycetes
+#seqSamples <- load_seqSamples(comm.otu, stemSamples)
+
+#check for missing data
+#issue 31 -- There are 2 unique codeStem ids that are found in the trait data (xrf sample names) and the sequence data, but not in the stemSamples data (deployment sample names).  
+#These codeStem ids are not found in the percent mass loss data.  
+#Because the main goal is to analyze decay responses, I'm going to continue to leave these codeStems out of the stemSamples dataframe. 
+#Is it possible that stem id numbers got switched? Something to follow-up on.
+
+checkMissing_stems <- function(traits.stem, seqSamples, pmr_byStem){
+  
+  traits.stem %>%
+    filter(!codeStem %in% stemSamples$codeStem) #there are 2 stems that are in the traits df but are missing from the stem lookup table...
+  
+  seqSamples %>%
+    filter(!codeStem %in% stemSamples$codeStem) %>%
+    separate(seq_sampName, into=c("drop","seq.stem"), 4, remove=FALSE) %>%
+    filter(grepl("[1-9]", seq.stem)) -> result #these same 2 stems are in the sequence samples but are missing from the stem lookup table...
+  result
+  
+  pmr_byStem %>%
+    filter(!codeStem %in% stemSamples$codeStem) # no stem samples are missing from the decay data
+  
+  return(result)
+}
+#checkMissing_stems(traits.stem, seqSamples, pmr_byStem)
+
+#issue #31 -- There are 2 unique codeStem ids that are found in the trait data (xrf sample names) and the sequence data, but not in the stemSamples data (deployment sample names).  These codeStem ids are not found in the percent mass loss data.  Because the main goal is to analyze decay responses, I'm going to continue to leave these codeStems out of the stemSamples dataframe. Is it possible that stem id numbers got switched? Something to follow-up on.
+
+```
+
+
+
+
