@@ -21,14 +21,7 @@ library(sjstats) #provides function eta_sq() to extract r2 for each predictor in
 library(grid) #plotting
 library(gridExtra) # plotting
 library(GGally) # bivariate plots
-#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
-library(litterfitter) #fit decay models to timeseries
 library(lmtest) # for coxtest()
-
-#library(vegan) #diversity metrics
-#library(rioja) #WA-PLS
-#library(knitr) #r markdown
-#library(magrittr) #data formatting
 
 
 #---------------------------#
@@ -40,25 +33,19 @@ sourceDir('code')
 
 Load decay data and wood trait data
 ```{r loaddata}
-#---------------------------#
-#data
 
-# stem mass
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 initial_mass <- read_in_initial_mass()
 harvest_mass <- LoadHarvestFiles()
 pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
-pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
-
-# decay fits
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data change; for each species+size
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
-indx <- unique(stemSamples[,c("code","Binomial","size")])
-decayfits %>%
-  left_join(indx) -> decayfits
-code.respVars <- list("w.t50","alpha","beta","w.r2") # weibull params: alpha = shape param, beta = scale param
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = scale param = higher values mean more S-shaped
 
 # wood traits
 traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
@@ -67,7 +54,6 @@ traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averag
 traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 #trait.sds_byStem(stemSamples) # within codeStem variation
 #trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
-
 trait.order <- traitcol.order()
 traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
 traitVars.stem <- trait.order$stem.trait.cols
@@ -134,15 +120,15 @@ resids_explainDecay.list[['traits.code']] <- result.traitsDecay$residuals
 fitstats_explainDecay.list[['traits.code']] <- result.traitsDecay$fitstats
 ```
 
-- Model fits: The best fitting models used traits to explain k, t50, beta, w.t50 (all with R2 > 0.70). The worst fitting model used traits to explain ne.r2 with R2 = 0.46.
+- Model fits: The best fitting models used traits to explain w.t50 and beta (scale), both with R2 > 0.70.
 
-- Water content was the most influential trait on time to 50% mass loss; more water was associated with short wait times. The role of water mainly appeared to influence the shape parameter; more water led to less s-shaped decay trajectories.
+- Water content was the most influential trait on time to 50% mass loss; more water was associated with short wait times (fast decay). The role of water mainly appeared to influence the scale parameter; more water led to lower scale parameter values (faster decay)
 ```{r}
 result.traitsDecay$preddat$waterperc_s %>%
   filter(respvar == c("w.t50","beta")) %>%
   mutate(respvar = factor(respvar, levels = c("w.t50","beta"), 
                          labels = c("Years to 50% mass loss",
-                                    "Shape param."))) -> tmp1
+                                    "Scale param."))) -> tmp1
 
 p <- ggplot(tmp1, aes(x = waterperc, y = .fitted, fill = size)) +
   geom_line(aes(color = size)) +
@@ -155,17 +141,96 @@ p <- ggplot(tmp1, aes(x = waterperc, y = .fitted, fill = size)) +
   facet_wrap(~respvar, scales = "free_y")
 p 
 
-
 plots.water <- list(p)
 ```
 
-- Ca concentration had a large influence on the shape parameter; more Ca led to more S-shaped decay trajectories. 
+Plot the effect of waterperc on the scale parameter
+```{r}
+# result.traitsDecay$preddat$waterperc_s %>%
+#   filter(respvar == c("beta")) %>%
+#   dplyr::rename('beta'='respval') %>%
+#   select(beta, size, waterperc, .fitted) -> plot.df
+# plot.df$code <- result.traitsDecay$data$code
+# plot.df %>%
+#   left_join(pmr) -> plot.df
+# quant <- quantile(plot.df$waterperc, probs = c(.25,.5,.75))
+# quant
+# plot.df %>%
+#   mutate(level = ifelse(waterperc <= quant[[1]], "0-25th", 
+#                                   ifelse(waterperc > quant[[1]] & waterperc <= quant[[2]], "25-50th",
+#                                          ifelse(waterperc > quant[[2]] & waterperc <= quant[[3]], "50-75th",
+#                                                 ifelse(waterperc > quant[[3]], "75-100th", NA))))) -> plot.df
+# # fit weibull model for each size and level
+# weibull.fxn <- function(x, beta, alpha){
+#     y = exp(-(x/beta)^alpha)
+#     return(y)
+# }
+# recalc.fits <- function(data){
+#   
+#   max.time <- 6
+#   LEVELs <- unique(data[,"level"])
+#   
+#   # small
+#   data %>%
+#     filter(size == "small") -> data.s
+#   param.list <- df.list <- list()
+#   for(i in 1:length(LEVELs)){
+#     data.s %>%
+#       filter(level == LEVELs[i]) -> tmp
+#     mod <- fit_litter(time = tmp$time/12, mass.remaining = tmp$pmr, model = "weibull")
+#     param.list[[i]] <- data.frame(beta = mod$optimFit$par[1], alpha = mod$optimFit$par[2])
+#     time.vec <- seq(0, max.time, 1e-01)
+#     y.pred <- predict(mod, time.vec)
+#     df.list[[i]] <- data.frame(time.vec, y.pred)
+#   }
+#   names(param.list) <- names(df.list) <- LEVELs
+#   df <- list_to_df(df.list)
+#   df %>%
+#     dplyr::rename('level'='source') %>%
+#     mutate(size = "small") -> df.s
+#   
+#   # large
+#   data %>%
+#     filter(size == "large") -> data.l
+#   param.list <- df.list <- list()
+#   for(i in 1:length(LEVELs)){
+#     data.l %>%
+#       filter(level == LEVELs[i]) -> tmp
+#     mod <- fit_litter(time = tmp$time/12, mass.remaining = tmp$pmr, model = "weibull")
+#     param.list[[i]] <- data.frame(beta = mod$optimFit$par[1], alpha = mod$optimFit$par[2])
+#     time.vec <- seq(0, max.time, 1e-01)
+#     y.pred <- predict(mod, time.vec)
+#     df.list[[i]] <- data.frame(time.vec, y.pred)
+#   }
+#   names(param.list) <- names(df.list) <- LEVELs
+#   df <- list_to_df(df.list)
+#   df %>%
+#     dplyr::rename('level'='source') %>%
+#     mutate(size = "large") -> df.l
+#   
+#   df <- rbind(df.s, df.l)
+#   
+#   return(df)
+# }
+# 
+# pred.df <- recalc.fits(data = plot.df)
+# 
+# ggplot(data = plot.df, aes(x = time/12, y = pmr*100, color = size)) +
+#   geom_point() +
+#   geom_line(data = pred.df, aes(x = time.vec, y = y.pred*100, color = size), 
+#             inherit.aes = F) +
+#   facet_grid(size~level) +
+#   theme_bw() +
+#   xlab("Time (yrs)") + ylab("Mass remaining (%)")
+```
+
+- Ca concentration had a large influence on t50 and the scale parameter; more Ca led to slower decay. 
 ```{r}
 result.traitsDecay$preddat$Ca_s %>%
   filter(respvar == c("w.t50","beta")) %>%
   mutate(respvar = factor(respvar, levels = c("w.t50","beta"),
                          labels = c("Years to 50% mass loss",
-                                    "Shape param."))) -> tmp1
+                                    "Scale param."))) -> tmp1
 
 p <- ggplot(tmp1, aes(x = Ca, y = .fitted, fill = size)) +
   geom_line(aes(color = size)) +
@@ -181,7 +246,7 @@ p
 plots.ca = list(p)
 ```
 
-- The largest influence on alpha was diameter size; large sized stems tended to decay at a faster rate, but see EUSC and EUTE. Also note the influence of the shape parameter in the decay model means that large stems take more time to lose 50% mass (opposite of what you'd expect)
+- The largest influence on alpha was diameter size; large sized stems tended to decay with a more S-shaped rate, but see EUSC and EUTE. 
 ```{r}
 decayfits %>%
   select("code","species","size","alpha") -> sel.decay
@@ -191,7 +256,7 @@ p.size <- ggplot(sel.decay, aes(x = size, y = alpha, color = species)) +
   geom_point() +
   theme_classic() +
   geom_line(aes(group = species)) +
-  ylab("Alpha") + xlab("Size")
+  ylab("Shape parameter") + xlab("Size")
 p.size
 
 plots.size <- list(p.size)
@@ -212,7 +277,14 @@ First, we need to decide what trait data (and samples) to include in this analys
 
 Plot the small-sized stem-level measures of density and barkthick
 ```{r}
-makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) # output/figures/supplementary/variation_densityNbarkthick.pdf
+p.list <- makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem)
+names(p.list)
+
+pdf("output/figures/variation_densityNbarkthick.pdf", width=5, height=5)
+  grid.newpage()
+  grid.draw(cbind(ggplotGrob(p.list$p.denVar), 
+                  ggplotGrob(p.list$p.barVar), size = "last"))
+dev.off()
 
 ```
 
@@ -222,7 +294,7 @@ Compare model fits (r2) using stem and species-level data to identify how much i
 ```{r}
 cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem, stem.respVars) 
 cox.df
-write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv")
+write.csv(cox.df, file="output/tables/smallsize_codeVstem_cox.csv")
 
 ```
 
@@ -338,11 +410,11 @@ resids_explainDecay.list[['cfract.code']] <- result.cfractDecay$residuals
 fitstats_explainDecay.list[['cfract.code']] <- result.cfractDecay$fitstats
 ```
 
-- Model fits: Over 50% of variance in decay R2 and time to 50% mass loss was explained by C fractions. Less more explanatory power for beta than alpha.
-- Lignin was the most influential trait, especially for model fit; less lignin led to better fitting models. More lignin led to longer wait times, slower decay rates (alpha), and more S-shaped decay (beta).
+- Model fits: Over 50% of variance in decay R2 and time to 50% mass loss was explained by C fractions. Less explanatory power for beta (scale) and alpha (shape).
+- Lignin was the most influential trait, especially for model fit; less lignin led to better fitting models. More lignin led to longer wait times, slower decay rates (beta), and less(?) S-shaped decay (alpha).
 ```{r}
 result.cfractDecay$preddat$Lignin_s %>%
-  mutate(respvar = factor(respvar, levels = c("w.t50","w.r2","alpha","beta"),
+  mutate(respvar = factor(respvar, levels = c("w.t50","w.r2","beta","alpha"),
                           labels = c("Years to 50% mass loss",
                                      "Weibull R2",
                                      "Scale param.",
@@ -362,19 +434,19 @@ plots.l <- list(p)
 
 ```
 
-- Rhamnose and Glucose were important in explaining variance in wait times and the shape parameter beta. More rhamanose and glucose led to longer wait times and more s-shaped decay trajectories.
+- Rhamnose and Glucose were important in explaining variance in wait times and the scale parameter beta. More rhamanose and glucose led to longer wait times and slower decay trajectories.
 ```{r}
 result.cfractDecay$preddat$Rhamnose_s %>%
   filter(respvar %in% c("w.t50","beta")) %>%
   mutate(respvar = factor(respvar, levels = c("w.t50","beta"),
                           labels = c("Years to 50% mass loss",
-                                     "Shape param."))) -> tmp1
+                                     "Scale param."))) -> tmp1
 
 result.cfractDecay$preddat$Glucose_s %>%
   filter(respvar %in% c("w.t50","beta")) %>%
   mutate(respvar = factor(respvar, levels = c("w.t50","beta"),
                           labels = c("Years to 50% mass loss",
-                                     "Shape param."))) -> tmp2
+                                     "Scale param."))) -> tmp2
 
 p.1 <- ggplot(tmp1, aes(x = Rhamnose, y = .fitted, fill = size)) +
   geom_line(aes(color = size)) +
@@ -576,14 +648,14 @@ Save bivariate predictor plots
 # save the bivariate predictor plots
 names(bivariate_explainDecay.list)
 #uncomment if data change
-# ggsave(filename = "output/figures/supplementary/bivariate_traits-code.pdf",
+# ggsave(filename = "output/figures/bivariate_traits-code.pdf",
 #        plot = bivariate_explainDecay.list$traits.code, width = 10, height = 10)
-# ggsave(filename = "output/figures/supplementary/bivariate_traits-stem.pdf",
-#        plot = bivariate_explainDecay.list$traits.stem, width = 10, height = 10)
-# ggsave(filename = "output/figures/supplementary/bivariate_cfract-code.pdf",
-#        plot = bivariate_explainDecay.list$cfract.code, width = 10, height = 10)
-# ggsave(filename = "output/figures/supplementary/bivariate_cfract-stem.pdf",
-#        plot = bivariate_explainDecay.list$cfract.code, width = 10, height = 10)
+# ggsave(filename = "output/figures/bivariate_traits-stem.pdf",
+#        plot = bivariate_explainDecay.list$traits.stem, width = 12, height = 12)
+# ggsave(filename = "output/figures/bivariate_cfract-code.pdf",
+#        plot = bivariate_explainDecay.list$cfract.code, width = 8, height = 8)
+# ggsave(filename = "output/figures/bivariate_cfract-stem.pdf",
+#        plot = bivariate_explainDecay.list$cfract.code, width = 8, height = 8)
 ```
 
 Save best model summaries
@@ -595,6 +667,7 @@ getrid.of.stuff <- function(plot.obj){
   theme(axis.title=element_blank(),
         axis.text=element_blank(),
         axis.ticks=element_blank()) +
+    theme(axis.text.x = element_blank())
   guides(fill = F)
   
   return(p)
@@ -621,11 +694,12 @@ x.c <- models_explainDecay.list$traits.code$p +
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         axis.title.y=element_blank()) + guides(fill = F)
-x.s <- models_explainDecay.list$cfract.code$p +
+x.s <- models_explainDecay.list$cfract.stem$p +
   theme(axis.title.x=element_blank(),
         axis.text.y=element_blank(),
         axis.ticks.y=element_blank(),
         axis.title.y=element_blank()) + guides(fill = F)
+
 require(gtable)
 p.y1 <- gtable_filter(ggplotGrob(y.t), 'axis-l', trim=F)
 p.y2 <- gtable_filter(ggplotGrob(y.c), 'axis-l', trim=F)
@@ -633,11 +707,11 @@ p.x1 <- gtable_filter(ggplotGrob(x.c), 'axis-b', trim=F)
 p.x2 <- gtable_filter(ggplotGrob(x.s), 'axis-b', trim=F)
 empty <- textGrob("")
 
-pdf("output/figures/maintext/traits-cfract_explainDecay.pdf", width = 6, height = 6)
-grid.arrange(p.y1, p.tc, p.ts, 
-             p.y2, p.cc, p.cs, 
+pdf("output/figures/traits-cfract_explainDecay.pdf", width = 8, height = 8)
+grid.arrange(p.y1, p.tc + guides(fill = F), p.ts + guides(fill = F), 
+             p.y2, p.cc + guides(fill = F), p.cs + guides(fill = F), 
              empty, p.x1, p.x2, ncol = 3,
-             widths = c(1.75, 4, 5),
+             widths = c(2, 4, 5),
              heights = c(12, 7, 3))
 dev.off()
 
@@ -645,7 +719,7 @@ dev.off()
 new.p <- models_explainDecay.list$traits.code$p +
            scale_fill_distiller(direction = 1, limits = c(0, .6))
 tmp <- gtable_filter(ggplotGrob(new.p), 'guide-box', trim=F)
-pdf("output/figures/maintext/traits-cfract_explainDecay_FILLGUIDE.pdf", width = 6, height = 6)
+pdf("output/figures/traits-cfract_explainDecay_FILLGUIDE.pdf", width = 6, height = 6)
 grid.arrange(tmp)
 dev.off()
 
@@ -663,13 +737,13 @@ traits.code
 names(plots_explainDecay.list$traits.code)
 
 ## water
-pdf(file = "output/unknown/traits-code_explainDecay_waterCa.pdf")
+pdf(file = "output/figures/traits-code_explainDecay_waterCa.pdf", width = 6, height = 6)
 grid.arrange(plots_explainDecay.list$traits.code$plots.water[[1]] + guides(color = F, fill = F),
              plots_explainDecay.list$traits.code$plots.ca[[1]] + guides(color = F, fill = F))
 dev.off()
 
 ## size
-pdf(file = "output/unknown/traits-code_explainDecay_size.pdf")
+pdf(file = "output/figures/traits-code_explainDecay_size.pdf", width = 4.5, height = 4.5)
 plots_explainDecay.list$traits.code$plots.size[[1]]
 dev.off()
 
@@ -679,7 +753,7 @@ traits.stem
 ```{r}
 names(plots_explainDecay.list$traits.stem)
 
-pdf(file = "output/unknown/traits-stem_explainDecay_water.pdf")
+pdf(file = "output/figures/traits-stem_explainDecay_water.pdf", width = 6, height = 4)
 plots_explainDecay.list$traits.stem$plots[[1]]
 dev.off()
 ```
@@ -689,12 +763,12 @@ cfract.code
 names(plots_explainDecay.list$cfract.code)
 
 ## lignin
-pdf(file = "output/unknown/cfract-code_explainDecay_lignin.pdf")
+pdf(file = "output/figures/cfract-code_explainDecay_lignin.pdf", width = 6, height = 6)
 plots_explainDecay.list$cfract.code$plots.l[[1]]
 dev.off()
 
 ## rhgl
-pdf(file = "output/unknown/cfract-code_explainDecay_rhgl.pdf")
+pdf(file = "output/figures/cfract-code_explainDecay_rhgl.pdf", width = 6, height = 6)
 grid.arrange(plots_explainDecay.list$cfract.code$plots.rhgl[[1]],
              plots_explainDecay.list$cfract.code$plots.rhgl[[2]], ncol = 1)
 dev.off()
@@ -706,12 +780,12 @@ cfract.stem
 names(plots_explainDecay.list$cfract.stem)
 
 ## early
-pdf(file = "output/unknown/cfract-stem_explainDecay_early.pdf")
+pdf(file = "output/figures/cfract-stem_explainDecay_early.pdf", width = 6, height = 4)
 plots_explainDecay.list$cfract.stem$plots.early[[1]]
 dev.off()
 
 ## mid
-pdf(file = "output/unknown/cfract-stem_explainDecay_mid.pdf")
+pdf(file = "output/figures/cfract-stem_explainDecay_mid.pdf", width = 6, height = 6)
 grid.arrange(plots_explainDecay.list$cfract.stem$plots.mid[[1]] + guides(color = F, fill = F),
              plots_explainDecay.list$cfract.stem$plots.mid[[4]] + guides(color = F, fill = F),
              plots_explainDecay.list$cfract.stem$plots.mid[[2]] + guides(color = F, fill = F),
@@ -719,7 +793,7 @@ grid.arrange(plots_explainDecay.list$cfract.stem$plots.mid[[1]] + guides(color =
 dev.off()
 
 ## lignin
-pdf(file = "output/unknown/cfract-stem_explainDecay_lignin.pdf")
+pdf(file = "output/figures/cfract-stem_explainDecay_lignin.pdf", width = 6, height = 4)
 plots_explainDecay.list$cfract.stem$plots.l[[1]]
 dev.off()
 

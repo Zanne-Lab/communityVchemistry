@@ -15,17 +15,13 @@ Load libraries, functions
 
 #---------------------------#
 #libraries
-library(knitr) #r markdown
-library(readr) #read/write
-library(magrittr) #data formatting
-library(tidyr) #data formatting
-library(dplyr) #data formatting
-library(ggplot2) #plotting
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+#library(tidymodels) # broom
+#library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
 library(grid) #plotting
-library(gridExtra)
-#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
-library(litterfitter) #fit decay models to timeseries
-library(lmtest) # for coxtest()
+library(gridExtra) # plotting
+#library(GGally) # bivariate plots
+#library(lmtest) # for coxtest()
 library(vegan) #diversity metrics
 library(rioja) #WA-PLS
 
@@ -40,31 +36,18 @@ Load data
 #---------------------------#
 #data
 
-# stem mass
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 initial_mass <- read_in_initial_mass()
 harvest_mass <- LoadHarvestFiles()
 pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
-pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
-
-# decay fits
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data change; for each species+size
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
-indx <- unique(stemSamples[,c("code","Binomial","size")])
-decayfits %>%
-  left_join(indx) -> decayfits
-code.respVars <- list("w.t50","alpha","beta","w.r2") # weibull params: alpha = shape param, beta = scale param
-
-# microbes
-microb.data <- load_MicrobeCollection(stemSamples)
-taxAndFunguild <- microb.data$taxAndFunguild
-comm.otu <- microb.data$comm.otu
-seqSamples <- microb.data$seqSamples
-
-# residuals from 'woodTraits_explainDecay.Rmd'
-resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = scale param = higher values mean more S-shaped
 
 # wood traits
 traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
@@ -73,6 +56,20 @@ trait.order <- traitcol.order()
 traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
 traitVars.stem <- trait.order$stem.trait.cols
 traitVars.cfract <- trait.order$cfract.cols
+
+# residuals from 'woodTraits_explainDecay.Rmd'
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+
+# microbes
+microb.data <- load_MicrobeCollection(stemSamples)
+taxAndFunguild <- microb.data$taxAndFunguild
+comm.otu <- microb.data$comm.otu
+seqSamples <- microb.data$seqSamples
+
+#check for oomycetes
+colnames(comm.otu)[grep("oo", colnames(comm.otu))]
+taxAndFunguild %>%
+  filter(kingdom != "Fungi")
 
 ```
 
@@ -87,7 +84,8 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fittin
 ## *Hyp-c (species+size-level)* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
 ```{r}
 result.list <- doAnalysis_endoDiv_explainDecay(taxAndFunguild, comm.otu, decayfits, code.respVars)
-write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysummary_code.csv")
+result.list$pretty.df
+write.csv(result.list$pretty.df, file="output/tables/diversitysummary_code.csv")
 
 #identify significant relationships
 result.list$pretty.df %>%
@@ -106,7 +104,7 @@ tmp %>%
   mutate(term.new = ifelse(term == "mean", "diversity", NA)) %>%
   mutate(term.new = ifelse(term == "sizesmall:mean", "size:diversity", term.new)) %>%
   select(-term) -> summ.code
-
+summ.code
 
 
 ```
@@ -120,10 +118,11 @@ Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass re
 ## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
 ```{r}
 result.list.stem <- doAnalysis_endoDiv_explainPMR(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversitysummary_stem.csv")
+result.list.stem$pretty.df
+write.csv(result.list.stem$pretty.df, file="output/tables/diversitysummary_stem.csv")
 
- #identify significant relationships
- result.list.stem$pretty.df %>%
+#identify significant relationships
+result.list.stem$pretty.df %>%
    filter(term %in% c('sizesmall:sub_rich','sub_rich')) %>%
    gather(key = "respvar", value = "coef", -c(source, term)) %>%
    mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
@@ -140,14 +139,13 @@ tmp %>%
   mutate(term.new = ifelse(term == "sub_rich", "diversity", NA)) %>%
   mutate(term.new = ifelse(term == "sizesmall:sub_rich", "size:diversity", term.new)) %>%
   select(-term) -> summ.stem
-
+summ.stem
 
 
 ```
 
 Make a summary table plot
 ```{r}
-
 summ.code %>%
   full_join(summ.stem) -> tmp
   
@@ -168,19 +166,23 @@ OTU richness and Shannon's H are associated with percent mass remaining at time2
 
 Plot the relationship between OTU richness and Shannon's H and pmr at time25 and time37
 ```{r}
-makefig__RichShannonPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars) # output/figures/supplementary/richness_pmr.pdf
+p.list <- makefig__RichShannonPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
+names(p.list)
+
+pdf(file = "output/figures/richness_pmr.pdf", width = 10, height = 5)
+grid.arrange(p.list$p.rich, p.list$p.h, ncol = 2)  
+dev.off()
 
 ```
-[](output/figures/supplementary/richness_sapro_pmr.pdf)
 
 Not especially convincing relationships. On the whole, diversity is positively correlated with mass remaining in large stems but negatively correlated in small stems.
 
 Plot the relationship between pathogen OTU richness and pmr at time37
 ```{r}
-makefig__pathoRichPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars) # output/figures/supplementary/richness_patho_pmr.pdf
-
+p <- makefig__pathoRichPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
+p
+ggsave(filename = "output/figures/richness_patho_pmr.pdf", width = 5, height = 3.5)
 ```
-[](output/figures/supplementary/richness_patho_pmr.pdf)
 
 Pathotroph richness is positively correlated with mass remaining in large stems, but negatively correlated in small stems.
 
@@ -191,8 +193,12 @@ Pathotroph richness is positively correlated with mass remaining in large stems,
 
 ## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
 ```{r}
+names(resids_explainDecay.list)
+traitResiduals.code <- resids_explainDecay.list$traits.code
+
 result.list <- doAnalysis_endoDiv_explainDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
-write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysummary_code_traitresid.csv")
+result.list$pretty.df
+write.csv(result.list$pretty.df, file="output/tables/diversitysummary_code_traitresid.csv")
 
 #identify significant relationships
 result.list$pretty.df %>%
@@ -211,7 +217,7 @@ tmp %>%
   mutate(term.new = ifelse(term == "mean", "diversity", NA)) %>%
   mutate(term.new = ifelse(term == "sizesmall:mean", "size:diversity", term.new)) %>%
   select(-term) -> summ.code
-
+summ.code
 
 ```
 
@@ -220,8 +226,11 @@ Beyond wood trait data, saprotroph richness improves models for beta and t60.
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
 ```{r}
+names(resids_explainDecay.list)
+traitResiduals.stem <- resids_explainDecay.list$traits.stem
+
 result.list.stem <- doAnalysis_endoDiv_explainPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversitysummary_stem_traitresid.csv")
+write.csv(result.list.stem$pretty.df, file="output/tables/diversitysummary_stem_traitresid.csv")
 
 #identify significant relationships
 result.list.stem$pretty.df %>%
@@ -240,6 +249,7 @@ tmp %>%
   mutate(term.new = ifelse(term == "sub_rich", "diversity", NA)) %>%
   mutate(term.new = ifelse(term == "sizesmall:sub_rich", "size:diversity", term.new)) %>%
   select(-term) -> summ.stem
+summ.stem
 
 ```
 
@@ -248,7 +258,6 @@ Beyond wood trait data, overall and basidio OTU richness improve model estimates
 
 Make a summary table plot
 ```{r}
-
 summ.code %>%
   full_join(summ.stem) -> tmp
   
@@ -259,6 +268,7 @@ p2 <- ggplot(tmp, aes(y = respvar, x = term.new, fill = signif)) +
   ylab("Response variable") +
   xlab("Term") +
   ggtitle("Decay residuals explained by diversity")
+p2
 
 pdf(file = "output/tables/diversitySummary.pdf", width = 8, height = 8)
 grid.arrange(p1, p2)
@@ -270,29 +280,32 @@ dev.off()
 
 Plot the relationship between Saprotroph richness and beta, t60
 ```{r}
-makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars) # output/figures/supplementary/richness_sapro_decayResids.pdf
+p <- makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
+p
+ggsave(filename = "output/figures/richness_sapro_decayResids.pdf", width = 5, height = 3.5)
 
 ```
-[](output/figures/supplementary/richness_sapro_decayResids.pdf)
 
 Higher saprotroph richness leads to smaller beta and t70 values (i.e. faster mass loss) than would be expected based on wood traits alone, especially in large stems.
 
 Plot the relationship between OTU richness, basidio richness and residuals of pmr at time25
 ```{r}
-makefig__richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) # output/figures/supplementary/richness_PMRResids.pdf
-
+p <- makefig__richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) 
+p
+ggsave(filename = "output/figures/richness_PMRResids.pdf", width = 5, height = 3.5)
 ```
-[](output/figures/supplementary/richness_PMRResids.pdf)
 
 In small stems, more OTU richness is associated with less mass remaining after 25 months than would be expected based on wood traits alone. This relationship looks heavily influenced by 1 outlier w/ high OTU (and basidio) richness
 
 
 Plot the relationship between Pathotroph OTU richness and residuals of pmr at time37
 ```{r}
-makefig__path_richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) # output/figures/supplementary/richness_patho_time37Resids.pdf
-  
+p <- makefig__path_richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars)
+p
+ggsave(filename = "output/figures/richness_patho_time37Resids.pdf", width = 5, height = 3.5)
+
 ```
-[](output/figures/supplementary/richness_patho_time37Resids.pdf)
+
 
 In small stems, more pathotroph OTUs is associated with less mass remaining after 37 months than would be expected based on wood traits alone.
 

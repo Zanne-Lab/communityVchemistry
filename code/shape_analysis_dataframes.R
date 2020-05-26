@@ -142,18 +142,18 @@ CreateCommTraitpair <- function(comm.otu, traits, sampleName){
 #########
 # Model formulation
 
-# ModelFit_manyYs<-function(y, rhs, curr.data){
-#   
-#   #create model formula
-#   string<-paste(y, " ~ ", rhs)
-#   fmla<-as.formula(string)
-#   
-#   #fit full model
-#   mod.full<-lm(formula=fmla, data=curr.data)
-#   
-#   #return a list with the best model for each response var
-#   return(mod.full)
-# }
+ModelFit_manyYs<-function(y, rhs, curr.data){
+
+  #create model formula
+  string<-paste(y, " ~ ", rhs)
+  fmla<-as.formula(string)
+
+  #fit full model
+  mod.full<-lm(formula=fmla, data=curr.data)
+
+  #return a list with the best model for each response var
+  return(mod.full)
+}
 
 fitNcrossval_WAPLS<-function(curr.comm, curr.respVar){
   fit<-WAPLS(y=curr.comm, x=curr.respVar)

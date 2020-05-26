@@ -13,21 +13,14 @@ knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 # load libraries and fxns
 
 #libraries
-library(knitr) #r markdown
-library(readr) #read/write
-library(magrittr) #data formatting
-library(tidyr) #data formatting
-library(dplyr) #data formatting
-library(ggplot2) #plotting
-library(grid) #plotting
+library(tidyverse) # formatting
 library(gridExtra) #plotting
-library(corrplot) #plotting
-#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
 #library(litterfitter) #fit decay models to timeseries
-library(lmtest) # for coxtest()
+#library(GGally) #plotting
+#library(corrplot) #plotting
+#library(lmtest) # for coxtest()
 #library(vegan) #diversity metrics
 #library(rioja) #WA-PLS
-library(GGally)
 
 #fxns
 source('code/helper_fxns.R')
@@ -42,169 +35,230 @@ sourceDir('code')
 1. How do wood species and sizes vary in decay?
 - script: *1_decayPatterns.Rmd*
 ```{r q1}
+#fxns
+# make_figs_decayPatterns.R
 
+# load data
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+decayfits <- read_csv("derived_data/decayfits.csv") # see rmd script if need to update
+# weibull params
+# beta = scale param = higher values mean slower decay
+# alpha = scale param = higher values mean more S-shaped
+
+# plot potential weibull fits
+plot_weibull(pmr, decayfits)
+
+# plot weibull vs neg exp fits
+p.a <- makefig__compare_t50_tab(decayfits) 
+p.b <- makefig__compare_t50_aic(decayfits) 
+grid.arrange(p.a + ggtitle("a"), 
+             p.b + ggtitle("b"))
+
+# plot decay fits for each species+size
+p.list <- makefig__decayfits(decayfits) 
+names(p.list)
+makefig__pmr_byStem(pmr, decayfits, param.labels = F) 
+makefig__scaleVshape(decayfits)
 
 ```
 
 2. Do wood traits explain decay? 
-- script: *woodtraits_explainDecay.Rmd*
-*** revisit this - scale trait matrix, varpart for each trait, add C fracts ***
-- summary: 
-    - Fast decayers (alpha) have low density
-    - Samples with S-shaped trajectories (beta) have low N and high density
-    - Difficult to predict decayers (low r2) have low N, high density, and belong to the small size class
-    - Low water content predicts more mass remaining across all time points
-    - Low N and small size class predict more mass remaining at early-mid time points
-    - High C predicts more mass remaining at late time points
+- script: *2_woodtraits_explainDecay.Rmd*
 ```{r load_woodtraits}
+#fxns
+# make_figs_decayPatterns.R
 
-#---------------------------#
-#data
+# load data
 stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
 traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
-#trait.sds_byCode(stemSamples) # within code variation
-#trait.n_byCode(stemSamples) # number of code samples that were aggregated
 traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
-#trait.sds_byStem(stemSamples) # within codeStem variation
-#trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
+trait.order <- traitcol.order()
+traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars.stem <- trait.order$stem.trait.cols
+traitVars.cfract <- trait.order$cfract.cols
 
-#---------------------------#
-# main figures and tables
+#######
+# do traits predict decayfits?
+result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, 
+                                      traits.code,
+                                      code.respVars, 
+                                      traitVars,
+                                      cfract = F) # see make_figs_woodTraits_explainDecay.R
+fig <- makefig__traits_explain_decayParams(result.list = result.traitsDecay, 
+                                           traitVars, cfract = F) 
+fig$p
+result.traitsDecay$fitstats
 
-#Fig 3
-# THIS DOESNT WORK
-makefig__traits_explain_decayParams(decayfits, traits.code, 
-                                    code.respVars, use.cache = T) # output/figures/maintext/traits_explain_decayparams.pdf
-# remove color for R2 and just report that in the figure legend. make this into a horizontal bar plot to show the coef magnitudes
+#######
+# do traits predict PMR?
+stem.respVars %>%
+  purrr::set_names() %>%
+  map(~CreateTraitPMRpair(respVar = .x, 
+                          traits.stem, traits.code, 
+                          pmr_byStem, 
+                          traitVars.stem)) -> datasets # see make_figs_woodTraits_explainDecay.R
+result.traitsPMR <- doAnalysis_traits_explain_pmr(datasets, 
+                                      stem.respVars, traitVars.stem, 
+                                      cfract = F) # see make_figs_woodTraits_explainDecay.R
+fig <- makefig__traits_explain_pmr(result.list = result.traitsPMR, 
+                                   traitVars.stem,
+                                   cfract = F) 
+fig$p
+result.traitsPMR$fitstats
 
-#Fig 4
-# THIS DOESNT WORK
-makefig__traits_explain_pmr(traits.stem, traits.code, pmr_byStem, 
-                            stem.respVars, use.cache = T) # output/figures/maintext/traits_explain_pmr.pdf
-# see updates above
 
-#---------------------------#
-# supplementary figures and tables
+#######
+# do Cfract predict decayfits?
+traits.code %>%
+  select(c(trait.order$id.cols, trait.order$cfract.cols, "waterperc","N","Ca")) %>%
+  filter(!is.na(Arabinose)) -> traits.code.cfract
+result.cfractDecay <- doAnalysis_traits_explain_decayParams(decayfits, 
+                                      traits.code = traits.code.cfract,
+                                      code.respVars, 
+                                      traitVars = traitVars.cfract,
+                                      cfract = T) # see make_figs_woodTraits_explainDecay.R
+fig <- makefig__traits_explain_decayParams(result.list = result.cfractDecay, 
+                                           traitVars = traitVars.cfract, 
+                                           cfract = T) 
+fig$p
+result.cfractDecay$fitstats
 
-#Fig S3
-makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem) # output/figures/supplementary/variation_densityNbarkthick.pdf
-
-#Table S1
-# THIS DOESNT WORK
-cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem, stem.respVars) 
-write.csv(cox.df, file="output/tables/supplementary/smallsize_codeVstem_cox.csv")
+#######
+# do Cfract predict PMR?
+traits.stem %>%
+  select(c(trait.order$id.cols, "codeStem", trait.order$cfract.cols)) %>%
+  filter(!is.na(Arabinose)) -> traits.stem.cfract
+stem.respVars %>%
+  purrr::set_names() %>%
+  map(~CreateCfractPMRpair(respVar = .x, 
+                          traits.stem.cfract, 
+                          pmr_byStem, 
+                          traitVars.cfract)) -> datasets # see make_figs_woodTraits_explainDecay.R
+result.cfractPMR <- doAnalysis_traits_explain_pmr(datasets, 
+                                      stem.respVars, 
+                                      traitVars.stem = traitVars.cfract,
+                                      cfract = T) # see make_figs_woodTraits_explainDecay.R
+fig <- makefig__traits_explain_pmr(result.list = result.cfractPMR, 
+                                   traitVars.stem = traitVars.cfract,
+                                   cfract = T) 
+fig$p
+result.cfractPMR$fitstats
 
 ```
 
-3. Does endophyte composition explain decay?
-- script: *endoComp_explainDecay.Rmd*
+3a. Does endophyte composition explain decay?
+- script: *3a_endoComp_explainDecay.Rmd*
 - summary: No. There is a relationship between composition and percent mass remaining after 37 months, but this is likely driven by the role of water content on the microbial community and decay.
 ```{r load_microbes}
-# THIS DOESNT WORK
+#fxns
+# make_figs_endoComp_explainDecay.R
 
-#---------------------------#
-#data
-
-# wood trait residuals (see `woodTraits_explainDecay.Rmd')
-result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits, traits.code, code.respVars, use.cache = T)
-traitResiduals.code <- result.traitsDecay$traitResiduals.code
-result.traitsPMR <- doAnalysis_traits_explain_pmr(pmr_byStem, traits.code, traits.stem, stem.respVars, use.cache = T)
-traitResiduals.stem <- result.traitsPMR$traitResiduals.stem
-
-#microbes
+# load data
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
+trait.order <- traitcol.order()
+traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars.stem <- trait.order$stem.trait.cols
+traitVars.cfract <- trait.order$cfract.cols
+# residuals from 'woodTraits_explainDecay.Rmd'
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+# microbes
 microb.data <- load_MicrobeCollection(stemSamples)
 taxAndFunguild <- microb.data$taxAndFunguild
 comm.otu <- microb.data$comm.otu
 seqSamples <- microb.data$seqSamples
+#check for oomycetes
+colnames(comm.otu)[grep("oo", colnames(comm.otu))]
+taxAndFunguild %>%
+  filter(kingdom != "Fungi")
 
-#---------------------------#
-# main figures and tables
+# identify the saprotrophs
+taxAndFunguild %>%
+  filter(grepl("Sapro", Guild)) -> sapro.tax
+comm.otu.sapro <- comm.otu[, colnames(comm.otu) %in% sapro.tax$OTUId]
+dim(comm.otu.sapro) # 176 OTUs
+comm.otu.sapro.trimmed <- comm.otu.trimmed[, colnames(comm.otu.trimmed) %in% sapro.tax$OTUId]
+dim(comm.otu.sapro.trimmed) # only 11 OTUs
 
-#---------------------------#
-# supplementary figures and tables
+######
+# Decay
 
-#Fig S4
-#plot_sampleEffortCurves(comm.otu) # output/figures/supplementary/sampleEffortCurve.pdf; #this takes a while... uncomment if the data changes
+# 1. decayfits ~ community
+cvfit.results.code <- doAnalysis_endoComp_explainDecay(comm.otu, seqSamples, decayfits, code.respVars, use.cache = F, save.cache = F)
+cvfit.results.code$prettyTabs #ns
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecay(comm.otu.sapro, seqSamples, decayfits, code.respVars, use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs #ns
 
-#Fig S5
-makefig__wapls_score_time37(comm.otu, pmr_byStem, stem.respVars, taxAndFunguild) # output/figures/supplementary/wapls_score_time37.pdf
-# remember that this fig does not include oomycetes because we do not have boral coef estimates for them
-#otucats <- maketab__wapls_score_time37_otuCats(cvfit.results.stem, taxAndFunguild)
-#write.csv(otucats, file = "output/tables/supplementary/wapls_score_time37_otuCats.csv")
-
-#Fig S6
-makefigs__endoComp_woodTraits(comm.otu, seqSamples, traits.code, traits.stem, use.cache = T) # output/figures/supplementary/dbRDA_code.pdf
-# figure only shows results from the trimmed community dataset
-tab.list <- maketabs__endoComp_woodTraits(comm.otu, seqSamples, traits.code, use.cache = T)
-write.csv(tab.list$an.nt.code, file="output/tables/supplementary/dbRDAanova_nt_code.csv")
-write.csv(tab.list$an.t.code, file="output/tables/supplementary/dbRDAanova_t_code.csv")
-write.csv(tab.list$an.nt.stem, file="output/tables/supplementary/dbRDAanova_nt_stem.csv")
-write.csv(tab.list$an.t.stem, file="output/tables/supplementary/dbRDAanova_t_stem.csv")
-
-#Table S2
-cvfit.results.code <- doAnalysis_endoComp_explainDecay(comm.otu, seqSamples, decayfits, code.respVars, use.cache = T)
+# 2. pmr ~ community
 cvfit.results.stem <- doAnalysis_endoComp_explainPMR(comm.otu, pmr_byStem, stem.respVars)
-commTab <- maketab_endoComp_explain(cvfit.results.code, cvfit.results.stem, code.respVars, stem.respVars)
-write.csv(commTab, file="output/tables/supplementary/commcompsummary.csv")
+cvfit.results.stem$prettyTabs # p = 0.04 for time37 full community 
+cvfit.results.stem.sapro <- doAnalysis_endoComp_explainPMR(comm.otu.sapro, pmr_byStem, stem.respVars)
+cvfit.results.stem.sapro$prettyTabs # ns
 
-#Table S3
-cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, 
-                                                             code.respVars, traitResiduals.code, use.cache = T)
-cvfit.results.stem <- doAnalysis_endoComp_explainPMRResids(comm.otu, pmr_byStem, stem.respVars, traitResiduals.stem)
-commTab <- maketab_endoComp_explain(cvfit.results.code, cvfit.results.stem, code.respVars, stem.respVars)
-write.csv(commTab, file="output/tables/supplementary/commcompsummary_traitresid.csv")
+######
+# Decay trait and Cfract residuals
+
+# Slice 1: Examine Cfract residuals separately
+
+# 1. decayfits trait residuals ~ community
+cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, code.respVars,traitResiduals.code = resids_explainDecay.list$traits.code, use.cache = F, save.cache = F)
+cvfit.results.code$prettyTabs #ns
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecayResids(comm.otu.sapro, seqSamples, decayfits, code.respVars, traitResiduals.code = resids_explainDecay.list$traits.code, use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs #ns
+
+# 2. decayfits Cfract residuals ~ community
+cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, code.respVars, traitResiduals.code = resids_explainDecay.list$cfract.code, use.cache = F, save.cache = F)
+cvfit.results.code$prettyTabs #ns
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecayResids(comm.otu.sapro, seqSamples, decayfits, code.respVars, traitResiduals.code = resids_explainDecay.list$cfract.code, use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs #ns
+
+# 3. pmr trait residuals ~ community
+cvfit.results.stem <- doAnalysis_endoComp_explainPMRResids(comm.otu, pmr_byStem, stem.respVars, traitResiduals.stem = resids_explainDecay.list$traits.stem)
+cvfit.results.stem$prettyTabs #ns
+cvfit.results.stem.sapro <- doAnalysis_endoComp_explainPMRResids(comm.otu.sapro, pmr_byStem, stem.respVars, traitResiduals.stem = resids_explainDecay.list$traits.stem)
+cvfit.results.stem.sapro$prettyTabs #ns
+
+
+# Slice 2: Include C fraction data (and exclude small stems)
+
+# 1. decayfits trait residuals ~ community
+cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, code.respVars, traitResiduals.code = resids_explainDecay.list$cfract.code, use.cache = F, save.cache = F)
+cvfit.results.code$prettyTabs # ns
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecayResids(comm.otu.sapro, seqSamples, decayfits, code.respVars, traitResiduals.code = resids_explainDecay.list$cfract.code, use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs # ns
+
+# 2. pmr Cfract residuals ~ community
+cvfit.results.stem <- doAnalysis_endoComp_explainPMRResids(comm.otu, pmr_byStem, stem.respVars, traitResiduals.stem = resids_explainDecay.list$cfract.stem)
+cvfit.results.stem$prettyTabs # ns
+cvfit.results.stem.sapro <- doAnalysis_endoComp_explainPMRResids(comm.otu.sapro, pmr_byStem, stem.respVars, traitResiduals.stem = resids_explainDecay.list$cfract.stem)
+cvfit.results.stem.sapro$prettyTabs # p=0.06 for time59 full saprotroph community
 
 ```
 
-
-4. Does endophyte diversity explain decay? *
-- script: *endoDiv_explainDecay.Rmd*
+3b. Does endophyte diversity explain decay? *
+- script: *3b_endoDiv_explainDecay.Rmd*
 *** revisit this - add bonferonni correction for multiple comparisons ***
-- summary:
-    - More saprotrophs leads to less mass remaining after 25 and 37 months, but only in small stems
-    - More pathotrophs leads to less mass remaining after 37 months, but only in small stems
-    - Higher saprotroph richness leads to faster decay than would be expected based on wood traits alone
-    - Higher saprotroph richness leads to trajectories that are less s-shaped than based on wood traits alone
+
 ```{r load_microbesdiv}
-# THIS DOESNT WORK
-#---------------------------#
-# main figures and tables
 
-# see output/tables/diversitySummary.pdf
-
-#---------------------------#
-# supplementary figures and tables
-
-#Fig S7
-makefig__RichShannonPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars) # output/figures/supplementary/richness_pmr.pdf
-
-#Fig S8
-makefig__pathoRichPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars) # output/figures/supplementary/richness_patho_pmr.pdf
-
-#Fig S9
-makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars) # output/figures/supplementary/richness_sapro_decayResids.pdf
-
-#Fig S10
-makefig__richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) # output/figures/supplementary/richness_PMRResids.pdf
-
-#Fig S11
-makefig__path_richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) # output/figures/supplementary/richness_patho_time37Resids.pdf
-
-#Table S4
-result.list <- doAnalysis_endoDiv_explainDecay(taxAndFunguild, comm.otu, decayfits, code.respVars)
-write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysummary_code.csv")
-
-#Table S5
-result.list.stem <- doAnalysis_endoDiv_explainPMR(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversitysummary_stem.csv")
-
-#Table S6
-result.list <- doAnalysis_endoDiv_explainDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
-write.csv(result.list$pretty.df, file="output/tables/supplementary/diversitysummary_code_traitresid.csv")
-
-#Table S7
-result.list.stem <- doAnalysis_endoDiv_explainPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/supplementary/diversitysummary_stem_traitresid.csv")
 
 ```
 

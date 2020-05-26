@@ -17,11 +17,6 @@ summarize_endoDiv <- function(taxAndFunguild, comm.otu){
 
 doAnalysis_endoDiv_explainDecay <- function(taxAndFunguild, comm.otu, decayfits, code.respVars){
   
-  # taxAndFunguild
-  # comm.otu
-  # decayfits
-  # code.respVars
-  
   richList <- summarize_endoDiv(taxAndFunguild, comm.otu)
   
   #create a set of richness and decay dataframes
@@ -45,8 +40,7 @@ doAnalysis_endoDiv_explainDecay <- function(taxAndFunguild, comm.otu, decayfits,
   names(richType.list) <- names(richList)
   
   #summarize
-  richType.list
-  pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
+  pretty.list <- lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
   pretty.df <- list_to_df(pretty.list)
   
   # #identify significant relationships
@@ -135,9 +129,8 @@ p.h<-ggplot(tmp1, aes(x = sub_rich, y = pmr)) +
   theme_bw()
 p.h
 
-pdf(file = "output/figures/supplementary/richness_pmr.pdf", width = 10, height = 5)
-grid.arrange(p.rich, p.h, ncol = 2)  
-dev.off()
+p.list <- list(p.rich = p.rich, p.h = p.h)
+return(p.list)
  
 }
 
@@ -152,7 +145,9 @@ makefig__pathoRichPMR.stem <- function(taxAndFunguild, comm.otu, pmr_byStem, ste
     facet_grid(~size)+
     xlab("Pathotroph OTU richness") + ylab("Mass remaining after 37 months (%)") +
     theme_bw()
-  ggsave(filename = "output/figures/supplementary/richness_patho_pmr.pdf", plot = p, width = 5, height = 3.5)
+  
+  return(p)
+  
   
 }
 
@@ -211,7 +206,7 @@ makefig__saproRichDecayResids <- function(taxAndFunguild, comm.otu, traitResidua
     facet_wrap(~resp, scales = "free") +
     theme_bw()
   p
-  ggsave(filename = "output/figures/supplementary/richness_sapro_decayResids.pdf", plot = p, width = 5, height = 3.5)
+  return(p)
   
 }
 
@@ -268,7 +263,7 @@ makefig__richPMRResids <- function(taxAndFunguild, comm.otu, traitResiduals.stem
     facet_wrap(~sub_rich_type, scales = "free") +
     xlab("OTU richness") + ylab("Residuals -  pmr time25")
   p
-  ggsave(filename = "output/figures/supplementary/richness_PMRResids.pdf", plot = p, width = 5, height = 3.5)
+  return(p)
   
 }
 
@@ -287,6 +282,6 @@ makefig__path_richPMRResids <- function(taxAndFunguild, comm.otu, traitResiduals
     xlab("Pathotroph OTU richness") + ylab("Residuals - pmr time37") +
     theme_bw()
   p
-  ggsave(filename = "output/figures/supplementary/richness_patho_time37Resids.pdf", plot = p, width = 5, height = 3.5)
+  return(p)
   
 }

@@ -67,7 +67,7 @@ p.a
 p.b <- makefig__compare_t50_aic(decayfits) 
 p.b
 
-pdf(file = "output/figures/compare_t50.pdf", width = 6, height = 6)
+pdf(file = "output/figures/compare_t50.pdf", width = 6, height = 10)
 grid.arrange(p.a + ggtitle("a"), 
              p.b + ggtitle("b"))
 dev.off()
@@ -80,7 +80,7 @@ dev.off()
 p.list <- makefig__decayfits(decayfits) 
 names(p.list)
 
-pdf(file = "output/figures/decayfits.pdf", width = 8, height = 8)
+pdf(file = "output/figures/decayfits.pdf", width = 10, height = 5)
 grid.arrange(p.list$p.t50,
              p.list$p.1beta +
                theme(axis.line=element_blank(),
@@ -95,7 +95,7 @@ grid.arrange(p.list$p.t50,
                      axis.text.y=element_blank(),
                      axis.title.y=element_blank()),
              
-             ncol=4, widths=c(1.5,1,1,1)
+             ncol=4, widths=c(1.75,1,1,1)
 )
 dev.off()
 
@@ -106,7 +106,7 @@ dev.off()
 # see code/make_figs_decayPatterns.R
 p <- makefig__pmr_byStem(pmr, decayfits, param.labels = F) 
 p
-ggsave(filename = "output/figures/pmr_byStem.pdf", plot = p, width=6, height=6)
+ggsave(filename = "output/figures/pmr_byStem.pdf", plot = p, width=8.5, height=8.5)
 ```
 
 Plot alpha vs beta w/ indication of model fit

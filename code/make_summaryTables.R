@@ -4,11 +4,8 @@
 #########
 # LM summary stats
 
-PullLmCoefs<-function(mod.list, respvars){
-  
-  # extract summary table from model object
-  sum.list<-lapply(mod.list, summary)
-  
+PullLmCoefs<-function(sum.list, respvars){
+
   # extract coefs from summary table
   coefs.list<-lapply(sum.list, function(x){
     df<-data.frame(term=row.names(x$coefficients), x$coefficients)
@@ -32,12 +29,7 @@ PullLmCoefs<-function(mod.list, respvars){
   return(coefs.df)
 }
 
-PullLmFitStats<-function(mod.list, respvars){
-  
-  
-  
-  # extract summary table from model object
-  sum.list<-lapply(mod.list, summary)
+PullLmFitStats<-function(sum.list, respvars){
   
   # extract model fit stats
   fitstats.list<-lapply(sum.list, function(x){

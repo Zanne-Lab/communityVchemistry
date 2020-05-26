@@ -2,7 +2,7 @@
 plot_sampleEffortCurves<-function(mat.otu){
   
   require(vegan)
-  pdf(file="output/figures/supplementary/sampleEffortCurve.pdf", width=5, height=5)
+  pdf(file="output/figures/sampleEffortCurve.pdf", width=5, height=5)
   
   rarecurve(mat.otu, step=100,
             xlab="Number of reads per sample", 
@@ -88,10 +88,16 @@ doAnalysis_endoComp_explainDecay <- function(comm.otu, seqSamples, decayfits, co
 # comm-decay.stem
 
 doAnalysis_endoComp_explainPMR <- function(comm.otu, pmr_byStem, stem.respVars){
-
+  
   require(rioja)
   
   comm.otu.trimmed <- removeRareOTUs(comm.otu)
+  
+  #check for empty samples
+  if(sum(rowSums(comm.otu.trimmed) == 0) > 0){
+    comm.otu.trimmed <- comm.otu.trimmed[rowSums(comm.otu.trimmed) != 0,]
+    print("warning: removed empty sample")
+  }
   
   # create dataframes
   datasets.notrim<-lapply(stem.respVars, function(x) {CreateCommPMRpair(x, comm.mat=comm.otu, pmr_byStem)} ) #analysisDF_fxns.R
@@ -316,6 +322,11 @@ doAnalysis_endoComp_explainPMRResids <- function(comm.otu, pmr_byStem,
   names(datasets.notrim)<-unlist(stem.respVars)
   
   comm.otu.trimmed <- removeRareOTUs(comm.otu)
+  # check for empty samples
+  if(sum(rowSums(comm.otu.trimmed) == 0) > 0){
+    comm.otu.trimmed <- comm.otu.trimmed[rowSums(comm.otu.trimmed) != 0,]
+    print("warning: removed empty sample")
+  }
   datasets.trim<-lapply(stem.respVars, function(x) {
     CreateCommTraitResidpair(respVar=x, 
                              comm.mat=comm.otu.trimmed, 

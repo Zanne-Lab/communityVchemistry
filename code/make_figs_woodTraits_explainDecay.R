@@ -99,7 +99,7 @@ makefig__traits_explain_decayParams <- function(result.list, traitVars, cfract){
                                       labels = rev(trait.labels))
   
   #define response variable levels
-  respvar.levels <- c("w.t50","alpha","beta","w.r2","t50","k","ne.r2")
+  respvar.levels <- c("w.t50","beta","alpha", "w.r2","t50","k","ne.r2")
   respvar.labels <- c("Years to 50%\nmass loss","Scale param.","Shape param.","Weibull R2",
                       "t50","k","ne.r2")
   plot.obj$plotting.df %>%
@@ -168,10 +168,8 @@ makefig__variation_densityNbarkthick <- function(traits.stem, traits.code, pmr_b
           plot.margin = unit(c(0,1,0,0), "lines"),
           plot.background = element_blank())
   
-  pdf("output/figures/supplementary/variation_densityNbarkthick.pdf", width=5, height=5)
-  grid.newpage()
-  grid.draw(cbind(ggplotGrob(p.denVar), ggplotGrob(p.barVar), size = "last"))
-  dev.off()
+  result.list <- list(p.denVar = p.denVar, p.barVar = p.barVar)
+  return(result.list)
   
 }
 

@@ -12,22 +12,16 @@ knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 Load libraries and functions
 ```{r}
-
 #---------------------------#
 #libraries
-library(knitr) #r markdown
-library(readr) #read/write
-library(magrittr) #data formatting
-library(tidyr) #data formatting
-library(dplyr) #data formatting
-library(ggplot2) #plotting
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+library(tidymodels) # broom
+library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
 library(grid) #plotting
-library(gridExtra)
-#devtools::install_github("cornwell-lab-unsw/litterfitter") #fit decay models to timeseries
-library(litterfitter) #fit decay models to timeseries
-library(lmtest) # for coxtest()
-library(vegan) #diversity metrics
-library(rioja) #WA-PLS
+library(gridExtra) # plotting
+#library(GGally) # bivariate plots
+#library(lmtest) # for coxtest()
+
 
 #---------------------------#
 #fxns
@@ -41,35 +35,18 @@ Load decay data, microbial community data, and residuals from "woodTraits_explai
 #---------------------------#
 #data
 
-# stem mass
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
 initial_mass <- read_in_initial_mass()
 harvest_mass <- LoadHarvestFiles()
 pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
-pmr_byStem <- AvgPMR_byStem(pmr) # average pmr for each stem and timepoint
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
 stem.respVars <- list("time7", "time13", "time25", "time37","time59")
-
-# decay fits
-stemSamples <- load_stemSamples() # this function is in load_microbeData.R
-#decayfits <- fit_all_curves(pmr, stemSamples) #this recalculates all the curve fits, uncomment if the data change; for each species+size
-#write_csv(decayfits,"derived_data/decayfits.csv")
-decayfits <- read_csv("derived_data/decayfits.csv")
-indx <- unique(stemSamples[,c("code","Binomial","size")])
-decayfits %>%
-  left_join(indx) -> decayfits
-code.respVars <- list("w.t50","alpha","beta","w.r2") # weibull params: alpha = shape param, beta = scale param
-
-# microbes
-microb.data <- load_MicrobeCollection(stemSamples)
-taxAndFunguild <- microb.data$taxAndFunguild
-comm.otu <- microb.data$comm.otu
-seqSamples <- microb.data$seqSamples
-colnames(taxAndFunguild)
-taxAndFunguild %>%
-  filter(kingdom != "Fungi")
-# oomycetes are here!
-
-# residuals from 'woodTraits_explainDecay.Rmd'
-resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = scale param = higher values mean more S-shaped
 
 # wood traits
 traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
@@ -79,19 +56,53 @@ traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
 traitVars.stem <- trait.order$stem.trait.cols
 traitVars.cfract <- trait.order$cfract.cols
 
+# residuals from 'woodTraits_explainDecay.Rmd'
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+
+# microbes
+microb.data <- load_MicrobeCollection(stemSamples)
+taxAndFunguild <- microb.data$taxAndFunguild
+comm.otu <- microb.data$comm.otu
+seqSamples <- microb.data$seqSamples
+
+#check for oomycetes
+colnames(comm.otu)[grep("oo", colnames(comm.otu))]
+taxAndFunguild %>%
+  filter(kingdom != "Fungi")
+
 ```
 
 Figure S1. Sample-effort curves
 ```{r}
 #this takes a while... uncomment if the data changes
-#plot_sampleEffortCurves(comm.otu) # output/figures/supplementary/sampleEffortCurve.pdf
+#plot_sampleEffortCurves(comm.otu) # output/figures/sampleEffortCurve.pdf
 
 ```
 
 Filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
 ```{r}
 comm.otu.trimmed <- removeRareOTUs(comm.otu)
+
+# are oomycetes in here? nope
+colnames(comm.otu.trimmed)[grep("oo", colnames(comm.otu.trimmed))]
+
 ```
+This drops all the oomycetes
+
+Identify the saprotrophs
+```{r}
+taxAndFunguild %>%
+  filter(grepl("Sapro", Guild)) -> sapro.tax
+  
+comm.otu.sapro <- comm.otu[, colnames(comm.otu) %in% sapro.tax$OTUId]
+dim(comm.otu.sapro) # 176 OTUs
+
+comm.otu.sapro.trimmed <- comm.otu.trimmed[, colnames(comm.otu.trimmed) %in% sapro.tax$OTUId]
+dim(comm.otu.sapro.trimmed) # only 11 OTUs
+
+```
+There are 176 saprotroph OTUs, of those 11 are present in the trimmed community
+
 
 Initalize lists to store results
 ```{r}
@@ -110,13 +121,22 @@ plots_explainDecay.list <- list()
 ## *Hyp (species+size-level)* Species+size-level (average) initial microbial community composition will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
 ```{r, message = F, results = F}
 cvfit.results.code <- doAnalysis_endoComp_explainDecay(comm.otu, seqSamples, decayfits, code.respVars,
-                                                       use.cache = T, save.cache = T)
+                                                       use.cache = F, save.cache = F)
 cvfit.results.code$prettyTabs # will merge this with the other summary table to export as a csv in the next chunk
 
 models_explainDecay.list[['comm-decay.code']] <- cvfit.results.code$prettyTabs
 ```
 
 None of the components are significant.
+
+Test saprotrophs
+```{r}
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecay(comm.otu.sapro, seqSamples, decayfits, code.respVars,
+                                                       use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs # will merge this with the other summary table to export as a csv in the next chunk
+
+models_explainDecay.list[['comm-decay.code.sapro']] <- cvfit.results.code.sapro$prettyTabs
+```
 
 
 ## *Hyp (stem-level)* Stem-level initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
@@ -142,6 +162,15 @@ grid.arrange(plots_explainDecay.list[['comm-decay.stem']]$p1,
 
 Is this because there is an underlying signature of wood traits on the initial microbial community that is driving the relationship between the community and the mass remaining after 37 months?  The next analysis (Community predicts decay residuals) will test this formally.
 
+Test saprotrophs
+```{r}
+
+cvfit.results.stem.sapro <- doAnalysis_endoComp_explainPMR(comm.otu.sapro, pmr_byStem, stem.respVars)
+cvfit.results.stem$prettyTabs
+
+models_explainDecay.list[['comm-decay.stem.sapro']] <- cvfit.results.stem$prettyTabs
+
+```
 
 
 ##########################################
@@ -151,13 +180,12 @@ Is this because there is an underlying signature of wood traits on the initial m
 
 ## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
 ```{r, message=FALSE, results = F}
-resids_explainDecay.list$traits.code
-
+#resids_explainDecay.list$traits.code
 
 cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, 
                                                              code.respVars, 
                                                              traitResiduals.code = resids_explainDecay.list$traits.code,
-                                                             use.cache = T, save.cache = T)
+                                                             use.cache = F, save.cache = F)
 cvfit.results.code$prettyTabs
 cvfit.results.code
 
@@ -165,14 +193,30 @@ models_explainDecay.list[['comm-decayResidtraits.code']] <- cvfit.results.code$p
 
 ```
 
+Test saprotrophs
+```{r}
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecayResids(comm.otu.sapro, seqSamples, decayfits, 
+                                                             code.respVars, 
+                                                             traitResiduals.code = resids_explainDecay.list$traits.code,
+                                                             use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs
+cvfit.results.code.sapro
+
+models_explainDecay.list[['comm-decayResidtraits.code.sapro']] <- cvfit.results.code.sapro$prettyTabs
+
+
+```
+
+
+
 ## *Hyp (species+size-level)* After accounting for variation in decay due to C fractions, average initial microbial communitiy compositions will predict variation in decay model fit (r2), rate (t70, k), and lagginess (alpha).
 ```{r, message=FALSE, results = F}
-resids_explainDecay.list$cfract.code
+#resids_explainDecay.list$cfract.code
 
 cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, 
                                                              code.respVars, 
                                                              traitResiduals.code = resids_explainDecay.list$cfract.code,
-                                                             use.cache = T, save.cache = T)
+                                                             use.cache = F, save.cache = F)
 cvfit.results.code$prettyTabs
 cvfit.results.code
 
@@ -180,6 +224,19 @@ models_explainDecay.list[['comm-decayResidtraits.code']] <- cvfit.results.code$p
 
 ```
 
+Test saprotrophs
+```{r}
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecayResids(comm.otu.sapro, seqSamples, decayfits, 
+                                                             code.respVars, 
+                                                             traitResiduals.code = resids_explainDecay.list$cfract.code,
+                                                             use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs
+cvfit.results.code.sapro
+
+models_explainDecay.list[['comm-decayResidtraits.code.sapro']] <- cvfit.results.code.sapro$prettyTabs
+
+
+```
 
 Community data doesn't improve our understanding of decay rates (k, t70) or variation in decay rate (ne.r2) beyond what is known from the trait data.
 
@@ -200,13 +257,21 @@ models_explainDecay.list[['comm-decayResidtraits.stem']] <- cvfit.results.stem$p
 #screeplot(fit.tr.t13.cv.nt)
 #There are two cases where there's a large % decrease in model RMSE from Component 1 to Component 2. This happens when using the whole community dataset to predict trait residuals at time13 and time37. In both cases the cross-validated RMSE is way higher than the model RMSE for all the components, suggesting that even the first community component doesn't perform well on the leave-one-out validation dataset.  Also, the cross-validated R-squared values (correlation between the observed and predicted values from the "loo" validation dataset) show that the model fit decreases after Component 1.  If there were a global maximum such that we saw an increase in R2 after adding more Components then maybe we could interpret Component 2, but there is no evidence of a better fitting model with more components based on the cross-validation results.
 
-
-
 ```
 
 Community data doesn't improve our understanding of mass loss (pmr after 7, 13, 25, 37, and 59 months) beyond what is known from the trait data.
 
+Test saprotrophs
+```{r}
+cvfit.results.stem.sapro <- doAnalysis_endoComp_explainPMRResids(comm.otu.sapro, 
+                                                           pmr_byStem, 
+                                                           stem.respVars, 
+                                                           traitResiduals.stem =
+                                                             resids_explainDecay.list$traits.stem)
+cvfit.results.stem.sapro$prettyTabs
 
+models_explainDecay.list[['comm-decayResidtraits.stem.sapro']] <- cvfit.results.stem.sapro$prettyTabs
+```
 
 # Slice 2: Include C fraction data (and exclude small stems)
 
@@ -215,7 +280,7 @@ Community data doesn't improve our understanding of mass loss (pmr after 7, 13, 
 cvfit.results.code <- doAnalysis_endoComp_explainDecayResids(comm.otu, seqSamples, decayfits, 
                                                              code.respVars, 
                                                              traitResiduals.code = resids_explainDecay.list$cfract.code,
-                                                             use.cache = T, save.cache = T)
+                                                             use.cache = F, save.cache = F)
 cvfit.results.code$prettyTabs
 
 models_explainDecay.list[['comm-decayResidcfract.code']] <- cvfit.results.code$prettyTabs
@@ -223,6 +288,18 @@ models_explainDecay.list[['comm-decayResidcfract.code']] <- cvfit.results.code$p
 ```
 
 Community data doesn't improve our understanding of decay rates (k, t70) or variation in decay rate (ne.r2) beyond what is known from the C fraction data.
+
+Test saprotrophs
+```{r}
+cvfit.results.code.sapro <- doAnalysis_endoComp_explainDecayResids(comm.otu.sapro, seqSamples, decayfits, 
+                                                             code.respVars, 
+                                                             traitResiduals.code = resids_explainDecay.list$cfract.code,
+                                                             use.cache = F, save.cache = F)
+cvfit.results.code.sapro$prettyTabs
+
+models_explainDecay.list[['comm-decayResidcfract.code.sapro']] <- cvfit.results.code.sapro$prettyTabs
+
+```
 
 
 ## *Hyp (stem-level)* After accounting for variation in decay due to wood C fractions (no models with density, includes small-species level bark thickness), stem-specific initial microbial communitiy compositions will predict variation in percent mass loss, particularly in the early stages of decay.
@@ -239,6 +316,18 @@ models_explainDecay.list[['comm-decayResidcfract.stem']] <- cvfit.results.stem$p
 
 Community data doesn't improve our understanding of mass loss (pmr after 7, 13, 25, 37, and 59 months) beyond what is known from the C fraction data.
 
+Test saprotrophs
+```{r}
+cvfit.results.stem.sapro <- doAnalysis_endoComp_explainPMRResids(comm.otu.sapro, pmr_byStem, 
+                                                           stem.respVars, 
+                                                           traitResiduals.stem =
+                                                             resids_explainDecay.list$cfract.stem)
+cvfit.results.stem.sapro$prettyTabs
+
+models_explainDecay.list[['comm-decayResidcfract.stem.sapro']] <- cvfit.results.stem.sapro$prettyTabs
+```
+
+Full saprotroph community marginally significant for explaining variation at the last time point (p = 0.06, time59)
 
 ##########################################
 # Relationship between wood traits and community --- GET RID OF THIS SECTION? Only look for signiture of traits in community comp if there are relationships between comp and decay.. there were none
@@ -330,13 +419,13 @@ Use ordistep to find the best combination of traits to constrain variation in th
 
 # save the objects that come out of makefig__...
 names(models_explainDecay.list)
-filenames<- paste0("output/tables/supplementary/wapls_", names(models_explainDecay.list),".csv")
+filenames<- paste0("output/tables/wapls_", names(models_explainDecay.list),".csv")
 for(i in 1:length(models_explainDecay.list)){
   write.csv(models_explainDecay.list[[i]], file = filenames[[i]])
 }
 
 # save the plots that dig into models summary results
-pdf(file = "output/figures/supplementary/wapls_pmr37.pdf")
+pdf(file = "output/figures/wapls_pmr37.pdf")
 grid.arrange(plots_explainDecay.list$`comm-decay.stem`$p1,
              plots_explainDecay.list$`comm-decay.stem`$p2, ncol = 2)
 dev.off()
@@ -378,10 +467,9 @@ p3 <- ggplot(df, aes(x = waterperc, y = time37, color = size)) +
   guides(color = F)
 p3
 
-pdf(file = "output/figures/maintext/water-comm-pmr37.pdf")
+pdf(file = "output/figures/water-comm-pmr37.pdf")
 grid.arrange(p1, p3, p2, ncol = 2)
 dev.off()
-
 
 ```
 
