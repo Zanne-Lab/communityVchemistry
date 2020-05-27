@@ -30,7 +30,8 @@ load_stemSamples <- function(){
 add_oomycetes <- function(fung.otu){
 
   # read in OTU table (uclust output) and convert to matrix (rows=samples, columns=OTUs)
-  data.otu <- read.csv('data/sequencing_T0/OTUtable_oomycetes_20171020.csv', row.names=1)
+  # data.otu <- read.csv('data/sequencing_T0/OTUtable_oomycetes_20171020.csv', row.names=1)
+  data.otu <- read.csv('data/sequencing_T0/DP16_T0_ITSoo_20200527_OTUtable.csv', row.names=1)
   data.df<-data.frame(seqSamp=row.names(data.otu), data.otu)
 
   #make mat.otu of fungal taxa a dataframe
