@@ -31,6 +31,9 @@ PullLmCoefs<-function(sum.list, respvars){
 
 PullLmFitStats<-function(sum.list, respvars){
   
+  sum.list <- mod.list
+  respvars <- unlist(respvars)
+  
   # extract model fit stats
   fitstats.list<-lapply(sum.list, function(x){
     df<-data.frame(Fstat = round(x$fstatistic['value'], digits=2),
@@ -72,8 +75,13 @@ PullAnova<-function(mod.list, respvars){
 
 MakeLm_plottingDF <- function(mod.list, respvars){
   
+  #mod.list = result.list$models
+  #respvars = result.list$respVars
+  
   # extract model R2
   fitstat.df<-PullLmFitStats(mod.list, unlist(respvars))
+  
+  
   fitstat.df %>%
     gather(key = "respvar", value = "value", -c(term)) %>%
     filter(term == "r.squared") %>%
@@ -121,9 +129,8 @@ MakeLmSummaryTable<-function(mod.list, respvars){
     mutate(print.est = paste(signif(est, 2), stars)) %>%
     select(respvar, term, print.est) %>%
     spread(respvar, print.est) -> coefs.df
-  
+  coefs.df
   prettyTab<-rbind(coefs.df, rep(NA, length(colnames(coefs.df))), fitstat.df)
-  
   return(prettyTab)
   
 }

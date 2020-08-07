@@ -192,6 +192,48 @@ doAnalysis_endoDiv_explainDecayResids <- function(taxAndFunguild, comm.otu, trai
   
 }
 
+doAnalysis_endoDiv_explainDecayResids_cfract <- function(taxAndFunguild, comm.otu, 
+                                                         traitResiduals.code, code.respVars){
+  
+  richList <- summarize_endoDiv(taxAndFunguild, comm.otu)
+  
+  #merge the diversity and trait residuals data
+  rich.traitresid.list<-lapply(richList, function(x) {CreateRichTraitResid_df(otutype.df = x, trait.residuals = traitResiduals.code)})
+  
+  #fit models
+  richType.list<-list()
+  for(i in 1:length(rich.traitresid.list)){
+    resp.list<-list()
+    for(k in 1:length(lhs)){
+      df.sub<-subset(rich.traitresid.list[[i]], resp == lhs[[k]]) #subset the dataset based on the current resp var
+      resp.list[[k]]<-ModelFit_manyYs(y = "resid", rhs = rhs, curr.data = df.sub) #run models
+    }
+    names(resp.list)<-lhs
+    richType.list[[i]]<-resp.list
+  }
+  names(richType.list)<-names(richList)
+  
+  #summarize
+  x<- richType.list[[1]]
+  pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
+  pretty.list
+  pretty.df <- list_to_df(pretty.list)
+  
+  # #identify significant relationships
+  # pretty.df %>%
+  #   filter(term %in% c('mean','sizesmall','sizesmall:mean')) %>%
+  #   gather(key = "respvar", value = "coef", -c(source, term)) %>%
+  #   mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
+  #   filter(signif == T)
+  
+  result.list <- list(rich.traitresid.list = rich.traitresid.list,
+                      pretty.df = pretty.df)
+  
+  return(result.list)
+  
+}
+
+
 makefig__saproRichDecayResids <- function(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars){
   
   result.list <- doAnalysis_endoDiv_explainDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
@@ -219,6 +261,39 @@ doAnalysis_endoDiv_explainPMRResids <- function(taxAndFunguild, comm.otu, traitR
   
   #fit models
   rhs <- "size * sub_rich"
+  lhs <- stem.respVars
+  
+  richType.list<-list()
+  for(i in 1:length(rich.traitresid.list)){
+    resp.list<-list()
+    for(k in 1:length(lhs)){
+      df.sub<-subset(rich.traitresid.list[[i]], resp == lhs[[k]]) #subset the dataset based on the current resp var
+      resp.list[[k]]<-ModelFit_manyYs(y = "resid", rhs = rhs, curr.data = df.sub) #run models
+    }
+    names(resp.list)<-lhs
+    richType.list[[i]]<-resp.list
+  }
+  names(richType.list)<-names(richList)
+  
+  #summarize
+  pretty.list<-lapply(richType.list, MakeLmSummaryTable, respvars=lhs)
+  pretty.df <- list_to_df(pretty.list)
+  
+  result.list.stem <- list(rich.traitresid.list = rich.traitresid.list,
+                           pretty.df = pretty.df)
+  
+  return(result.list.stem)
+  
+}
+
+doAnalysis_endoDiv_explainPMRResids_cfract <- function(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars){
+  
+  richList <- summarize_endoDiv(taxAndFunguild, comm.otu)
+  #merge the diversity and trait residuals data
+  rich.traitresid.list<-lapply(richList, function(x) {traitResiduals.stem %>% left_join(x)})
+  
+  #fit models
+  rhs <- "sub_rich"
   lhs <- stem.respVars
   
   richType.list<-list()

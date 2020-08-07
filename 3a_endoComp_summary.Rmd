@@ -1,0 +1,272 @@
+---
+title: "Does endophyte composition explain decay?"
+author: "Marissa Lee"
+date: "12/2/2018"
+output: github_document
+---
+
+Contents:
+1. Summarize sequencing effort
+2. Create a filtered dataset without rare taxa
+3. Identify taxa by functional groups
+4. Export OTU tables for analysis
+5. Summarize alpha diversity
+
+___________________
+___________________
+
+Load libraries and functions
+```{r}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+
+#---------------------------#
+#libraries
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+library(tidymodels) # broom
+library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
+library(grid) #plotting
+library(gridExtra) # plotting
+#library(GGally) # bivariate plots
+#library(lmtest) # for coxtest()
+
+
+#---------------------------#
+#fxns
+source('code/helper_fxns.R')
+sourceDir('code')
+
+```
+
+Load decay data
+```{r loaddata}
+
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = shape param = higher values mean more S-shaped
+```
+
+Load wood trait data
+```{r}
+traits.code <- read.csv(file = "derived_data/traits_code.csv", row.names = 1)
+traits.stem <- read.csv(file = "derived_data/traits_stem.csv", row.names = 1)
+
+# ordering and stuff
+trait.order <- traitcol.order()
+traitVars1 <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars1 # slice1 (w/ size)
+traitVars2 <- c(traitVars1, trait.order$cfract.cols)
+traitVars2 # slice2 (w/o size)
+
+```
+
+Load residuals from 2b_woodTraits_explainDecay.Rmd
+```{r}
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+
+```
+
+Load microbial community data
+```{r}
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+
+# microbes
+microb.data <- load_MicrobeCollection(stemSamples)
+taxAndFunguild <- microb.data$taxAndFunguild
+comm.otu <- microb.data$comm.otu
+seqSamples <- microb.data$seqSamples
+
+#check for oomycetes
+colnames(comm.otu)[grep("oo", colnames(comm.otu))] # 9
+taxAndFunguild %>%
+  filter(kingdom != "Fungi") #9
+
+```
+
+___________________
+# 1. Summarize sequencing effort
+
+Sample-effort curves
+```{r}
+#this takes a while... uncomment if the data changes
+#plot_sampleEffortCurves(comm.otu) # output/figures/sampleEffortCurve.pdf
+
+```
+
+How many total OTUs and reads?
+```{r}
+# how many OTUs?
+dim(comm.otu)
+dim(taxAndFunguild)
+taxAndFunguild %>%
+  group_by(kingdom) %>%
+  summarize(n = length(OTUId))
+
+# how many reads?
+x <- grepl("oo", colnames(comm.otu))
+comm.otu.oo <- comm.otu[,x]
+comm.otu.fun <- comm.otu[,!x]
+
+sum(colSums(comm.otu.oo))
+sum(colSums(comm.otu.fun))
+
+```
+
+How many per sample?
+```{r}
+# mean number of reads per sample
+mean(rowSums(comm.otu))
+sd(rowSums(comm.otu))/sqrt(length(rowSums(comm.otu)))
+
+# mean numbr of OTUs per sample
+comm.otu.pa <- (comm.otu > 0) * 1
+mean(rowSums(comm.otu.pa))
+sd(rowSums(comm.otu.pa))/sqrt(length(rowSums(comm.otu.pa)))
+```
+
+___________________
+# 2. Create a filtered dataset without rare taxa
+
+Filter community matrix to include only taxa that are present in a least 20% of all the samples. This step removes taxa that may not contribute much to our understanding of the relationship between species’ multivariate abundance and environment.
+```{r}
+comm.otu.trimmed <- removeRareOTUs(comm.otu)
+
+# are oomycetes in here? nope
+colnames(comm.otu.trimmed)[grep("oo", colnames(comm.otu.trimmed))]
+
+```
+This drops all the oomycetes
+
+___________________
+# 3. Identify taxa by functional groups
+
+How many OTUs matched to a genus-level taxonomic assignment?
+```{r}
+colnames(taxAndFunguild)
+n.unc <- sum(taxAndFunguild$genus == "unclassified")
+n.unc / dim(taxAndFunguild)[1]
+taxAndFunguild %>%
+  filter(genus != "unclassified") %>%
+  group_by(Confidence.Ranking) %>%
+  summarize(n = length(OTUId)) -> tmp
+conf <- 244 + 54
+conf/sum(tmp$n)
+```
+
+Identify the saprotrophs
+```{r}
+taxAndFunguild %>%
+  filter(grepl("Sapro", Guild)) -> sapro.tax
+  
+comm.otu.sapro <- comm.otu[, colnames(comm.otu) %in% sapro.tax$OTUId]
+dim(comm.otu.sapro) # 176 OTUs
+
+comm.otu.sapro.trimmed <- comm.otu.trimmed[, colnames(comm.otu.trimmed) %in% sapro.tax$OTUId]
+dim(comm.otu.sapro.trimmed) # only 11 OTUs
+
+```
+There are 176 saprotroph OTUs, of those 11 are present in the trimmed community
+
+Identify the basidios
+```{r}
+taxAndFunguild %>%
+  filter(grepl("Basidio", phylum)) -> basid.tax
+basid.tax  
+comm.otu.basid <- comm.otu[, colnames(comm.otu) %in% basid.tax$OTUId]
+dim(comm.otu.basid) # 526 OTUs
+
+comm.otu.basid.trimmed <- comm.otu.trimmed[, colnames(comm.otu.trimmed) %in% basid.tax$OTUId]
+dim(comm.otu.basid.trimmed) # only 15 OTUs
+
+```
+There are 526 Basidiomycota OTUs, of those 15 are present in the trimmed community
+
+Identify the oomycetes
+```{r}
+taxAndFunguild %>%
+  filter(grepl("Protist", kingdom)) -> oo.tax
+oo.tax  
+comm.otu.oo <- comm.otu[, colnames(comm.otu) %in% oo.tax$OTUId]
+dim(comm.otu.oo) # 9 OTUs
+#remove empty samples
+#comm.otu.oo <- comm.otu.oo[rowSums(comm.otu.oo) > 0,]
+
+comm.otu.oo.trimmed <- comm.otu.trimmed[, colnames(comm.otu.trimmed) %in% oo.tax$OTUId]
+dim(comm.otu.oo.trimmed) # 0 OTUs
+
+```
+There are 9 Oomycete OTUs, of those 0 are present in the trimmed community
+
+Identify the Pathotrophs
+```{r}
+taxAndFunguild %>%
+  filter(grepl("Patho", Guild)) -> patho.tax
+  
+comm.otu.patho <- comm.otu[, colnames(comm.otu) %in% patho.tax$OTUId]
+dim(comm.otu.patho) # 129 OTUs
+
+comm.otu.patho.trimmed <- comm.otu.trimmed[, colnames(comm.otu.trimmed) %in% patho.tax$OTUId]
+dim(comm.otu.patho.trimmed) # only 11 OTUs
+
+```
+There are 129 Pathotroph OTUs, of those 10 are present in the trimmed community
+
+___________________
+# 4. Export OTU tables for analysis
+
+```{r}
+
+#all
+dim(comm.otu) # 3297 OTUs
+dim(comm.otu.trimmed) # 146 OTUs
+
+#sapros
+dim(comm.otu.sapro) # 176 OTUs
+dim(comm.otu.sapro.trimmed) # only 11 OTUs
+
+#basidios
+dim(comm.otu.basid) # 526 OTUs
+dim(comm.otu.basid.trimmed) # only 15 OTUs
+
+#oomycetes
+dim(comm.otu.oo) # 9 OTUs in 11 samples
+dim(comm.otu.oo.trimmed) # 0 OTUs
+
+#pathos
+dim(comm.otu.patho) # 129 OTUs
+dim(comm.otu.patho.trimmed) # only 10 OTUs
+
+
+otu.list <- list(all = comm.otu,
+                 sapro = comm.otu.sapro,
+                 basid = comm.otu.basid,
+                 oo = comm.otu.oo,
+                 patho = comm.otu.patho)
+saveRDS(otu.list, file = "derived_data/otu_list.RData")
+
+otu.list.trimmed <- list(all = comm.otu.trimmed,
+                 sapro = comm.otu.sapro.trimmed,
+                 basid = comm.otu.basid.trimmed,
+                 patho = comm.otu.patho.trimmed)
+saveRDS(otu.list.trimmed, file = "derived_data/otu_list_trimmed.RData")
+# remember there are 0 oomycete OTUs in the trimmed dataset so these are not included in the list
+
+
+```
+
+___________________
+# 5. Summarize alpha diversity
+
+
+
+

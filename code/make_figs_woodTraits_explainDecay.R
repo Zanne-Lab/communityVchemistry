@@ -1,29 +1,35 @@
 #--------------------------------------#
-# code-level traits
+# use code-level traits to explain decay
 
-doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.respVars, traitVars, cfract){
+#updated 7.28.20
+doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, 
+                                                  code.respVars, traitVars, slice){
   
+  # 1- set up df
   #isolate trait data and scale it
   traits.code %>%
-    ungroup(code) %>%
-    select(c("code","species","size",traitVars)) %>%
-    na.omit %>%
-    mutate_at(vars(traitVars), list(s = scale2)) -> select.traits.code  # see helper_fxns.R
-  
+    select(c("code","species","size",traitVars)) -> select.traits.code
+  if(slice == 2){
+    select.traits.code %>%
+      filter(size == "large") -> select.traits.code
+  }
+  select.traits.code %>%
+    mutate_at(vars(traitVars), list(s = scale2)) -> select.traits.code
+  select.traits.code
   #isolate decay data
   decayfits %>%
     select(c("code","species","size", unlist(code.respVars))) -> select.decayfits
-  
+  if(slice == 2){
+    select.decayfits %>%
+      filter(size == "large") -> select.decayfits
+  }
   #merge traits and response variables into 1 df
   select.decayfits %>%
-    left_join(select.traits.code) %>%
-    na.omit -> decayfits.traits
-  #remove the na.action attribute so that it does not interfere with prediction downstream
-  attr(decayfits.traits, "na.action") <- NULL
+    left_join(select.traits.code) -> decayfits.traits
   
   #set up full models
   scaled.traitvars <- paste(traitVars,"s",sep = "_")
-  if(cfract == FALSE){
+  if(slice == 1){ # slice1 = no C fraction data, include samll
     rhsVars <- paste(c("size",scaled.traitvars))
   }else{
     rhsVars <- paste(c(scaled.traitvars))
@@ -31,31 +37,62 @@ doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.r
   rhs <- paste(rhsVars, collapse = " + ")
   print(rhs)
   
-  # fit models
-  code.respVars %>%
-    purrr::set_names() %>%
-    map(~fit.lm(y = .x, rhs, data = decayfits.traits)) -> mod.full.list  # see helper_fxns.R
+  # 2 - fit cv glmnet
+  require(glmnet)
+  var.list <- list()
+  cvfit.list <- list()
+  code.respVars
+  i<-1
+  for(i in 1:length(code.respVars)){
+    y <- decayfits.traits[,code.respVars[[i]]]
+    x <- data.frame(decayfits.traits[,rhsVars], stringsAsFactors = F)
+    if(slice == 1){ # slice1 = no C fraction data, include samll
+      x %>%
+        mutate(size = ifelse(size == "small", 0, 1)) -> x
+    }
+    x <- as.matrix(x)
+    y <- as.matrix(y)
+    #fit <- glmnet(x = x, y = y, family="gaussian")
+    #plot(fit, xvar = "lambda", label = T)
+    cvfit <- cv.glmnet(x = x, y = y, family = "gaussian")
+    #plot(cvfit)
+    vars <- extract.lambda_uni(cvfit, s = "lambda.min")
+    vars
+    var.list[[i]] <- vars
+    cvfit.list[[i]] <- cvfit
+  }
+  #var.list
+  #cvfit.list
   
-  #do stepwise model selection
-  mod.full.list %>%
-    map(~backward_selection(.x, data = decayfits.traits)) -> mod.select.list  # see helper_fxns.R
+  # 3 - fit cv glmnet final model
+  mod.list <- list()
+  i<-1
+  for(i in 1:length(code.respVars)){
+    y <- decayfits.traits[,code.respVars[[i]]]
+    x <- data.frame(decayfits.traits[,var.list[[i]]], stringsAsFactors = F)
+    if("size" %in% colnames(x)){
+      x %>%
+        mutate(size = ifelse(size == "small", 0, 1)) -> x
+    }
+    x <- as.matrix(x)
+    y <- as.matrix(y)
+    fml<- as.formula(paste("y~",paste(colnames(x),collapse = "+")))
+    fml
+    df <- data.frame(y, x, stringsAsFactors = F)
+    mod <- lm(fml, data = df)
+    mod.list[[i]] <- mod
+  }
+  names(mod.list) <- code.respVars
   
-  #extract and save the residuals
-  mod.select.list %>%
+  # 4 - extract and save the residuals from final model
+  mod.list %>%
     map(~residuals(.x)) %>%
     map(~data.frame(resid=.x, code = decayfits.traits$code)) %>%
-    bind_rows(.id = "resp") -> residuals
+    list_to_df() %>%
+    dplyr::rename('resp'='source') -> residuals
   
-  #create prediction dataframes for each trait and model
-  scaled.traitvars %>%
-    purrr::set_names() %>%
-    map(~preddat_fun_bysize_allmodels(models = mod.select.list,
-                                      data = decayfits.traits, # see helper_fxns.R
-                                      curr.traitVar = .x,
-                                      data.list = F)) -> preddat
-  
-  #save model fit stats
-  mod.select.list %>%
+  # 5 - save model fit stats
+  mod.list %>%
     map(~summary(.x)) %>%
     map(~data.frame(Fstat = round(.x$fstatistic['value'], digits=2),
                     numdf = .x$fstatistic['numdf'],
@@ -65,66 +102,169 @@ doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code, code.r
     select(-source) %>%
     t() -> fitstats
   
-
   result.traitsDecay <- list(
     data = decayfits.traits,
     respVars = code.respVars,
-    models = mod.select.list,
+    models = mod.list,
     residuals = residuals,
-    preddat = preddat,
     fitstats = fitstats)
   
   return(result.traitsDecay)
   
 }
 
-makefig__traits_explain_decayParams <- function(result.list, traitVars, cfract){
+#--------------------------------------#
+# use stem-level traits to expain decay
+
+#updated 7.28.20
+doAnalysis_traits_explain_pmr <- function(stem.respVars, traits.stem, pmr_byStem, traitVars, slice){
   
-  #set up plotting dataframe
-  plot.obj <- MakeLm_plottingDF(mod.list = result.list$models, 
-                                respvars = result.list$respVars)
-  #plot.obj$plotting.df
-  #plot.obj$r2.df
-  
-  #define wood trait levels
-  if(cfract == F){
-    trait.levels <- c("sizesmall", paste(traitVars, "s", sep = "_"))
-    trait.labels <- c("sizesmall", traitVars)
-  }else{
-    trait.levels <- c(paste(traitVars, "s", sep = "_"))
-    trait.labels <- c(traitVars)
+  # 1- set up df
+  #isolate trait data and scale it
+  traits.stem %>%
+    select(c("codeStem","code","species","size", traitVars)) -> select.traits.stem
+  if(slice == 2){
+    select.traits.stem %>%
+      filter(size == "large") -> select.traits.stem
   }
-  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, 
-                                      levels = rev(trait.levels),
-                                      labels = rev(trait.labels))
+  select.traits.stem %>%
+    mutate_at(vars(traitVars), list(s = scale2)) -> select.traits.stem
+  #isolate decay data
+  pmr_byStem %>%
+    select(c("codeStem", "code","species","size", unlist(stem.respVars))) -> select.pmr
+  if(slice == 2){
+    select.pmr %>%
+      filter(size == "large") -> select.pmr
+  }
+  #merge traits and response variables into 1 df
+  select.pmr %>%
+    left_join(select.traits.stem) -> pmr.traits
   
-  #define response variable levels
-  respvar.levels <- c("w.t50","beta","alpha", "w.r2","t50","k","ne.r2")
-  respvar.labels <- c("Years to 50%\nmass loss","Scale param.","Shape param.","Weibull R2",
-                      "t50","k","ne.r2")
-  plot.obj$plotting.df %>%
-    filter(respvar %in% respvar.levels) %>%
-    mutate(respvar = factor(respvar, levels = respvar.levels, 
-                            labels = respvar.labels)) -> plot.obj$plotting.df
+  #set up full models
+  scaled.traitvars <- paste(traitVars,"s",sep = "_")
+  if(slice == 1){ # slice1 = no C fraction data, include samll
+    rhsVars <- paste(c("size",scaled.traitvars))
+  }else{
+    rhsVars <- paste(c(scaled.traitvars))
+  }
+  rhs <- paste(rhsVars, collapse = " + ")
+  print(rhs)
   
-  #plot
-  p <- ggplot(plot.obj$plotting.df, aes(x = respvar, y = term, fill = etasq)) +
-    geom_tile(color = "black") + 
-    geom_text(aes(label = round(est, digits = 2)), size = 3) +
-    xlab("Response variable") + ylab("Wood trait") +
-    theme_classic() +
-    scale_fill_distiller(direction = 1) +
-    scale_y_discrete(limits = rev(trait.labels)) +
-    theme(axis.text.x = element_text(angle = 45, hjust = 1))
-  p
+  # 2 - fit cv glmnet
+  require(glmnet)
+  var.list <- list()
+  cvfit.list <- list()
+  stem.respVars
+  i<-1
+  for(i in 1:length(stem.respVars)){
+    y <- pmr.traits[,stem.respVars[[i]]]
+    x <- data.frame(pmr.traits[,rhsVars], stringsAsFactors = F)
+    if(slice == 1){ # slice1 = no C fraction data, include samll
+      x %>%
+        mutate(size = ifelse(size == "small", 0, 1)) -> x
+    }
+    x <- as.matrix(x)
+    y <- as.matrix(y)
+    data <- cbind(x, y)
+    data.nonas <- data[complete.cases(data),]
+    x.nonas <- data.nonas[,colnames(data.nonas) %in% colnames(x)]
+    y.nonas <- data.nonas[,!colnames(data.nonas) %in% colnames(x)]
+    #fit <- glmnet(x = x.nonas, y = y.nonas, family="gaussian")
+    #plot(fit, xvar = "lambda", label = T)
+    cvfit <- cv.glmnet(x = x.nonas, y = y.nonas, family = "gaussian")
+    #plot(cvfit)
+    vars <- extract.lambda_uni(cvfit, s = "lambda.min")
+    var.list[[i]] <- vars
+    cvfit.list[[i]] <- cvfit
+  }
+  #var.list
+  #cvfit.list
   
-  result <- list(p = p, p.r2 = plot.obj$r2.df)
-  return(result)
+  # 3 - fit cv glmnet final model
+  mod.list <- list()
+  samples.list <- list()
+  i<-1
+  for(i in 1:length(stem.respVars)){
+    y <- pmr.traits[,stem.respVars[[i]]]
+    x <- data.frame(pmr.traits[,var.list[[i]]], stringsAsFactors = F)
+    if("size" %in% colnames(x)){
+      x %>%
+        mutate(size = ifelse(size == "small", 0, 1)) -> x
+    }
+    x <- as.matrix(x)
+    y <- as.matrix(y)
+    data <- cbind(x, y)
+    data.nonas <- data[complete.cases(data),]
+    x.nonas <- data.nonas[,colnames(data.nonas) %in% colnames(x)]
+    y.nonas <- data.nonas[,!colnames(data.nonas) %in% colnames(x)]
+    !is.null(colnames(x.nonas))
+    if(!is.null(colnames(x.nonas))){
+      fml<- as.formula(paste("y.nonas~",paste(colnames(x.nonas),collapse = "+")))
+      df <- data.frame(y.nonas, x.nonas, stringsAsFactors = F)
+      mod <- lm(fml, data = df)
+    }else{
+      df <- data.frame(y.nonas, stringsAsFactors = F)
+      df
+      mod <- lm(y.nonas~1, data = df)
+    }
+    mod.list[[i]] <- mod
+    samples.list[[i]] <- pmr.traits[complete.cases(data),"codeStem"]
+    
+  }
+  names(mod.list) <- stem.respVars
+  names(samples.list) <- stem.respVars
+  
+  # 4 - extract and save the residuals from final model
+  mod.list %>%
+    map(~residuals(.x)) %>%
+    map2(.y = samples.list, .f = ~data.frame(resid=.x, codeStem =.y)) %>%
+    list_to_df() %>%
+    dplyr::rename('resp'='source') -> residuals
+  
+  # 5 - save model fit stats
+  mod.list %>%
+    map(~summary(.x)) -> summary.list
+  summary.list %>%
+    map(~is.null(.x$fstatistic)) -> empty
+  not.empty <- summary.list[!unlist(empty)]
+  not.empty %>%
+    map(~data.frame(Fstat = round(.x$fstatistic['value'], digits=2),
+                    numdf = .x$fstatistic['numdf'],
+                    dendf = .x$fstatistic['dendf'],
+                    r.squared = round(.x$r.squared, digits=2))) %>%
+    list_to_df() %>%
+    select(-source) %>%
+    t() -> fitstats
+  fitstats
+  if(sum(unlist(empty)) != 0){
+    empty.mods <- summary.list[unlist(empty)]
+    empty.mods %>%
+      map(~data.frame(Fstat = NA,
+                      numdf = .x$df[1],
+                      dendf = .x$df[2],
+                      r.squared = round(.x$r.squared, digits=2))) %>%
+      list_to_df() %>%
+      select(-source) %>%
+      t() -> fitstats.empty
+    fitstats <- cbind(fitstats, fitstats.empty)
+  }
+  
+  result.traitsDecay <- list(
+    data = pmr.traits,
+    respVars = stem.respVars,
+    models = mod.list,
+    residuals = residuals,
+    fitstats = fitstats)
+  
+  
+  return(result.traitsDecay)
   
 }
 
+
+
 #--------------------------------------#
-# stem-level traits
+# rationalize aggregation of trait data
 
 makeDF_variation_densityNbarkthick <- function(traits.stem, traits.code, pmr_byStem){
   
@@ -220,184 +360,6 @@ doAnalysis_variation_densityNbarkthick <- function(traits.stem, traits.code, pmr
   
 }
 
-CreateTraitPMRpair<-function(respVar, traits.stem, traits.code, pmr_byStem, traitVars.stem){
-  
-  #make a dataframe using the current time point's pmr and remove NAs
-  pmr_byStem %>%
-    select("codeStem", respVar) %>%
-    rename("curr.pmr" = respVar) %>%
-    filter(!is.na(curr.pmr)) -> pmr.noNAs
-  #subset the trait matrix using these unique codeStems
-  traits.stem %>%
-    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
-  #make sure there are no NAs in waterperc or chemistry data
-  curr.traits %>%
-    filter(!is.na(waterperc) & !is.na(P) & !is.na(K) & !is.na(Ca) & !is.na(Mn) & !is.na(Fe) & !is.na(Zn) & !is.na(N) & !is.na(C)) -> curr.traits
-  
-  #add species-level traits
-  traits.code %>%
-    select(code, barkthick, density) %>%
-    rename('barkthick_smspp'='barkthick',
-           'density_smspp'='density')-> select.traits.code
-  curr.traits %>%
-    left_join(select.traits.code) -> curr.traits
-  
-  #get rid of pmr rows for which there is missing trait data
-  pmr.noNAs %>%
-    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
-  
-  #merge the dataframes
-  curr.df<-left_join(curr.pmr, curr.traits) 
-  #add code and species and size
-  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
-  curr.df$species<-tolower(curr.df$code)
-  curr.df$size<-"large"
-  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
-  
-  return(curr.df)
-  
-}
-
-doAnalysis_traits_explain_pmr <- function(datasets, stem.respVars, traitVars.stem, cfract){
-  
-  #isolate trait data and scale it
-  datasets %>%
-    map(~ungroup(.x, codeStem)) %>%
-    map(~mutate_at(.x, vars(traitVars.stem), list(s = scale2))) -> datasets.s # see helper_fxns.R
-  
-  #set up full models
-  scaled.traitvars <- paste(traitVars.stem ,"s",sep = "_")
-  if(cfract == F){
-    rhsVars <- paste(c("size",scaled.traitvars))
-  }else{
-    rhsVars <- paste(c(scaled.traitvars))
-  }
-  rhs <- paste(rhsVars, collapse = " + ")
-  print(rhs)
-  lhs <- "curr.pmr"
-  
-  # fit models
-  datasets.s %>%
-    map(~fit.lm(y = lhs, rhs, data = .x)) -> mod.full.list  # see helper_fxns.R
-  
-  #do stepwise model selection
-  map2(.x = mod.full.list, 
-       .y = datasets.s, ~backward_selection(.x, data = .y)) -> mod.select.list  # see helper_fxns.R
-  
-  #extract and save the residuals
-  mod.select.list %>%
-    map(~residuals(.x)) %>%
-    map2(.y = datasets.s, 
-         ~data.frame(resid=.x, codeStem = .y$codeStem)) %>%
-    bind_rows(.id = "resp") -> residuals
-  
-  #create prediction dataframes for each trait and model
-  scaled.traitvars %>%
-    purrr::set_names() %>%
-    map(~preddat_fun_bysize_allmodels(models = mod.select.list,
-                                      data = datasets.s, # see helper_fxns.R
-                                      curr.traitVar = .x,
-                                      data.list = T)) -> preddat
-  
-  #save model fit stats
-  mod.select.list %>%
-    map(~summary(.x)) %>%
-    map(~data.frame(Fstat = round(.x$fstatistic['value'], digits=2),
-                    numdf = .x$fstatistic['numdf'],
-                    dendf = .x$fstatistic['dendf'],
-                    r.squared = round(.x$r.squared, digits=2))) %>%
-    list_to_df() %>%
-    select(-source) %>%
-    t() -> fitstats
-
-  result.traitsPMR <- list(
-    data = datasets,
-    respVars = stem.respVars,
-    models = mod.select.list,
-    residuals = residuals,
-    preddat = preddat,
-    fitstats = fitstats)
-  
-  return(result.traitsPMR)
-  
-}
-
-makefig__traits_explain_pmr <- function(result.list, traitVars.stem, cfract){
-  
-  #set up plotting dataframe
-  plot.obj <- MakeLm_plottingDF(mod.list = result.list$models, respvars = result.list$respVars)
-  #plot.obj$plotting.df
-  #plot.obj$r2.df
-  
-  #define wood trait levels
-  traitVars.stem.s <- c(paste(traitVars.stem, "s", sep = "_"))
-  if(cfract == F){
-    trait.levels <- c("sizesmall", traitVars.stem.s)
-    trait.labels <- c("sizesmall", traitVars.stem)
-  }else{
-    trait.levels <- c(traitVars.stem.s)
-    trait.labels <- c(traitVars.stem)
-  }
-  plot.obj$plotting.df$term <- factor(plot.obj$plotting.df$term, 
-                                      levels = rev(trait.levels),
-                                      labels = rev(trait.labels))
-  
-  #define response variable levels
-  respvar.levels <- unlist(result.list$respVars)
-  plot.obj$plotting.df %>%
-    filter(respvar %in% respvar.levels) %>%
-    mutate(respvar = factor(respvar, levels = respvar.levels)) -> plot.obj$plotting.df
-  
-  #plot
-  plot.obj$plotting.df
-  p <- ggplot(plot.obj$plotting.df, aes(x = respvar, y = term, fill = etasq)) +
-    geom_tile(color = "black") + 
-    geom_text(aes(label = round(est, digits = 2)), size = 3) +
-    xlab("Response variable") + ylab("Wood trait") +
-    theme_classic() +
-    scale_fill_distiller(direction = 1) +
-    scale_y_discrete(limits = rev(trait.labels))
-  p
-  
-  result <- list(p = p, p.r2 = plot.obj$r2.df)
-  return(result)
-}
-
-#--------------------------------------#
-# code-level Cfractions
 
 
-
-#--------------------------------------#
-# stem-level Cfractions
-
-CreateCfractPMRpair<-function(respVar, traits.stem.cfract, pmr_byStem, traitVars.cfract){
-  
-  #make a dataframe using the current time point's pmr and remove NAs
-  pmr_byStem %>%
-    select("codeStem", respVar) %>%
-    rename("curr.pmr" = respVar) %>%
-    filter(!is.na(curr.pmr)) -> pmr.noNAs
-  #subset the trait matrix using these unique codeStems
-  traits.stem.cfract %>%
-    filter(codeStem %in% pmr.noNAs$codeStem) -> curr.traits
-  #make sure there are no NAs 
-  curr.traits <- curr.traits[complete.cases(curr.traits),]
-  
-  #get rid of pmr rows for which there is missing trait data
-  pmr.noNAs %>%
-    filter(codeStem %in% curr.traits$codeStem) -> curr.pmr
-  
-  #merge the dataframes
-  curr.df<-left_join(curr.pmr, curr.traits) 
-  
-  #add code and species and size
-  curr.df<-separate(curr.df, col=codeStem, into=c("code","Stem"), sep=4, remove=FALSE)
-  curr.df$species<-tolower(curr.df$code)
-  curr.df$size<-"large"
-  curr.df[curr.df$code == tolower(curr.df$code),"size"]<-"small"
-  
-  return(curr.df)
-  
-}
 

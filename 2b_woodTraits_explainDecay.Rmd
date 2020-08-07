@@ -1,0 +1,458 @@
+---
+title: "Do wood traits explain decay?"
+author: "Marissa Lee"
+date: "12/2/2018"
+output: github_document
+---
+
+Contents:
+1. CODE-S1. Test role of wood substrate attributes. Exclude C fraction data, include small stems.
+2. CODE-S2. Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+3. STEM-S1. Test role of wood substrate attributes. Exclude C fraction data, include small stems.
+4. STEM-S2. Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+
+___________________
+___________________
+
+Load libraries and functions
+```{r loadlib}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+
+#---------------------------#
+#libraries
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+library(tidymodels) # broom
+library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
+library(grid) #plotting
+library(gridExtra) # plotting
+library(GGally) # bivariate plots
+library(lmtest) # for coxtest()
+
+
+#---------------------------#
+#fxns
+source('code/helper_fxns.R')
+sourceDir('code')
+
+```
+
+Load decay data
+```{r loaddata}
+
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = shape param = higher values mean more S-shaped
+```
+
+Load wood trait data
+```{r}
+traits.code <- read.csv(file = "derived_data/traits_code.csv", row.names = 1)
+traits.stem <- read.csv(file = "derived_data/traits_stem.csv", row.names = 1)
+
+# ordering and stuff
+trait.order <- traitcol.order()
+traitVars1 <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars1 # slice1 (w/ size)
+traitVars2 <- c(traitVars1, trait.order$cfract.cols)
+traitVars2 # slice2 (w/o size)
+
+```
+
+Initalize lists to store results
+```{r}
+
+# save the fig objects that come out of makefig__...
+models_explainDecay.list <- list() 
+
+# save residuals from the best models that use traits/C fractions to explain decay
+resids_explainDecay.list <- list()
+
+# save the plots that dig into models summary results
+plots_explainDecay.list <- list()
+
+# save the model fit statistics
+fitstats_explainDecay.list <- list()
+
+
+# functions...
+extract.lambda_uni <- function(x, s){
+  tab <- coef(x, s = s)
+  notempty <- tab[tab[,1] != 0,]
+  names(notempty)[-1]
+}
+
+```
+
+___________________
+# 1. CODE-Slice1 (C1). Test role of wood substrate attributes. Exclude C fraction data, include small stems.
+
+model selection
+```{r}
+# 1 - the glmnet part of this is stochastic so only update if necessary
+result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits,
+                                      traits.code,
+                                      code.respVars,
+                                      traitVars = traitVars1,
+                                      slice = 1) # see make_figs_woodTraits_explainDecay.R
+saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_C1.RData")
+result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_C1.RData")
+```
+
+plot and save output
+```{r}
+# 2 - create plotting dataframe with model coefs and fit stats
+result.traitsDecay$models %>%
+  map(~summary(.x)) %>%
+  map(~.x$coefficients) %>%
+  map(~data.frame(term = row.names(.x), .x)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source','pval'='Pr...t..') %>%
+  filter(term != "(Intercept)") -> coef.df
+result.traitsDecay$models %>%
+  map(~anova_stats(car::Anova(.x, type = 2))) %>%
+  map(~select(.x, term, sumsq, df, statistic, p.value, etasq)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source') %>%
+  filter(term != "Residuals") -> fit.df
+coef.df %>%
+  left_join(fit.df) -> plot.df
+write.csv(plot.df, file = "derived_data/result_traitsDecay_C1.csv")
+
+# 3 - plot
+# fix term labels
+unique(plot.df$term)
+traitVars <- traitVars1
+slice <- 1
+if(slice == 1){
+    trait.levels <- c("size", paste(traitVars, "s", sep = "_"))
+    trait.labels <- c("size", traitVars)
+}else{
+    trait.levels <- c(paste(traitVars, "s", sep = "_"))
+    trait.labels <- c(traitVars)
+}
+plot.df$term <- factor(plot.df$term,
+                       levels = rev(trait.levels),
+                       labels = rev(trait.labels))
+# fix response labels
+respvar.levels <- unlist(code.respVars)
+plot.df %>%
+    filter(resp %in% respvar.levels) %>%
+    mutate(resp = factor(resp, levels = respvar.levels)) -> plot.df
+#plot
+p <- ggplot(plot.df, aes(x = resp, y = term, fill = etasq)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = round(Estimate, digits = 2)), size = 3) +
+  xlab("Decay response variable") + ylab("Wood substrate predictor") +
+  ggtitle("Slice 1, Code-level") +
+  theme_classic() +
+  scale_fill_distiller(direction = 1) +
+  scale_y_discrete(limits = rev(trait.labels)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p
+result.traitsDecay$fitstats
+
+#save the model summary and residuals
+models_explainDecay.list[['C1']] <- p
+resids_explainDecay.list[['C1']] <- result.traitsDecay$residuals
+fitstats_explainDecay.list[['C1']] <- result.traitsDecay$fitstats
+```
+
+___________________
+# 2. CODE-Slice2 (C2). Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+
+model selection
+```{r}
+# 1 - the glmnet part of this is stochastic so only update if necessary
+result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits,
+                                      traits.code,
+                                      code.respVars,
+                                      traitVars2,
+                                      slice = 2) # see make_figs_woodTraits_explainDecay.R
+result.traitsDecay
+saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_C2.RData")
+result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_C2.RData")
+```
+
+plot and save output
+```{r}
+# 2 - create plotting dataframe with model coefs and fit stats
+result.traitsDecay$models %>%
+  map(~summary(.x)) %>%
+  map(~.x$coefficients) %>%
+  map(~data.frame(term = row.names(.x), .x)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source','pval'='Pr...t..') %>%
+  filter(term != "(Intercept)") -> coef.df
+coef.df
+result.traitsDecay$models %>%
+  map(~anova_stats(car::Anova(.x, type = 2))) %>%
+  map(~select(.x, term, sumsq, df, statistic, p.value, etasq)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source') %>%
+  filter(term != "Residuals") -> fit.df
+coef.df %>%
+  left_join(fit.df) -> plot.df
+write.csv(plot.df, file = "derived_data/result_traitsDecay_C2.csv")
+
+# 3 - plot
+# fix term labels
+unique(plot.df$term)
+traitVars <- traitVars2
+slice <- 2
+if(slice == 1){
+    trait.levels <- c("size", paste(traitVars, "s", sep = "_"))
+    trait.labels <- c("size", traitVars)
+}else{
+    trait.levels <- c(paste(traitVars, "s", sep = "_"))
+    trait.labels <- c(traitVars)
+}
+plot.df$term <- factor(plot.df$term,
+                       levels = rev(trait.levels),
+                       labels = rev(trait.labels))
+# fix response labels
+respvar.levels <- unlist(code.respVars)
+plot.df %>%
+    filter(resp %in% respvar.levels) %>%
+    mutate(resp = factor(resp, levels = respvar.levels)) -> plot.df
+#plot
+p <- ggplot(plot.df, aes(x = resp, y = term, fill = etasq)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = round(Estimate, digits = 2)), size = 3) +
+  xlab("Decay response variable") + ylab("Wood substrate predictor") +
+  ggtitle("Slice 2, Code-level") +
+  theme_classic() +
+  scale_fill_distiller(direction = 1) +
+  scale_y_discrete(limits = rev(trait.labels)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p
+result.traitsDecay$fitstats
+
+#save the model summary and residuals
+models_explainDecay.list[['C2']] <- p
+resids_explainDecay.list[['C2']] <- result.traitsDecay$residuals
+fitstats_explainDecay.list[['C2']] <- result.traitsDecay$fitstats
+```
+
+
+___________________
+# 3. STEM-Slice1 (S1). Test role of wood substrate attributes. Exclude C fraction data, include small stems.
+
+model selection 
+```{r}
+# 1 - the glmnet part of this is stochastic so only update if necessary
+result.traitsDecay <- doAnalysis_traits_explain_pmr(stem.respVars,
+                                                    traits.stem,
+                                                    pmr_byStem,
+                                                    traitVars = traitVars1,
+                                                    slice = 1) # see make_figs_woodTraits_explainDecay.R
+saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_S1.RData")
+result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_S1.RData")
+```
+
+plot and save output
+```{r}
+# 2 - create plotting dataframe with model coefs and fit stats
+result.traitsDecay$models %>%
+  map(~summary(.x)) %>%
+  map(~.x$coefficients) %>%
+  map(~data.frame(term = row.names(.x), .x)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source','pval'='Pr...t..') %>%
+  filter(term != "(Intercept)") -> coef.df
+coef.df
+result.traitsDecay$models %>%
+  map(~anova_stats(car::Anova(.x, type = 2))) %>%
+  map(~select(.x, term, sumsq, df, statistic, p.value, etasq)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source') %>%
+  filter(term != "Residuals") -> fit.df
+fit.df
+coef.df %>%
+  left_join(fit.df) -> plot.df
+write.csv(plot.df, file = "derived_data/result_traitsDecay_S1.csv")
+
+# 3 - plot
+# fix term labels
+unique(plot.df$term)
+traitVars <- traitVars1
+slice <- 1
+if(slice == 1){
+    trait.levels <- c("size", paste(traitVars, "s", sep = "_"))
+    trait.labels <- c("size", traitVars)
+}else{
+    trait.levels <- c(paste(traitVars, "s", sep = "_"))
+    trait.labels <- c(traitVars)
+}
+trait.levels
+plot.df$term <- factor(plot.df$term,
+                       levels = rev(trait.levels),
+                       labels = rev(trait.labels))
+# fix response labels
+respvar.levels <- unlist(stem.respVars)
+plot.df %>%
+    filter(resp %in% respvar.levels) %>%
+    mutate(resp = factor(resp, levels = respvar.levels)) -> plot.df
+#plot
+p <- ggplot(plot.df, aes(x = resp, y = term, fill = etasq)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = round(Estimate, digits = 2)), size = 3) +
+  xlab("Decay response variable") + ylab("Wood substrate predictor") +
+  ggtitle("Slice 1, Stem-level") +
+  theme_classic() +
+  scale_fill_distiller(direction = 1) +
+  scale_y_discrete(limits = rev(trait.labels)) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p
+result.traitsDecay$fitstats
+
+#save the model summary and residuals
+models_explainDecay.list[['S1']] <- p
+resids_explainDecay.list[['S1']] <- result.traitsDecay$residuals
+fitstats_explainDecay.list[['S1']] <- result.traitsDecay$fitstats
+```
+
+
+___________________
+# 4. STEM-Slice2 (S2). Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+
+model selection 
+```{r}
+# 1 - the glmnet part of this is stochastic so only update if necessary
+result.traitsDecay <- doAnalysis_traits_explain_pmr(stem.respVars,
+                                                    traits.stem,
+                                                    pmr_byStem,
+                                                    traitVars = traitVars2,
+                                                    slice = 2) # see make_figs_woodTraits_explainDecay.R
+result.traitsDecay$models
+saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_S2.RData")
+result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_S2.RData")
+```
+
+plot and save output
+```{r}
+# 2 - create plotting dataframe with model coefs and fit stats
+result.traitsDecay$models %>%
+  map(~summary(.x)) %>%
+  map(~.x$coefficients) %>%
+  map(~data.frame(term = row.names(.x), .x)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source','pval'='Pr...t..') %>%
+  filter(term != "(Intercept)") -> coef.df
+coef.df
+result.traitsDecay$models %>%
+  map(~anova_stats(car::Anova(.x, type = 2))) %>%
+  map(~select(.x, term, sumsq, df, statistic, p.value, etasq)) %>%
+  list_to_df %>%
+  dplyr::rename('resp'='source') %>%
+  filter(term != "Residuals") -> fit.df
+# remove fit data for empty model
+fit.df %>%
+  filter(resp != "time25") -> fit.df
+coef.df %>%
+  left_join(fit.df) -> plot.df
+write.csv(plot.df, file = "derived_data/result_traitsDecay_S2.csv")
+
+# 3 - plot
+# fix term labels
+unique(plot.df$term)
+traitVars <- traitVars2
+slice <- 2
+if(slice == 1){
+    trait.levels <- c("size", paste(traitVars, "s", sep = "_"))
+    trait.labels <- c("size", traitVars)
+}else{
+    trait.levels <- c(paste(traitVars, "s", sep = "_"))
+    trait.labels <- c(traitVars)
+}
+trait.levels
+plot.df$term <- factor(plot.df$term,
+                       levels = rev(trait.levels),
+                       labels = rev(trait.labels))
+# fix response labels
+respvar.levels <- unlist(stem.respVars)
+plot.df %>%
+    filter(resp %in% respvar.levels) %>%
+    mutate(resp = factor(resp, levels = respvar.levels)) -> plot.df
+#plot
+p <- ggplot(plot.df, aes(x = resp, y = term, fill = etasq)) +
+  geom_tile(color = "black") + 
+  geom_text(aes(label = round(Estimate, digits = 2)), size = 3) +
+  xlab("Decay response variable") + ylab("Wood substrate predictor") +
+  ggtitle("Slice 2, Stem-level") +
+  theme_classic() +
+  scale_fill_distiller(direction = 1) +
+  scale_y_discrete(limits = rev(trait.labels)) +
+  scale_x_discrete(limits = respvar.levels) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+p
+result.traitsDecay$fitstats
+
+#save the model summary and residuals
+models_explainDecay.list[['S2']] <- p
+resids_explainDecay.list[['S2']] <- result.traitsDecay$residuals
+fitstats_explainDecay.list[['S2']] <- result.traitsDecay$fitstats
+```
+
+
+___________________
+# 3. Print results
+
+Save best model summaries
+```{r}
+# save the objects that come out of makefig__...
+getrid.of.stuff <- function(plot.obj){
+  p <- plot.obj +
+  scale_fill_distiller(direction = 1, limits = c(0, .6))
+  
+  return(p)
+}
+models_explainDecay.list$C1
+p.c1 <- getrid.of.stuff(models_explainDecay.list$C1)
+p.c2 <- getrid.of.stuff(models_explainDecay.list$C2)
+p.s1 <- getrid.of.stuff(models_explainDecay.list$S1)
+p.s2 <- getrid.of.stuff(models_explainDecay.list$S2)
+
+ggsave(filename = "output/figures/traits_explainDecay.png", 
+       grid.arrange(p.c1 + guides(fill = F), 
+             p.s1 + guides(fill = F), 
+             p.c2 + guides(fill = F), 
+             p.s2 + guides(fill = F)),
+       width = 8, height = 8)
+
+# print the fill legend separately
+new.p <- models_explainDecay.list$C1 +
+           scale_fill_distiller(direction = 1, limits = c(0, .6))
+tmp <- gtable_filter(ggplotGrob(new.p), 'guide-box', trim=F)
+pdf("output/figures/traits_explainDecay_FILLGUIDE.pdf", width = 6, height = 6)
+grid.arrange(tmp)
+dev.off()
+
+```
+
+Save model residuals
+```{r}
+# save residuals from the best models that use traits/C fractions to explain decay
+names(resids_explainDecay.list)
+saveRDS(resids_explainDecay.list, file = "derived_data/resids_explainDecay_list.RData")
+
+```
+
+Save model fit statistics
+```{r}
+fnames <- paste0("output/tables/", names(fitstats_explainDecay.list),".csv")
+map2(.x = fitstats_explainDecay.list, .y = fnames,
+     ~write.csv(.x, file = .y))
+```
+
+
+

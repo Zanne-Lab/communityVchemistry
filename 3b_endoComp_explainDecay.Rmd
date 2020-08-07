@@ -1,0 +1,425 @@
+---
+title: "Does endophyte composition explain decay?"
+author: "Marissa Lee"
+date: "12/2/2018"
+output: github_document
+---
+
+Contents:
+1. CODE-S1. Test role of endophyte composition. Exclude C fraction data, include small stems.
+2. CODE-S2. Test role of endophyte composition. Include C fraction data, exclude small stems.
+3. STEM-S1. Test role of endophyte composition. Exclude C fraction data, include small stems.
+4. STEM-S2. Test role of endophyte composition. Include C fraction data, exclude small stems.
+
+5. CODE-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
+6. CODE-S2. Test role of endophyte composition after accounting for traits. Include C fraction data, exclude small stems.
+7. STEM-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
+8. STEM-S2. Test role of endophyte composition after accounting for traits. Include C fraction data, exclude small stems.
+
+___________________
+___________________
+
+Load libraries and functions
+```{r}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+
+#---------------------------#
+#libraries
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+library(tidymodels) # broom
+library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
+library(grid) #plotting
+library(gridExtra) # plotting
+#library(GGally) # bivariate plots
+#library(lmtest) # for coxtest()
+
+
+#---------------------------#
+#fxns
+source('code/helper_fxns.R')
+sourceDir('code')
+
+```
+
+Load OTU tables
+```{r}
+otu.list <- readRDS(file = "derived_data/otu_list.RData")
+otu.list.trimmed <- readRDS(file = "derived_data/otu_list_trimmed.RData")
+```
+
+Load decay data
+```{r loaddata}
+
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = shape param = higher values mean more S-shaped
+```
+
+Load residuals from 2b_woodTraits_explainDecay.Rmd
+```{r}
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+
+```
+
+Initalize lists to store results
+```{r}
+# save the objects that come out of makefig__...
+models_explainDecay.list <- list() 
+
+```
+
+___________________
+# 1. CODE-S1. Test role of endophyte composition. Exclude C fraction data, include small stems.
+
+calculate code-level OTU abundances
+```{r}
+stemSamples
+comm.otu <- otu.list$all
+slice <- 1
+
+seqSamples <- load_seqSamples(mat.otu = comm.otu, stemSamples)
+codeOTUabund <- AverageOTUabund_byCode(comm.otu=comm.otu, seqSamples=seqSamples) 
+#remove eusc because there is no community data for this code
+codeOTUabund <- codeOTUabund[row.names(codeOTUabund) != "eusc",]
+write.csv(codeOTUabund, file="derived_data/codeOTUabund.csv")
+```
+
+set up dataframe (otu table and response matrix)
+```{r}
+codeOTUabund # all OTUs
+comm.otu <- otu.list$oo
+resp.mat <- decayfits
+slice <- 1
+
+setup_wapls_data <- function(codeOTUabund, comm.otu, stemSamples, resp.mat, slice){
+  
+  # subset OTUs based on current comm.otu
+  curr.codeOTUabund <- codeOTUabund[,colnames(codeOTUabund) %in% colnames(comm.otu)]
+  
+  # subset samples by size based on data slice
+  if(slice == 2){
+    seqSamples <- load_seqSamples(mat.otu = comm.otu, stemSamples)
+    size.indx <- unique(seqSamples[,c("code","size")])
+    df <- data.frame(code = row.names(curr.codeOTUabund))
+    df %>%
+      left_join(size.indx) %>%
+      filter(size == "large") -> df
+    curr.codeOTUabund <- curr.codeOTUabund[row.names(curr.codeOTUabund) %in% df$code,]
+    dim(curr.codeOTUabund)
+  }
+  
+  # remove empty samples (no OTUs present)
+  dim(curr.codeOTUabund)
+  n.emptyrows <- sum(rowSums(curr.codeOTUabund) == 0)
+  if(n.emptyrows != 0){
+    curr.codeOTUabund <- curr.codeOTUabund[rowSums(curr.codeOTUabund) != 0,]
+  }
+  
+  # remove empty OTUs (not present in any sample)
+  dim(curr.codeOTUabund)
+  n.emptycols <- sum(colSums(curr.codeOTUabund) == 0)
+  if(n.emptycols != 0){
+    curr.codeOTUabund <- curr.codeOTUabund[,colSums(curr.codeOTUabund) != 0]
+  }
+  
+  # subset decayfits and order based on otu matrix
+  df <- data.frame(code = row.names(curr.codeOTUabund))
+  df %>%
+    left_join(resp.mat) -> curr.respmat
+  df
+  data <- list(otu = curr.codeOTUabund, resp = curr.respmat)
+
+  return(data)
+  
+}
+
+otu.list %>%
+  map(~setup_wapls_data(codeOTUabund, comm.otu = .x, stemSamples, resp.mat = decayfits, slice = 1)) -> waplsdata.list
+
+waplsdata.list %>%
+  map(~dim(.x$resp))
+waplsdata.list %>%
+  map(~dim(.x$otu))
+
+```
+
+fit wapls
+```{r, message = F, results = F}
+
+require(rioja) # for WAPLS
+code.respVars
+
+names(waplsdata.list)
+for(i in 1:length(waplsdata.list)){
+  # select current community type
+  tmp <- waplsdata.list[[i]]
+  
+  for(k in 1:length(code.respVars)){
+    # select current response variable
+    respvar <- code.respVars[[k]]
+ 
+    #fit models and test signif
+    dim(tmp$otu)
+    tmp$otu
+    tmp$resp[[respvar]]
+    fit <- WAPLS(y=tmp$otu, x=tmp$resp[[respvar]], npls=2)
+    fit.cv<-crossval(fit, cv.method="loo")
+    mod.out <-rand.t.test(fit.cv) 
+    print(i); print(k)
+    capture.output(mod.out, file = "output/tables/wapls_C1.txt", append = T)
+  }
+}
+```
+None of the components are significant.
+
+
+___________________
+# 2. CODE-S2. Test role of endophyte composition. Include C fraction data, exclude small stems.
+
+calculate code-level OTU abundances
+```{r}
+codeOTUabund <- read.csv(file="derived_data/codeOTUabund.csv", row.names = 1)
+```
+
+set up dataframe (otu table and response matrix)
+```{r}
+otu.list %>%
+  map(~setup_wapls_data(codeOTUabund, comm.otu = .x, stemSamples, resp.mat = decayfits, slice = 2)) -> waplsdata.list
+
+waplsdata.list %>%
+  map(~dim(.x$resp))
+waplsdata.list %>%
+  map(~dim(.x$otu))
+
+```
+
+fit wapls
+```{r, message = F, results = F}
+
+require(rioja) # for WAPLS
+code.respVars
+
+names(waplsdata.list)
+for(i in 1:length(waplsdata.list)){
+  # select current community type
+  tmp <- waplsdata.list[[i]]
+  for(k in 1:length(code.respVars)){
+    # select current response variable
+    respvar <- code.respVars[[k]]
+    
+    #fit models and test signif
+    
+    if(dim(tmp$otu)[1] < 5){
+      mod.out <-NA
+    }else{
+      fit <- WAPLS(y=tmp$otu, x=tmp$resp[[respvar]], npls=2)
+      fit.cv<-crossval(fit, cv.method="loo")
+      mod.out <-rand.t.test(fit.cv) 
+    }
+    print(i); print(k)
+    capture.output(mod.out, file = "output/tables/wapls_C2.txt", append = T)
+  }
+}
+
+```
+None of the components are significant.
+
+___________________
+# 3. STEM-S1. Test role of endophyte composition. Exclude C fraction data, include small stems.
+
+set up dataframe (otu table and response matrix)
+```{r}
+#comm.otu <- otu.list$all
+#resp.mat <- pmr_byStem
+
+setup_wapls_data_stem <- function(comm.otu, stemSamples, resp.mat, slice){
+  
+  # subset samples by size based on data slice
+  if(slice == 2){
+    seqSamples <- load_seqSamples(mat.otu = comm.otu, stemSamples)
+    size.indx <- unique(seqSamples[,c("codeStem","code","size")])
+    df <- data.frame(code = row.names(comm.otu))
+    df %>%
+      left_join(size.indx) %>%
+      filter(size == "large") -> df
+    curr.comm.otu <- comm.otu[row.names(comm.otu) %in% df$code,]
+    dim(curr.comm.otu)
+  }else{
+    curr.comm.otu <- comm.otu
+  }
+  
+  # remove empty samples (no OTUs present)
+  dim(curr.comm.otu)
+  n.emptyrows <- sum(rowSums(curr.comm.otu) == 0)
+  n.emptyrows
+  if(n.emptyrows != 0){
+    curr.comm.otu <- curr.comm.otu[rowSums(curr.comm.otu) != 0,]
+  }
+  
+  # remove empty OTUs (not present in any sample)
+  dim(curr.comm.otu)
+  n.emptycols <- sum(colSums(curr.comm.otu) == 0)
+  n.emptycols
+  if(n.emptycols != 0){
+    curr.comm.otu <- curr.comm.otu[,colSums(curr.comm.otu) != 0]
+  }
+  
+  # subset resp.mat and order based on otu matrix
+  df <- data.frame(codeStem = row.names(curr.comm.otu))
+  head(resp.mat)
+  df %>%
+    left_join(resp.mat) -> curr.respmat
+  data <- list(otu = curr.comm.otu, resp = curr.respmat)
+  
+  return(data)
+  
+}
+
+otu.list %>%
+  map(~setup_wapls_data_stem(comm.otu = .x, stemSamples, resp.mat = pmr_byStem, slice = 1)) -> waplsdata.list
+
+waplsdata.list %>%
+  map(~dim(.x$resp))
+waplsdata.list %>%
+  map(~dim(.x$otu))
+# be careful! this still has NAs in the response matrix... will need to deal with this below
+
+```
+
+fit wapls
+```{r, message = F, results = F}
+
+require(rioja) # for WAPLS
+stem.respVars
+
+names(waplsdata.list)
+for(i in 1:length(waplsdata.list)){
+  # select current community type
+  tmp <- waplsdata.list[[i]]
+  
+  for(k in 1:length(stem.respVars)){
+    # select current response variable
+    respvar <- stem.respVars[[k]]
+    respvar
+    # remove NAs from respvar dataset
+    selection <- !is.na(tmp$resp[[respvar]])
+    y <- tmp$otu[selection,]
+    x <- tmp$resp[[respvar]][!is.na(tmp$resp[[respvar]])]
+    dim(y)
+    length(x)
+    
+    # check again for empty cols
+    n.emptycols <- sum(colSums(y) == 0)
+    if(n.emptycols != 0){
+      new.y <- y[,colSums(y)!=0]
+      y <- new.y
+    }
+    print(dim(y))
+    
+    #fit models and test signif
+    if(length(x) < 5){
+      mod.out <-NA
+    }else{
+      fit <- WAPLS(y=y, x=x, npls=2)
+      fit.cv<-crossval(fit, cv.method="loo")
+      mod.out <-rand.t.test(fit.cv) 
+    }
+    print(i); print(k)
+    capture.output(mod.out, file = "output/tables/wapls_S1.txt", append = T)
+  }
+}
+
+
+# all, tim37
+#stem.respVars[[4]]
+# p = 0.024
+
+```
+Only 1 component is significant -- Full community at time = 37
+
+
+___________________
+# 4. STEM-S2. Test role of endophyte composition. Include C fraction data, exclude small stems.
+
+set up dataframe (otu table and response matrix)
+```{r}
+#comm.otu <- otu.list$all
+#resp.mat <- pmr_byStem
+
+# error here!
+otu.list %>%
+  map(~setup_wapls_data_stem(comm.otu = .x, stemSamples, resp.mat = pmr_byStem, slice = 2)) -> waplsdata.list
+
+# waplsdata.list %>%
+#   map(~dim(.x$resp))
+# waplsdata.list %>%
+#   map(~dim(.x$otu))
+# # be careful! this still has NAs in the response matrix... will need to deal with this below
+
+```
+
+fit wapls
+```{r, message = F, results = F}
+
+require(rioja) # for WAPLS
+stem.respVars
+
+names(waplsdata.list)
+for(i in 1:length(waplsdata.list)){
+  # select current community type
+  tmp <- waplsdata.list[[i]]
+  
+  for(k in 1:length(stem.respVars)){
+    # select current response variable
+    respvar <- stem.respVars[[k]]
+    respvar
+    # remove NAs from respvar dataset
+    selection <- !is.na(tmp$resp[[respvar]])
+    y <- tmp$otu[selection,]
+    x <- tmp$resp[[respvar]][!is.na(tmp$resp[[respvar]])]
+    dim(y)
+    length(x)
+    
+    # check again for empty cols
+    n.emptycols <- sum(colSums(y) == 0)
+    if(n.emptycols != 0){
+      new.y <- y[,colSums(y)!=0]
+      y <- new.y
+    }
+    print(dim(y))
+    
+    #fit models and test signif
+    if(length(x) < 5){
+      mod.out <-NA
+    }else{
+      fit <- WAPLS(y=y, x=x, npls=2)
+      fit.cv<-crossval(fit, cv.method="loo")
+      mod.out <-rand.t.test(fit.cv) 
+    }
+    print(i); print(k)
+    capture.output(mod.out, file = "output/tables/wapls_S1.txt", append = T)
+  }
+}
+
+
+# all, tim37
+#stem.respVars[[4]]
+# p = 0.024
+
+```
+Only 1 component is significant -- Full community at time = 37
+
+
+
+
+

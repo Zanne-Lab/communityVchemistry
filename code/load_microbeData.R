@@ -98,7 +98,7 @@ load_matotu <- function(){
   
   # add oomycetes
   mat.otu <- add_oomycetes(fung.otu = mat.otu)
-  sum(grepl("ITSoo", colnames(mat.otu)) == T) # verify that 13 oomycete OTUs have been added
+  sum(grepl("ITSoo", colnames(mat.otu)) == T) # verify that 19 oomycete OTUs have been added
   
   #trim OTUs that do not show up in ANY of the samples
   x <- apply(mat.otu > 0, 2, sum)
@@ -119,6 +119,11 @@ load_TaxAndFunguild <- function(){
   colnames(tax)[1] <- "OTUId" #make this match the column name in funguild
   tax %>%
     left_join(funguild) -> taxAndFunguild
+  
+  # check for oomycetes -- they don't look like they are in the new files either
+  #grep("oo", tax$OTUId)
+  #grep("oo", funguild$OTUId)
+  #grep("oo", taxAndFunguild$OTUId)
   
   return(taxAndFunguild)
 }
@@ -272,8 +277,8 @@ load_MicrobeCollection <- function(stemSamples){
   
   # OTU table
   comm.otu <- load_matotu()
-  dim(comm.otu) # 3795 OTUs, includes oomycetes
-  sum(grepl("ITSoo", colnames(comm.otu))) # 13 oomycete OTUs
+  dim(comm.otu) # 3791 OTUs, includes oomycetes
+  sum(grepl("ITSoo", colnames(comm.otu))) # 9 oomycete OTUs
   
   # taxon table
   taxAndFunguild <- load_TaxAndFunguild()
@@ -288,21 +293,21 @@ load_MicrobeCollection <- function(stemSamples){
   sum(grepl("ITSoo", taxAndFunguild$OTUId))
   
   # identify OTUs in community matrix that are not found in the taxon table -- remove these.. likely plant OTUs
-  sum(colnames(comm.otu) %in% taxAndFunguild$OTUId) #3301 OTUs shared
+  sum(colnames(comm.otu) %in% taxAndFunguild$OTUId) #3297 OTUs shared
   sum(!colnames(comm.otu) %in% taxAndFunguild$OTUId) #494 OTUs in community matrix that are not in taxon matrix
   rm.OTUs <- colnames(comm.otu)[!colnames(comm.otu) %in% taxAndFunguild$OTUId]
   rm.OTUs # remove these 494 OTUs since they are probably non-fungal and non-oomycete
   comm.otu <- comm.otu[,!colnames(comm.otu) %in% rm.OTUs]
-  dim(comm.otu) # 3301 OTUs, includes oomycetes
-  sum(grepl("ITSoo", colnames(comm.otu))) # 13 oomycete OTUs
+  dim(comm.otu) # 3297 OTUs, includes oomycetes
+  sum(grepl("ITSoo", colnames(comm.otu))) # 9 oomycete OTUs
   
   # remove OTUs from the taxon table that are not relevant (i.e. only found in blanks, mock, or very infrequently)
   sum(!taxAndFunguild$OTUId %in% colnames(comm.otu)) # 1996 OTUs in taxon matrix that are not in the community matrix
   rm.OTUs <- taxAndFunguild[!taxAndFunguild$OTUId %in% colnames(comm.otu),"OTUId"]
   rm.OTUs # remove these 1996 OTUs from the taxon table since they are no longer in the cleaned community OTU matrix
   taxAndFunguild <- taxAndFunguild[!taxAndFunguild$OTUId %in% rm.OTUs,]
-  dim(taxAndFunguild) # 3301 OTUs, includes oomycetes
-  sum(grepl("ITSoo", taxAndFunguild$OTUId)) # 13 oomycete OTUs
+  dim(taxAndFunguild) # 3297 OTUs, includes oomycetes
+  sum(grepl("ITSoo", taxAndFunguild$OTUId)) # 9 oomycete OTUs
   
   # clean the taxon table
   taxAndFunguild <- clean_TaxTab(taxAndFunguild = taxAndFunguild)

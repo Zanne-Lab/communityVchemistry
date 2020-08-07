@@ -140,7 +140,6 @@ load_XRF <- function(){
   
   data <- read.csv('data/sequencing_T0/NextGenSeqencing_2016_Sample_MasterSpreadsheet.csv', stringsAsFactors=F)
   data <- data[!data$SampleCode == 'blank', ] # extract 'blank' and 'mock' samples from 'mat.otu', delete from 'data'
-  
   # create dataframe containing metadata for initial sequencing and XRF data
   #if there is a number or letter on the back of the SampleCode, then it was composited
   meta.indx <- load_XRF_meta()
@@ -155,6 +154,10 @@ load_XRF <- function(){
     filter(!is.na(P)) %>%
     select(unique, code, size, Stem, compositeSample, P, K, Ca, Mn, Fe, Zn) -> xrf
   
+  # remove negative P values
+  sum(xrf$P < 0)
+  xrf %>%
+    mutate(P = ifelse(P < 0, 0, P)) -> xrf
   # length(unique(xrf$code)) #33
   
   return(xrf)
@@ -304,10 +307,14 @@ traitcol.order <- function(){
 # code-level traits
 
 #if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
-trait.means_byCode <- function(stemSamples, fill.densitybark){
+#if fill.euscXRFCN == TRUE, then use EUSC large-stem estimates of XRF and CN data for eusc
+trait.means_byCode <- function(stemSamples, fill.densitybark, fill.euscXRFCN){
   
   #load trait data
   trait.data.l <- mergeTraitData()
+  trait.data.l %>%
+    filter(code == "eusc")
+  # no XRF or CN data for eusc
   
   #summarize
   trait.data.l %>%
@@ -350,8 +357,23 @@ trait.means_byCode <- function(stemSamples, fill.densitybark){
       fill.vals <- filler.data[filler.data$code == CODE[i], c("density","barkthick")]
       traitmeans.code[traitmeans.code$code == CODE[i], c("density","barkthick")] <- fill.vals
     }
-    
   }
+  
+  if(fill.euscXRFCN == TRUE){
+    # use EUSC large-stem estimates of XRF and CN data for eusc
+    #pull out the EUSC estimates
+    traitmeans.code %>%
+      filter(code == "EUSC") %>%
+      select(code, species, order$nutr.cols) %>%
+      mutate(size = "small") -> filler.data
+    # fill
+    tmp <- data.frame(filler.data)
+    tmp %>%
+      select(-code) %>%
+      mutate(code = tolower(species)) -> filler.data
+    traitmeans.code[traitmeans.code$code == "eusc",order$nutr.cols] <- filler.data[,order$nutr.cols]
+  }
+  
   return(traitmeans.code)
   
 }
@@ -443,8 +465,9 @@ trait.means_byStem <- function(stemSamples){
   # acpa2 and lepa4
   # manually fill in the species and size column for these samples
   tmp <- traitmeans.stem
-  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
-  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] 
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- as.list(c("acpa","acpa","small"))
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- as.list(c("lepa","lepa","small"))
   traitmeans.stem <- tmp
   
   return(traitmeans.stem)
@@ -484,8 +507,8 @@ trait.sds_byStem <- function(stemSamples){
   # acpa2 and lepa4
   # manually fill in the species and size column for these samples
   tmp <- traitsds.stem
-  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
-  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- as.list(c("acpa","acpa","small"))
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- as.list(c("lepa","lepa","small"))
   traitsds.stem <- tmp
   
   return(traitsds.stem)
@@ -525,8 +548,8 @@ trait.n_byStem <- function(stemSamples){
   # acpa2 and lepa4
   # manually fill in the species and size column for these samples
   tmp <- traitn.stem
-  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- c("acpa","acpa","small")
-  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- c("lepa","lepa","small")
+  tmp[tmp$codeStem == "acpa2", c("code","species","size")] <- as.list(c("acpa","acpa","small"))
+  tmp[tmp$codeStem == "lepa4", c("code","species","size")] <- as.list(c("lepa","lepa","small"))
   traitn.stem <- tmp
   
   return(traitn.stem)

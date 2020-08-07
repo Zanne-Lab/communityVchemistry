@@ -4,18 +4,25 @@ author: "Marissa Lee"
 date: "12/2/2018"
 output: github_document
 ---
-```{r, include = F}
-#chunk options
-knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
-```
+
+Contents:
+1. Plot weibull model behavior
+2. Compare the negative exp. vs weibull models
+3. Summarize species+size decay trajectories
+4. Missing data?
+___________________
+___________________
 
 Load libraries, functions
 ```{r load}
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 #---------------------------#
 #libraries
 library(tidyverse)
 library(gridExtra)
+#devtools::install_github("cornwell-lab-unsw/litterfitter")
 library(litterfitter) #fit decay models to timeseries
 
 #---------------------------#
@@ -47,17 +54,148 @@ decayfits <- read_csv("derived_data/decayfits.csv")
 
 ```
 
+___________________
+# 1. Plot weibull model behavior
 Weibull model:
 y = exp(-(x/Beta)^Alpha)
 ```{r}
 p <- plot_weibull(pmr, decayfits)
 p
+ggsave(filename = "output/weibull_behavior.pdf", width = 4, height = 4)
 ```
 Beta is the scale paramter -- higher values (more negative) mean slower decay
 Alpha is the shape parameter -- higher values mean more S-shaped
 
-Compare the negative exp. vs weibull models by plotting time to 50% mass remaining (t50) for each species+size.
-*Fig S2* Plot (a) heatmap table of mean t50 and (b) delta AIC for each species+size given neg. exp and weibull model
+Separately plot variation params
+```{r}
+weibull.fxn <- function(x, beta, alpha){
+    y = exp(-(x/beta)^alpha)
+    return(y)
+    }
+  
+# time
+max.time <- max(pmr$time)/12
+time.vec <- seq(0, max.time, 1e-01)
+
+#######################
+#beta
+
+# plot variation in beta (scale) with alpha (shape) == 1
+beta.low <- weibull.fxn(x = time.vec, beta = 2, alpha = 1)
+beta <- weibull.fxn(x = time.vec, beta = 4, alpha = 1)
+beta.high <- weibull.fxn(x = time.vec, beta = 6, alpha = 1)
+
+df <- data.frame(x = time.vec, 
+                 beta.low, beta.high,
+                 beta)
+df %>%
+  gather(key = "fit.type", value = "y", -c(x)) %>%
+  mutate(beta = ifelse(fit.type == "beta.low", 2, 
+                       ifelse(fit.type == "beta.high", 6, 4))) %>%
+  mutate(alpha = 1) -> plot.df
+           
+p.beta <- ggplot(plot.df, aes(x = x, y = y, group = fit.type)) +
+  geom_line(aes(color = factor(beta), linetype = factor(alpha))) +
+  xlab("Time (yrs)") + ylab("Mass remaining (%)") +
+  theme_bw() +
+  scale_color_manual(values = c("black","gray", "red"))
+p.beta
+
+#######################
+# time to 50% mass loss
+
+p.beta
+plot.df %>%
+  filter(y > .490 & y < 0.499) -> plot.points
+plot.points
+p.t50 <- p.beta +
+  geom_point(data = plot.points, aes(x = x, y = y, 
+                                     color = factor(beta)), 
+             inherit.aes = F) 
+p.t50
+#+ geom_text(data = plot.points, aes(x = x, y = y-.05, label = paste0(x, " yrs"),
+#color = factor(beta)), inherit.aes = F)
+
+
+#######################
+#alpha
+
+# plot variation in alpha (shape) with beta (scale) = 5
+beta.alpha.low <- weibull.fxn(x = time.vec, beta = 4, alpha = 0.5)
+beta.alpha <- weibull.fxn(x = time.vec, beta = 4, alpha = 1)
+beta.alpha.high <- weibull.fxn(x = time.vec, beta = 4, alpha = 6)
+
+df <- data.frame(x = time.vec, 
+                 beta.alpha.low, 
+                 beta.alpha,
+                 beta.alpha.high)
+df %>%
+  gather(key = "fit.type", value = "y", -c(x)) %>%
+  mutate(beta = 4) %>%
+  mutate(alpha = ifelse(fit.type == "beta.alpha.low", 0.5, 
+                        ifelse(fit.type == "beta.alpha.high", 6, 1))) -> plot.df
+           
+p.alpha <- ggplot(plot.df, aes(x = x, y = y, group = fit.type)) +
+  geom_line(aes(color = factor(alpha), linetype = factor(beta))) +
+  xlab("Time (yrs)") + ylab("Mass remaining (%)") +
+  theme_bw() +
+  scale_color_manual(values = c("black","gray", "red"))
+p.alpha
+
+
+#######################
+#model fit
+plot.df %>%
+  filter(alpha == 1 & beta == 4) -> plot.df.tmp
+
+plot.df.tmp %>%
+  filter(x %in% c(0.5, 1, 2, 3, 5)) %>%
+  mutate(se.low = 0.01) %>%
+  mutate(se.high = 0.1) -> plot.points
+
+head(plot.points)
+p.fit <- ggplot(plot.points, aes(x = x, y = y)) +
+  geom_errorbarh(aes(xmin = x-.2, xmax = x+.2), height = 0, size = 3, color = "gray") +
+  geom_line(data = plot.df.tmp, aes(x = x, y = y), inherit.aes = F, color = "gray") +
+  geom_errorbar(aes(ymin = y - se.low, ymax = y + se.low, x = x-.1), inherit.aes = F, 
+                color = 1) +
+  geom_errorbar(aes(ymin = y - se.high, ymax = y + se.high, x = x+.1), inherit.aes = F,
+                color = 2) +
+  xlab("Time (yrs)") + ylab("Mass remaining (%)") +
+  theme_bw()
+p.fit
+
+
+#######################
+# combine
+grid.arrange(p.beta + theme_classic() +
+               guides(color = F, linetype = F), 
+             p.t50 + theme_classic() +
+               guides(color = F, linetype = F),
+             p.alpha + theme_classic() + 
+               guides(color = F, linetype = F),
+             p.fit + theme_classic())
+
+ggsave(filename = "output/weibull_behavior2.png",
+       grid.arrange(p.beta + theme_classic() +
+               guides(color = F, linetype = F), 
+             p.t50 + theme_classic() +
+               guides(color = F, linetype = F),
+             p.alpha + theme_classic() + 
+               guides(color = F, linetype = F),
+             p.fit + theme_classic()),
+       width = 5.5, height = 5.5
+       )
+
+```
+
+
+___________________
+# 2. Compare the negative exp. vs weibull models
+
+Plot time to 50% mass remaining (t50) for each species+size
+
+*Fig SX* Plot (a) heatmap table of mean t50 and (b) delta AIC for each species+size given neg. exp and weibull model
 ```{r}
 # see code/make_figs_decayPatterns.R
 p.a <- makefig__compare_t50_tab(decayfits) 
@@ -74,34 +212,46 @@ dev.off()
 
 ```
 
-*Fig 1.* Plot mean decay params (weibull model) for each species + size
+
+___________________
+# 3. Summarize species+size decay trajectories
+
+*Table X.* Mean decay params (weibull model) for each species + size
 ```{r}
 # see code/make_figs_decayPatterns.R
 p.list <- makefig__decayfits(decayfits) 
 names(p.list)
 
-pdf(file = "output/figures/decayfits.pdf", width = 10, height = 5)
-grid.arrange(p.list$p.t50,
-             p.list$p.1beta +
-               theme(axis.line=element_blank(),
-                     axis.text.y=element_blank(),
-                     axis.title.y=element_blank()), 
-             p.list$p.2alpha + 
-               theme(axis.line=element_blank(),
-                     axis.text.y=element_blank(),
-                     axis.title.y=element_blank()),
-             p.list$p.fit + 
-               theme(axis.line=element_blank(),
-                     axis.text.y=element_blank(),
-                     axis.title.y=element_blank()),
-             
-             ncol=4, widths=c(1.75,1,1,1)
-)
-dev.off()
+colnames(decayfits)
+decayfits %>%
+  select(code, Binomial, 
+         alpha, lower2.alpha, upper2.alpha,
+         beta, lower1.beta, upper1.beta,
+         w.t50, w.aic, w.r2) -> tab
+write.csv(tab, "output/tables/decayfits.csv")
+
+# pdf(file = "output/figures/decayfits.pdf", width = 10, height = 5)
+# grid.arrange(p.list$p.t50,
+#              p.list$p.1beta +
+#                theme(axis.line=element_blank(),
+#                      axis.text.y=element_blank(),
+#                      axis.title.y=element_blank()), 
+#              p.list$p.2alpha + 
+#                theme(axis.line=element_blank(),
+#                      axis.text.y=element_blank(),
+#                      axis.title.y=element_blank()),
+#              p.list$p.fit + 
+#                theme(axis.line=element_blank(),
+#                      axis.text.y=element_blank(),
+#                      axis.title.y=element_blank()),
+#              
+#              ncol=4, widths=c(1.75,1,1,1)
+# )
+# dev.off()
 
 ```
 
-*Fig S3.* Plot percent mass remaining (pmr) for each sample over time. Overlay the weibull model fit
+*Fig SX.* Plot percent mass remaining (pmr) for each sample over time. Overlay the weibull model fit
 ```{r}
 # see code/make_figs_decayPatterns.R
 p <- makefig__pmr_byStem(pmr, decayfits, param.labels = F) 
@@ -109,7 +259,7 @@ p
 ggsave(filename = "output/figures/pmr_byStem.pdf", plot = p, width=8.5, height=8.5)
 ```
 
-Plot alpha vs beta w/ indication of model fit
+*Fig X.* Plot alpha vs beta w/ indication of model fit
 ```{r}
 # see code/make_figs_decayPatterns.R
 p <- makefig__scaleVshape(decayfits)
@@ -117,6 +267,10 @@ p
 ggsave(filename = "output/figures/scaleVshape.pdf", plot = p, width=6, height=6)
 
 ```
+
+
+___________________
+# 4. Missing data?
 
 ```{r checkmissing}
 #load community data to check for missing samples

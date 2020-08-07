@@ -1,0 +1,480 @@
+---
+title: "Do wood traits explain decay?"
+author: "Marissa Lee"
+date: "12/2/2018"
+output: github_document
+---
+
+Contents:
+1. Identify information lost by aggregating trait data
+2. Aggregate trait data
+3. Examine trait correlations
+4. Export trait data frames that will be used as predictors
+___________________
+___________________
+
+Load libraries and functions
+```{r loadlib}
+
+#chunk options
+knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
+
+#---------------------------#
+#libraries
+library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+library(tidymodels) # broom
+library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
+library(grid) #plotting
+library(gridExtra) # plotting
+library(GGally) # bivariate plots
+library(lmtest) # for coxtest()
+
+
+#---------------------------#
+#fxns
+source('code/helper_fxns.R')
+sourceDir('code')
+
+```
+
+Load decay data
+```{r loaddata}
+
+# samples and decay
+stemSamples <- load_stemSamples() # this function is in load_microbeData.R
+initial_mass <- read_in_initial_mass()
+harvest_mass <- LoadHarvestFiles()
+pmr <- Calc_massRemaining(initial_mass, harvest_mass) # calculate percent mass remaining (pmr)
+pmr_byStem <- AvgPMR_byStem(pmr, long.form = F) # average pmr for each stem and timepoint
+stem.respVars <- list("time7", "time13", "time25", "time37","time59")
+decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to update
+code.respVars <- list("w.t50","beta","alpha","w.r2")
+# weibull params
+# beta = scale param = higher values mean *slower* decay
+# alpha = scale param = higher values mean more S-shaped
+```
+
+Load wood trait data
+```{r}
+# by code
+traits.code <- trait.means_byCode(stemSamples, 
+                                  fill.densitybark = FALSE, 
+                                  fill.euscXRFCN = FALSE) 
+# averaged by code
+# if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+#if fill.euscXRFCN == TRUE, then use EUSC large-stem estimates of XRF and CN data for eusc
+sds <- trait.sds_byCode(stemSamples) # within code variation
+ns <- trait.n_byCode(stemSamples) # number of code samples that were aggregated
+# calculate se
+traits.code %>%
+  select(-c(species, size)) %>%
+  gather(key = "trait", value = "mean", -code) -> traits.code.l
+sds %>%
+  select(-c(species, size)) %>%
+  gather(key = "trait", value = "sd", -code) -> sds.l
+ns %>%
+  select(-c(species, size)) %>%
+  gather(key = "trait", value = "n", -code) -> ns.l
+traits.code.l %>%
+  left_join(sds.l) %>%
+  left_join(ns.l) %>%
+  mutate(se = sd/sqrt(n)) -> traits.code.l
+traits.code.l %>%
+  select(code, trait, se) %>%
+  spread(key = trait, value = se) -> traits.code.se
+ns.code <- ns
+trait.names <- colnames(sds)[4:21]
+colnames(sds)[4:21] <- paste0(trait.names, "_sd")
+colnames(ns)[4:21] <- paste0(trait.names, "_n")
+traits.code %>%
+  left_join(sds) %>%
+  left_join(ns) -> traits.code.tab
+write.csv(traits.code.tab, file = "output/tables/traits_code.csv")
+# print means and ses
+traits.code.se <- data.frame(code = traits.code.se$code,
+                             traits.code.se[,trait.names])
+colnames(traits.code.se)[-1]<- paste0(trait.names, "_se")
+sp.indx <- unique(stemSamples[,c("code", "Binomial")])
+traits.code %>%
+  left_join(traits.code.se) %>%
+  left_join(sp.indx) %>%
+  arrange(size,species) -> traits.code.meanse
+write.csv(traits.code.meanse, file = "output/tables/traits_code_meanse.csv")
+
+# averaged by stem
+traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
+sds <- trait.sds_byStem(stemSamples) # within codeStem variation
+ns <- trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
+ns.stem <- ns
+trait.names <- colnames(sds)[5:22]
+colnames(sds)[5:22] <- paste0(trait.names, "_sd")
+colnames(ns)[5:22] <- paste0(trait.names, "_n")
+traits.stem %>%
+  left_join(sds) %>%
+  left_join(ns) -> traits.stem.tab
+write.csv(traits.stem.tab, file = "output/tables/traits_stem.csv")
+
+# print just the number of samples per code and stem
+ns.code %>%
+  mutate(elements = C) %>%
+  mutate(Cfractions = Lignin) %>%
+  select(species, size, waterperc, density, barkthick, elements, Cfractions) %>%
+  arrange(size,species) -> ns.code
+ns.stem %>%
+  mutate(elements = C) %>%
+  mutate(Cfractions = Lignin) %>%
+  select(codeStem, code, species, size, waterperc, 
+         density, barkthick, elements, Cfractions) %>%
+  group_by(code) %>%
+  summarize(n = length(codeStem),
+            stems = paste(unique(codeStem), collapse = "_"),
+            n.elements = sum(elements, na.rm = T)) -> ns.stem
+ns.code %>%
+  left_join(ns.stem) -> ns.all
+sp.indx <- unique(stemSamples[,c("code", "Binomial")])
+ns.all %>%
+  mutate(composite = ifelse(is.na(n.elements), NA, 
+                            ifelse(n.elements == elements, "no","yes"))) %>%
+  dplyr::rename('n.stems'='n',
+                'stem.ids'='stems') %>%
+  left_join(sp.indx) -> ns.out
+write.csv(ns.out, file = "output/tables/traits_summ_tab.csv")
+
+# ordering and stuff
+trait.order <- traitcol.order()
+trait.order
+traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars
+cfractVars <- trait.order$cfract.cols
+cfractVars
+```
+
+___________________
+# 1. Identify information lost by aggregating trait data
+
+Notice that there isn't full coverage of the trait data across codes. Here are two ways that I've investigated what this means for our results.
+
+## 1. Density and bark thickness were only measured on small-sized stems. We decided to use these data as species-level estimates for large-sized stems too.
+If there is not very much within-species variation in these traits that contribute to variation in percent mass loss than we can justify including species-level estimates of these traits in the code-level and stem-level models. 
+
+Plot the small-sized stem-level measures of density and barkthick
+```{r}
+p.list <- makefig__variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem)
+p.list$p.barVar
+p.list$p.denVar
+#pdf("output/figures/variation_densityNbarkthick.pdf", width=5, height=5)
+#grid.newpage()
+#grid.draw(cbind(ggplotGrob(p.list$p.denVar), 
+                  ggplotGrob(), size = "last"))
+#dev.off()
+
+```
+
+A few species have a relatively large amount of within-species variation in density (i.e. alli) and barkthickness (i.e. leer and cota).
+
+Compare model fits (r2) using stem and species-level data to identify how much information about percent mass remaining is lost by using species-level estimates.
+```{r}
+doAnalysis_variation_densityNbarkthick <- function(traits.stem, traits.code, pmr_byStem, stem.respVars){
+  
+  db.df <- makeDF_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem)
+  
+  # set up models
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "density_stem", data = db.df)) -> mod.stem_density.list  # see helper_fxns.R
+  
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "density_code", data = db.df)) -> mod.code_density.list  # see helper_fxns.R
+  
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "barkthick_stem", data = db.df)) -> mod.stem_barkthick.list  # see helper_fxns.R
+  
+  stem.respVars %>%
+    purrr::set_names() %>%
+    map(~fit.lm(y = .x, rhs = "barkthick_code", data = db.df)) -> mod.code_barkthick.list  # see helper_fxns.R
+  
+  #cox test to compare non-nested models
+  # if the first model (M1) contains the correct set of regressors, then a fit of the regressors from the second model (M2) to the fitted values from M1 should have no further explanatory value. But if it has, it can be concluded that M1 does not contain the correct set of regressors
+  cox.density <- Do_coxTests(mod.stem_density.list, 
+                             mod.code_density.list, 
+                             respvars=unlist(stem.respVars))
+  # stem level density information improves estimates for time7 and time59
+  cox.barkthick <- Do_coxTests(mod.stem_barkthick.list, 
+                               mod.code_barkthick.list, 
+                               respvars=unlist(stem.respVars))
+  
+  cox.density.df <- list_to_df(lapply(cox.density, extr_cox_results))
+  cox.density.df$meas <- "density"
+  cox.barkthick.df <- list_to_df(lapply(cox.barkthick, extr_cox_results))
+  cox.barkthick.df$meas <- "barkthick"
+  cox.df <- rbind(cox.density.df, cox.barkthick.df)
+  
+  return(cox.df)
+  
+}
+cox.df <- doAnalysis_variation_densityNbarkthick(traits.stem, traits.code, pmr_byStem, stem.respVars) 
+cox.df
+write.csv(cox.df, file="output/tables/smallsize_codeVstem_cox.csv")
+```
+
+Remember M1 = stem and M2 = code
+- For density -- Stem-level data (M1) improves estimates of pmr after 7 and 59 months
+- For barkthickness -- Stem-level data (relative to code-level data) does not improve estimates of pmr at any time point.
+
+I'm going to go ahead and use the small stem trait measures for the large stems, but it will be important to note that the size-specific density measurements would help estimate PMR at early and late stages.
+
+## 2. Some traits are missing for individual stems because multiple stems were composited into 1 measurement, e.g. for XRF and CN. We decided to use species-size level averages when necessary. Also, there is no XRF or CN data for eusc. We decided to use large-sized EUSC data as species estimates.
+
+If there is not very much within-species variation in these traits that contribute to variation in percent mass loss than we can justify including species-level estimates of these traits in the code-level and stem-level models. 
+
+Plot variation within individuals and between species
+```{r}
+traits.stem %>%
+  select(code, trait.order$nutr.cols) %>%
+  gather(key = "trait", value = "value", -c(codeStem, code)) -> tmp
+
+tmp %>%
+  filter(trait == "C") -> tmp.plot
+ggplot(tmp.plot, aes(x = code, y = value)) +
+  geom_point()+
+  coord_flip()
+```
+
+Compare model fits (r2) using stem or species-size-level data to identify how much information about percent mass remaining is lost by using species-level estimates.
+```{r}
+# identify complete set of stem-level data
+#traits.stem, traits.code, pmr_byStem, stem.respVars
+makeDF_variation_XRFCN <- function(traits.stem, traits.code, pmr_byStem){
+  
+  # prep a dataset with pmr, stem-level and code-level data
+  traits.stem %>%
+    select(codeStem, code, C, N, P, K, Ca, Fe, Mn, Zn) %>%
+    filter(!is.na(C)) -> tmp
+  vars <- colnames(tmp)[-(1:2)] 
+  colnames(tmp)[-(1:2)] <- paste0(vars, "_stem")  
+  db.stem <- tmp
+  
+  traits.code %>%
+    select(code, C, N, P, K, Ca, Fe, Mn, Zn) %>%
+    filter(!is.na(C)) -> tmp
+  db.code <- tmp
+
+  db.stem %>%
+    left_join(db.code) %>%
+    left_join(pmr_byStem) -> db.df
+
+  return(db.df)
+  
+}
+
+doAnalysis_variation_XRFCN <- function(traits.stem, traits.code, pmr_byStem, stem.respVars){
+  
+  db.df <- makeDF_variation_XRFCN(traits.stem, traits.code, pmr_byStem)
+  
+  # set up cox test for each predictor variable
+  var.names <- colnames(db.df)[grepl("_stem", colnames(db.df))]
+  var.names <- as.character(list_to_df(str_split(var.names, "_"))[,1])
+  
+  var.list <- list()
+  for(i in 1:length(var.names)){
+    stem.respVars %>%
+      purrr::set_names() %>%
+      map(~fit.lm(y = .x, rhs = paste0(var.names[i], "_stem"), 
+                  data = db.df)) -> mod.stem_var.list
+    stem.respVars %>%
+      purrr::set_names() %>%
+      map(~fit.lm(y = .x, rhs = var.names[i], 
+                  data = db.df)) -> mod.code_var.list
+     
+    #cox test to compare non-nested models
+  # if the first model (M1) contains the correct set of regressors, then a fit of the regressors from the second model (M2) to the fitted values from M1 should have no further explanatory value. But if it has, it can be concluded that M1 does not contain the correct set of regressors
+  cox.result <- Do_coxTests(mod.stem_var.list, 
+                             mod.code_var.list, 
+                             respvars=unlist(stem.respVars))
+  cox.df <- list_to_df(lapply(cox.result, extr_cox_results))
+  cox.df$meas <- var.names[i]
+  colnames(cox.df)[3] <- "response"
+  var.list[[i]] <- cox.df
+    
+  }
+  
+  return(var.list)
+  
+}
+
+cox.df.list <- doAnalysis_variation_XRFCN(traits.stem, traits.code, pmr_byStem, stem.respVars) 
+cox.df.list
+cox.df <- list_to_df(cox.df.list)
+cox.df %>%
+  separate(mod, into = c(NA, "y_mod","x_mod")) -> cox.df
+write.csv(cox.df, file="output/tables/xrfcn_codeVstem_cox.csv")
+
+cox.df %>%
+  filter(x_mod == "M1") %>%
+  filter(pval < 0.05)
+
+```
+
+Remember M1 = stem and M2 = code, so we are really interested in M2 ~ M1
+Here are the significant improvements to be aware of:
+- For C -- Stem-level C data (M1) improves estimates of pmr after 25 months
+- For K -- Stem-level K data (M1) improves estimates of pmr 7 months.
+
+
+___________________
+# 2. Aggregate trait data and export dataframes
+
+Code-level trait data
+```{r}
+# averaged by code
+# if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
+# if fill.euscXRFCN == TRUE, then use EUSC large-stem estimates of XRF and CN data for eusc
+traits.code <- trait.means_byCode(stemSamples, 
+                                  fill.densitybark = TRUE, 
+                                  fill.euscXRFCN = TRUE) 
+write.csv(traits.code, file = "derived_data/traits_code.csv")
+```
+
+Stem-level trait data when possible, code-level otherwise
+```{r}
+# averaged by stem
+traits.stem <- trait.means_byStem(stemSamples)
+
+# fill in missing information using traits.code
+traits.stem %>%
+  gather(key = "trait", value = "stem_value", -c(codeStem, code, species, size)) -> traits.stem.l
+traits.code %>%
+  gather(key = "trait", value = "code_value", -c(code, species, size)) -> traits.code.l
+traits.stem.l %>%
+  left_join(traits.code.l) %>%
+  mutate(value = ifelse(is.na(stem_value), code_value, stem_value)) %>%
+  select(-c(stem_value, code_value)) %>%
+  spread(key = trait, value = value) -> tmp
+cols.ids <- tmp[,c("codeStem", trait.order$id.cols)]
+cols.x <- tmp[,c(trait.order$phys.cols, trait.order$nutr.cols, trait.order$cfract.cols)]
+traits.stem <- data.frame(cols.ids, cols.x, stringsAsFactors = F)
+
+write.csv(traits.stem, file = "derived_data/traits_stem.csv")
+
+```
+
+___________________
+# 3. Examine trait correlations and ordination for each data slice
+
+## Slice 1: Exclude C fraction data
+```{r}
+# non-carbon fraction data including large and small stems
+# by code
+traits.code %>%
+  select(-c(code,species,size)) %>%
+  select(-trait.order$cfract.cols) -> tmp
+cor.mat <- cor(tmp[,-1])
+cor.mat <- round(cor.mat, digits = 2)
+#library(corrplot)
+#corrplot(cor.mat, method = "number", type = "lower")
+write.csv(cor.mat, file = "output/tables/corr_traits_C1.csv")
+ggsave(filename = "output/figures/corr_traits_C1.png",
+       ggpairs(data = tmp[,-1], 
+        upper = list(continuous = wrap("cor", method = "pearson"))),
+       width = 8, height = 8)
+pca <- prcomp(tmp[,-1], scale. = TRUE)
+p.bi <- ggbiplot(pca, obs.scale = 1, var.scale = 1) +
+  geom_point(aes(color = traits.code$species, 
+                 shape = traits.code$size), size = 2.5) +
+  xlim(c(-3, 4.2)) + ylim(c(-4.2, 3)) +
+  theme_classic()
+p.bi
+ggsave(filename = "output/figures/corr_traits_C1_biplot.png",
+       p.bi,
+       width = 5, height = 5)
+
+#library(devtools); install_github("vqv/ggbiplot")
+require(ggbiplot)
+ggbiplot(pca) +
+  geom_text(aes(lab))
+
+# by stem
+traits.stem %>%
+  select(-c(codeStem,code,species,size)) %>%
+  select(-trait.order$cfract.cols) -> tmp
+cor.mat <- cor(tmp[,-1])
+cor.mat <- round(cor.mat, digits = 2)
+#library(corrplot)
+#corrplot(cor.mat, method = "number", type = "lower")
+write.csv(cor.mat, file = "output/tables/corr_traits_S1.csv")
+ggsave(filename = "output/figures/corr_traits_S1.png",
+       ggpairs(data = tmp[,-1], 
+        upper = list(continuous = wrap("cor", method = "pearson"))),
+       width = 8, height = 8)
+pca <- prcomp(tmp, scale. = TRUE)
+p.bi <- ggbiplot(pca, obs.scale = 1, var.scale = 1) +
+  geom_point(aes(color = traits.stem$species, 
+                 shape = traits.stem$size), size = 2.5) +
+  xlim(c(-4.5, 4.2)) + ylim(c(-4.2, 4.5)) +
+  theme_classic()
+p.bi
+ggsave(filename = "output/figures/corr_traits_S1_biplot.png",
+       p.bi,
+       width = 5, height = 5)
+
+```
+
+## Slice 2: C fraction data only
+```{r}
+# carbon fractions
+traits.code %>%
+  filter(size == "large") %>%
+  select(cfractVars) -> tmp
+cor.mat <- cor(tmp[,-1])
+cor.mat <- round(cor.mat, digits = 2)
+#library(corrplot)
+#corrplot(cor.mat, method = "number", type = "lower")
+write.csv(cor.mat, file = "output/tables/corr_traits_C2.csv")
+ggsave(filename = "output/figures/corr_traits_C2.png",
+       ggpairs(data = tmp[,-1], 
+        upper = list(continuous = wrap("cor", method = "pearson"))),
+       width = 8, height = 8)
+traits.code %>%
+  filter(size == "large") -> traits.code1
+pca <- prcomp(tmp[,-1], scale. = TRUE)
+p.bi <- ggbiplot(pca, obs.scale = 1, var.scale = 1) +
+  geom_point(aes(color = traits.code1$species, 
+                 shape = traits.code1$size), size = 2.5) +
+  xlim(c(-3, 4.2)) + ylim(c(-4.2, 3)) +
+  theme_classic()
+p.bi
+ggsave(filename = "output/figures/corr_traits_C2_biplot.png",
+       p.bi,
+       width = 5, height = 5)
+
+# by stem
+traits.stem %>%
+  filter(size == "large") %>%
+  select(cfractVars) -> tmp
+cor.mat <- cor(tmp[,-1])
+cor.mat <- round(cor.mat, digits = 2)
+#library(corrplot)
+#corrplot(cor.mat, method = "number", type = "lower")
+write.csv(cor.mat, file = "output/tables/corr_traits_S2.csv")
+ggsave(filename = "output/figures/corr_traits_S2.png",
+       ggpairs(data = tmp[,-1], 
+        upper = list(continuous = wrap("cor", method = "pearson"))),
+       width = 8, height = 8)
+traits.stem %>%
+  filter(size == "large") -> traits.stem1
+tmp
+pca <- prcomp(tmp, scale. = TRUE)
+p.bi <- ggbiplot(pca, obs.scale = 1, var.scale = 1) +
+  geom_point(aes(color = traits.stem1$species, 
+                 shape = traits.stem1$size), size = 2.5) +
+  xlim(c(-3.2, 4.2)) + ylim(c(-4.2, 3.2)) +
+  theme_classic()
+p.bi
+ggsave(filename = "output/figures/corr_traits_S2_biplot.png",
+       p.bi,
+       width = 5, height = 5)
+
+```
+
