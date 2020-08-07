@@ -52,24 +52,41 @@ doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code,
     }
     x <- as.matrix(x)
     y <- as.matrix(y)
-    #fit <- glmnet(x = x, y = y, family="gaussian")
+    #fit <- glmnet(x = x, y = y, family="gaussian", standardize = F)
     #plot(fit, xvar = "lambda", label = T)
-    cvfit <- cv.glmnet(x = x, y = y, family = "gaussian")
-    #plot(cvfit)
+    cvfit <- cv.glmnet(x = x, y = y, family = "gaussian", standardize = F,
+                       nfolds = nrow(y), grouped = FALSE)
+    cvfit
     vars <- extract.lambda_uni(cvfit, s = "lambda.min")
-    vars
-    var.list[[i]] <- vars
-    cvfit.list[[i]] <- cvfit
+    if(is.null(vars)){
+      var.list[[i]] <- "None"
+    }else{
+      var.list[[i]] <- vars
+      cvfit.list[[i]] <- cvfit
+    }
   }
-  #var.list
-  #cvfit.list
+  var.list
+  cvfit.list
   
   # 3 - fit cv glmnet final model
+  # if there were any empty models, add back all the variables
+  # var.list
+  var.list.tmp <- var.list
+  selection <- var.list %in% "None"
+  length(selection)
+  i<-1
+  for(i in 1:length(selection)){
+    if(selection[i] == TRUE){
+      var.list.tmp[[i]] <- paste0(traitVars,"_s")
+    }
+  }
+  var.list.tmp
+  
   mod.list <- list()
   i<-1
   for(i in 1:length(code.respVars)){
     y <- decayfits.traits[,code.respVars[[i]]]
-    x <- data.frame(decayfits.traits[,var.list[[i]]], stringsAsFactors = F)
+    x <- data.frame(decayfits.traits[,var.list.tmp[[i]]], stringsAsFactors = F)
     if("size" %in% colnames(x)){
       x %>%
         mutate(size = ifelse(size == "small", 0, 1)) -> x
@@ -106,6 +123,7 @@ doAnalysis_traits_explain_decayParams <- function(decayfits, traits.code,
     data = decayfits.traits,
     respVars = code.respVars,
     models = mod.list,
+    vars = var.list,
     residuals = residuals,
     fitstats = fitstats)
   
@@ -171,22 +189,40 @@ doAnalysis_traits_explain_pmr <- function(stem.respVars, traits.stem, pmr_byStem
     y.nonas <- data.nonas[,!colnames(data.nonas) %in% colnames(x)]
     #fit <- glmnet(x = x.nonas, y = y.nonas, family="gaussian")
     #plot(fit, xvar = "lambda", label = T)
-    cvfit <- cv.glmnet(x = x.nonas, y = y.nonas, family = "gaussian")
+    cvfit <- cv.glmnet(x = x.nonas, y = y.nonas, family = "gaussian", standardize = F,
+                       nfolds = nrow(y), grouped = FALSE)
     #plot(cvfit)
     vars <- extract.lambda_uni(cvfit, s = "lambda.min")
-    var.list[[i]] <- vars
-    cvfit.list[[i]] <- cvfit
+    if(is.null(vars)){
+      var.list[[i]] <- "None"
+    }else{
+      var.list[[i]] <- vars
+      cvfit.list[[i]] <- cvfit
+    }
   }
-  #var.list
-  #cvfit.list
+  var.list
+  cvfit.list
   
   # 3 - fit cv glmnet final model
+  # if there were any empty models, add back all the variables
+  # var.list
+  var.list.tmp <- var.list
+  selection <- var.list %in% "None"
+  selection
+  i<-1
+  for(i in 1:length(selection)){
+    if(selection[i] == TRUE){
+      var.list.tmp[[i]] <- paste0(traitVars,"_s")
+    }
+  }
+  var.list.tmp
+  
   mod.list <- list()
   samples.list <- list()
   i<-1
   for(i in 1:length(stem.respVars)){
     y <- pmr.traits[,stem.respVars[[i]]]
-    x <- data.frame(pmr.traits[,var.list[[i]]], stringsAsFactors = F)
+    x <- data.frame(pmr.traits[,var.list.tmp[[i]]], stringsAsFactors = F)
     if("size" %in% colnames(x)){
       x %>%
         mutate(size = ifelse(size == "small", 0, 1)) -> x
@@ -195,18 +231,9 @@ doAnalysis_traits_explain_pmr <- function(stem.respVars, traits.stem, pmr_byStem
     y <- as.matrix(y)
     data <- cbind(x, y)
     data.nonas <- data[complete.cases(data),]
-    x.nonas <- data.nonas[,colnames(data.nonas) %in% colnames(x)]
-    y.nonas <- data.nonas[,!colnames(data.nonas) %in% colnames(x)]
-    !is.null(colnames(x.nonas))
-    if(!is.null(colnames(x.nonas))){
-      fml<- as.formula(paste("y.nonas~",paste(colnames(x.nonas),collapse = "+")))
-      df <- data.frame(y.nonas, x.nonas, stringsAsFactors = F)
-      mod <- lm(fml, data = df)
-    }else{
-      df <- data.frame(y.nonas, stringsAsFactors = F)
-      df
-      mod <- lm(y.nonas~1, data = df)
-    }
+    fml <- paste(stem.respVars[[i]], "~", paste0(var.list.tmp[[i]], collapse = "+"))
+    df <- data.frame(data.nonas, stringsAsFactors = F)
+    mod <- lm(fml, data = df)
     mod.list[[i]] <- mod
     samples.list[[i]] <- pmr.traits[complete.cases(data),"codeStem"]
     
@@ -253,6 +280,7 @@ doAnalysis_traits_explain_pmr <- function(stem.respVars, traits.stem, pmr_byStem
     data = pmr.traits,
     respVars = stem.respVars,
     models = mod.list,
+    vars = var.list,
     residuals = residuals,
     fitstats = fitstats)
   

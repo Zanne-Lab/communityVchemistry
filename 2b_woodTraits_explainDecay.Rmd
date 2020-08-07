@@ -7,9 +7,9 @@ output: github_document
 
 Contents:
 1. CODE-S1. Test role of wood substrate attributes. Exclude C fraction data, include small stems.
-2. CODE-S2. Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+2. CODE-S2. Test role of wood substrate attributes. C fraction data.
 3. STEM-S1. Test role of wood substrate attributes. Exclude C fraction data, include small stems.
-4. STEM-S2. Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+4. STEM-S2. Test role of wood substrate attributes. C fraction data
 
 ___________________
 ___________________
@@ -63,7 +63,7 @@ traits.stem <- read.csv(file = "derived_data/traits_stem.csv", row.names = 1)
 trait.order <- traitcol.order()
 traitVars1 <- c(trait.order$phys.cols, trait.order$nutr.cols)
 traitVars1 # slice1 (w/ size)
-traitVars2 <- c(traitVars1, trait.order$cfract.cols)
+traitVars2 <- c(trait.order$cfract.cols)
 traitVars2 # slice2 (w/o size)
 
 ```
@@ -99,12 +99,13 @@ ___________________
 model selection
 ```{r}
 # 1 - the glmnet part of this is stochastic so only update if necessary
-result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits,
-                                      traits.code,
-                                      code.respVars,
-                                      traitVars = traitVars1,
-                                      slice = 1) # see make_figs_woodTraits_explainDecay.R
-saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_C1.RData")
+# result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits,
+#                                       traits.code,
+#                                       code.respVars,
+#                                       traitVars = traitVars1,
+#                                       slice = 1) # see make_figs_woodTraits_explainDecay.R
+# result.traitsDecay
+# saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_C1.RData")
 result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_C1.RData")
 ```
 
@@ -118,6 +119,7 @@ result.traitsDecay$models %>%
   list_to_df %>%
   dplyr::rename('resp'='source','pval'='Pr...t..') %>%
   filter(term != "(Intercept)") -> coef.df
+
 result.traitsDecay$models %>%
   map(~anova_stats(car::Anova(.x, type = 2))) %>%
   map(~select(.x, term, sumsq, df, statistic, p.value, etasq)) %>%
@@ -127,6 +129,7 @@ result.traitsDecay$models %>%
 coef.df %>%
   left_join(fit.df) -> plot.df
 write.csv(plot.df, file = "derived_data/result_traitsDecay_C1.csv")
+
 
 # 3 - plot
 # fix term labels
@@ -168,18 +171,18 @@ fitstats_explainDecay.list[['C1']] <- result.traitsDecay$fitstats
 ```
 
 ___________________
-# 2. CODE-Slice2 (C2). Test role of wood substrate attributes. Include C fraction data, exclude small stems.
+# 2. CODE-Slice2 (C2). Test role of wood substrate attributes. C fraction data.
 
 model selection
 ```{r}
 # 1 - the glmnet part of this is stochastic so only update if necessary
-result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits,
-                                      traits.code,
-                                      code.respVars,
-                                      traitVars2,
-                                      slice = 2) # see make_figs_woodTraits_explainDecay.R
-result.traitsDecay
-saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_C2.RData")
+# result.traitsDecay <- doAnalysis_traits_explain_decayParams(decayfits,
+#                                       traits.code,
+#                                       code.respVars,
+#                                       traitVars2,
+#                                       slice = 2) # see make_figs_woodTraits_explainDecay.R
+# result.traitsDecay
+# saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_C2.RData")
 result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_C2.RData")
 ```
 
@@ -250,12 +253,13 @@ ___________________
 model selection 
 ```{r}
 # 1 - the glmnet part of this is stochastic so only update if necessary
-result.traitsDecay <- doAnalysis_traits_explain_pmr(stem.respVars,
-                                                    traits.stem,
-                                                    pmr_byStem,
-                                                    traitVars = traitVars1,
-                                                    slice = 1) # see make_figs_woodTraits_explainDecay.R
-saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_S1.RData")
+# result.traitsDecay <- doAnalysis_traits_explain_pmr(stem.respVars,
+#                                                     traits.stem,
+#                                                     pmr_byStem,
+#                                                     traitVars = traitVars1,
+#                                                     slice = 1) # see make_figs_woodTraits_explainDecay.R
+# result.traitsDecay$vars
+# saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_S1.RData")
 result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_S1.RData")
 ```
 
@@ -328,13 +332,13 @@ ___________________
 model selection 
 ```{r}
 # 1 - the glmnet part of this is stochastic so only update if necessary
-result.traitsDecay <- doAnalysis_traits_explain_pmr(stem.respVars,
-                                                    traits.stem,
-                                                    pmr_byStem,
-                                                    traitVars = traitVars2,
-                                                    slice = 2) # see make_figs_woodTraits_explainDecay.R
-result.traitsDecay$models
-saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_S2.RData")
+# result.traitsDecay <- doAnalysis_traits_explain_pmr(stem.respVars,
+#                                                     traits.stem,
+#                                                     pmr_byStem,
+#                                                     traitVars = traitVars2,
+#                                                     slice = 2) # see make_figs_woodTraits_explainDecay.R
+# result.traitsDecay$models
+# saveRDS(result.traitsDecay, file = "derived_data/result_traitsDecay_S2.RData")
 result.traitsDecay <- readRDS(file = "derived_data/result_traitsDecay_S2.RData")
 ```
 
@@ -349,15 +353,15 @@ result.traitsDecay$models %>%
   dplyr::rename('resp'='source','pval'='Pr...t..') %>%
   filter(term != "(Intercept)") -> coef.df
 coef.df
+result.traitsDecay$models
+
 result.traitsDecay$models %>%
   map(~anova_stats(car::Anova(.x, type = 2))) %>%
   map(~select(.x, term, sumsq, df, statistic, p.value, etasq)) %>%
   list_to_df %>%
   dplyr::rename('resp'='source') %>%
   filter(term != "Residuals") -> fit.df
-# remove fit data for empty model
-fit.df %>%
-  filter(resp != "time25") -> fit.df
+fit.df
 coef.df %>%
   left_join(fit.df) -> plot.df
 write.csv(plot.df, file = "derived_data/result_traitsDecay_S2.csv")
@@ -407,7 +411,7 @@ fitstats_explainDecay.list[['S2']] <- result.traitsDecay$fitstats
 ___________________
 # 3. Print results
 
-Save best model summaries
+Save best model summaries - plots
 ```{r}
 # save the objects that come out of makefig__...
 getrid.of.stuff <- function(plot.obj){
@@ -416,7 +420,6 @@ getrid.of.stuff <- function(plot.obj){
   
   return(p)
 }
-models_explainDecay.list$C1
 p.c1 <- getrid.of.stuff(models_explainDecay.list$C1)
 p.c2 <- getrid.of.stuff(models_explainDecay.list$C2)
 p.s1 <- getrid.of.stuff(models_explainDecay.list$S1)
@@ -432,6 +435,7 @@ ggsave(filename = "output/figures/traits_explainDecay.png",
 # print the fill legend separately
 new.p <- models_explainDecay.list$C1 +
            scale_fill_distiller(direction = 1, limits = c(0, .6))
+require('gtable')
 tmp <- gtable_filter(ggplotGrob(new.p), 'guide-box', trim=F)
 pdf("output/figures/traits_explainDecay_FILLGUIDE.pdf", width = 6, height = 6)
 grid.arrange(tmp)
@@ -450,8 +454,38 @@ saveRDS(resids_explainDecay.list, file = "derived_data/resids_explainDecay_list.
 Save model fit statistics
 ```{r}
 fnames <- paste0("output/tables/", names(fitstats_explainDecay.list),".csv")
+fnames
 map2(.x = fitstats_explainDecay.list, .y = fnames,
      ~write.csv(.x, file = .y))
+# 
+
+# save list of terms from glmnet
+r.C1 <- readRDS(file = "derived_data/result_traitsDecay_C1.RData")
+r.S1 <- readRDS(file = "derived_data/result_traitsDecay_S1.RData")
+r.C2 <- readRDS(file = "derived_data/result_traitsDecay_C2.RData")
+r.S2 <- readRDS(file = "derived_data/result_traitsDecay_S2.RData")
+r.all <- list(r.C1, r.S1, r.C2, r.S2)
+names(r.all) <- c("C1","S1","C2","S2")
+
+make_term.df <- function(obj) {
+  names(obj$vars)<- unlist(obj$respVars)
+  obj$vars %>%
+    map(~as_tibble(.x)) %>%
+    map(~unnest_auto(.x, 1)) %>%
+    list_to_df() %>%
+    dplyr::rename('var'='value',
+                  'respVar'='source') -> df
+  return(df)
+  
+}
+
+r.all %>%
+  map(~make_term.df(.x)) %>%
+  list_to_df() -> r.all.df
+row.names(r.all.df) <- NULL
+r.all.df
+write.csv(r.all.df, "output/tables/traits_explainDecay_terms.csv")
+
 ```
 
 
