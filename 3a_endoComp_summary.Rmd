@@ -64,7 +64,7 @@ traits.stem <- read.csv(file = "derived_data/traits_stem.csv", row.names = 1)
 trait.order <- traitcol.order()
 traitVars1 <- c(trait.order$phys.cols, trait.order$nutr.cols)
 traitVars1 # slice1 (w/ size)
-traitVars2 <- c(traitVars1, trait.order$cfract.cols)
+traitVars2 <- c(trait.order$cfract.cols)
 traitVars2 # slice2 (w/o size)
 
 ```
@@ -267,6 +267,62 @@ saveRDS(otu.list.trimmed, file = "derived_data/otu_list_trimmed.RData")
 ___________________
 # 5. Summarize alpha diversity
 
+```{r}
+sr.otumat <- function(otumat){
+  # number of asvs
+  n.asvs <- length(colnames(otumat))
+  # number of ASVs per sample
+  otumat.pa <- (otumat>0) * 1
+  df <- data.frame(sample = names(rowSums(otumat.pa)), 
+                   nASVs = rowSums(otumat.pa), 
+             row.names = NULL, stringsAsFactors = F)
+  
+  # number of samples per ASV
+  df.samps <- data.frame(ASV = names(colSums(otumat.pa)), 
+                   nSamps = colSums(otumat.pa), 
+             row.names = NULL, stringsAsFactors = F)
+  
+  r.list <- c(total.asvs = n.asvs,
+              meanSR = mean(df$nASVs, na.rm = T),
+             sdSR = sd(df$nASVs, na.rm = T),
+             n = sum(!is.na(df$nASVs)),
+             
+             meanSamps = mean(df.samps$nSamps, na.rm = T),
+             sdSamps = sd(df.samps$nSamps, na.rm = T),
+             emptySamps = sum(rowSums(otumat.pa) == 0))
+  
+  return(r.list)
+}
 
+
+# full otu tables
+otu.list %>%
+  map(~sr.otumat(.x)) %>%
+  as_tibble() %>%
+  t() %>%
+  data.frame() -> otus.sr
+colnames(otus.sr) <- c("total.ASVs","meanSR","sdSR","n.Samps",
+                       "meanSamps.ASV","sdSamps.ASV","empty.Samps")
+# trimmed otu tables
+otu.list.trimmed %>%
+  map(~sr.otumat(.x)) %>%
+  as_tibble() %>%
+  t() %>%
+  data.frame() -> otus.sr.trimmed
+colnames(otus.sr.trimmed) <- c("total.ASVs","meanSR","sdSR","n.Samps",
+                       "meanSamps.ASV","sdSamps.ASV","empty.Samps")
+
+# combine
+otus.sr$trim <- "no"
+otus.sr$community <- row.names(otus.sr)
+otus.sr.trimmed$trim <- "yes"
+otus.sr.trimmed$community <- row.names(otus.sr.trimmed)
+otus.sr %>%
+  full_join(otus.sr.trimmed) %>%
+  arrange(trim, community) -> otu.sr.all
+write.csv(otu.sr.all, file = "output/tables/otu_summary.csv")
+
+
+```
 
 
