@@ -1,0 +1,104 @@
+       RMSE        R2    Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples   Comp
+1 0.8230502 0.1192219 0.004735017 1.448488 -70.23796  30.475270 0.984   1969        12 Comp01
+2 0.8551106 0.1916261 0.024350084 1.483091 -83.75889   3.895318 0.950   1969        12 Comp02
+  community respVar
+1       all   w.t50
+2       all   w.t50
+      RMSE         R2   Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples   Comp
+1 1.224643 0.07832859 0.01011605 2.315344 -62.92857  27.643475 0.968   1969        12 Comp01
+2 1.276340 0.14671130 0.04293099 2.373946 -76.97438   4.221322 0.949   1969        12 Comp02
+  community respVar
+1       all    beta
+2       all    beta
+       RMSE         R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.2944622 0.01288837 0.02281491 0.7356597 -40.11626   18.37071 0.817   1969        12
+2 0.3068764 0.05667061 0.01942516 0.7839986 -52.17950    4.21586 0.863   1969        12
+    Comp community respVar
+1 Comp01       all   alpha
+2 Comp02       all   alpha
+        RMSE        R2     Avg.Bias   Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.07199305 0.1972916 0.0026214620 0.09417047 -113.5675  46.139483 0.998   1969        12
+2 0.07406338 0.2560575 0.0008933781 0.10003351 -126.0274   2.875736 0.885   1969        12
+    Comp community respVar
+1 Comp01       all    w.r2
+2 Comp02       all    w.r2
+       RMSE        R2   Avg.Bias Max.Bias      Skill delta.RMSE     p n.asvs n.samples   Comp
+1 0.8629431 0.2014043 0.07675733 1.397961  -87.14062   36.79935 0.992     95        12 Comp01
+2 1.0240300 0.4382560 0.06319268 1.891504 -163.52944   18.66716 0.973     95        12 Comp02
+  community respVar
+1     sapro   w.t50
+2     sapro   w.t50
+      RMSE        R2  Avg.Bias Max.Bias      Skill delta.RMSE     p n.asvs n.samples   Comp
+1 1.311634 0.1782971 0.1227807 2.244823  -86.89736   36.71041 0.997     95        12 Comp01
+2 1.563396 0.4155531 0.1007559 3.002412 -165.53144   19.19455 0.984     95        12 Comp02
+  community respVar
+1     sapro    beta
+2     sapro    beta
+       RMSE        R2    Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples   Comp
+1 0.3804896 0.3147344 -0.01839013 0.820750 -133.9456   52.95281 0.990     95        12 Comp01
+2 0.4491809 0.3906596 -0.01416960 1.043129 -226.0407   18.05338 0.963     95        12 Comp02
+  community respVar
+1     sapro   alpha
+2     sapro   alpha
+        RMSE        R2     Avg.Bias  Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.07497501 0.2458386 0.0007476117 0.1152477 -131.6258  52.192580 0.988     95        12
+2 0.08216485 0.1389784 0.0009319282 0.1129260 -178.1801   9.589651 0.828     95        12
+    Comp community respVar
+1 Comp01     sapro    w.r2
+2 Comp02     sapro    w.r2
+       RMSE           R2   Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.7424723 0.0237512577 0.02290611 1.499766 -38.53651  17.701532 0.951    287        12
+2 0.7673613 0.0005465481 0.09105727 1.544368 -47.98017   3.352182 0.770    287        12
+    Comp community respVar
+1 Comp01     basid   w.t50
+2 Comp02     basid   w.t50
+      RMSE           R2   Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 1.122807 0.0235985636 0.02755471 2.395375 -36.95818  17.029135 0.946    287        12
+2 1.160074 0.0001992966 0.13219379 2.457339 -46.20073   3.319139 0.741    287        12
+    Comp community respVar
+1 Comp01     basid    beta
+2 Comp02     basid    beta
+       RMSE          R2   Avg.Bias  Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.2840610 0.012661618 0.04821270 0.7597053 -30.39247  14.189524 0.696    287        12
+2 0.2947506 0.001414442 0.03156729 0.8137094 -40.39080   3.763128 0.728    287        12
+    Comp community respVar
+1 Comp01     basid   alpha
+2 Comp02     basid   alpha
+        RMSE        R2     Avg.Bias  Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.07222013 0.2089618  0.001289901 0.1056051 -114.9169   46.60043 0.997    287        12
+2 0.08783331 0.1169350 -0.011747734 0.1293883 -217.8867   21.61887 0.983    287        12
+    Comp community respVar
+1 Comp01     basid    w.r2
+2 Comp02     basid    w.r2
+           result n.asvs n.samples community respVar
+1 too few samples      4         2        oo   w.t50
+           result n.asvs n.samples community respVar
+1 too few samples      4         2        oo    beta
+           result n.asvs n.samples community respVar
+1 too few samples      4         2        oo   alpha
+           result n.asvs n.samples community respVar
+1 too few samples      4         2        oo    w.r2
+       RMSE          R2   Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples
+1 0.6747736 0.008585451 -0.1235016 1.532715 -14.42473   6.969497 0.783     72        12
+2 0.7082538 0.011384879 -0.1446707 1.823901 -26.06124   4.961695 0.582     72        12
+    Comp community respVar
+1 Comp01     patho   w.t50
+2 Comp02     patho   w.t50
+      RMSE          R2   Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples   Comp
+1 1.026687 0.007024063 -0.1897855 2.442154 -14.51275   7.010631 0.786     72        12 Comp01
+2 1.107028 0.024429801 -0.2322597 2.986141 -33.13598   7.825331 0.575     72        12 Comp02
+  community respVar
+1     patho    beta
+2     patho    beta
+       RMSE        R2   Avg.Bias Max.Bias     Skill delta.RMSE     p n.asvs n.samples   Comp
+1 0.3518767 0.5264795 0.07116969 0.937819 -100.0831   41.45073 0.951     72        12 Comp01
+2 0.4835244 0.5068333 0.10859479 1.421166 -277.8037   37.41302 0.961     72        12 Comp02
+  community respVar
+1     patho   alpha
+2     patho   alpha
+        RMSE         R2   Avg.Bias  Max.Bias      Skill delta.RMSE     p n.asvs n.samples
+1 0.06614732 0.03365535 0.01052314 0.1069506  -80.29281   34.27316 0.808     72        12
+2 0.07959095 0.01115431 0.01562925 0.1461027 -161.02450   20.32377 0.571     72        12
+    Comp community respVar
+1 Comp01     patho    w.r2
+2 Comp02     patho    w.r2
