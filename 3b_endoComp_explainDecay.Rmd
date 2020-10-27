@@ -801,7 +801,6 @@ None of the components are significant.
 ___________________
 # 3-r. STEM-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
 
-
 set up dataframe (otu table and response matrix)
 ```{r}
 
@@ -860,6 +859,7 @@ waplsdata.list %>%
 waplsdata.list %>%
   map(~dim(.x$otu))
 # be careful! this still has NAs in the response matrix... will need to deal with this below
+
 
 ```
 
@@ -941,13 +941,75 @@ tibtab %>%
 tibtab.summ$slice <- "S1_resid"
 tibtab.summ
 write.csv(tibtab.summ, file = "output/tables/wapls_S1_resid.csv")
+#tibtab.sum <- read.csv(file = "output/tables/wapls_S1_resid.csv")
 
 # signif
 tibtab.summ %>%
   filter(comp1.signif == TRUE)
 
 ```
+None are significant
 
+plot marginally significant relationship between all endos and pmr time37
+```{r}
+
+waplsdata.list
+
+# select current response variable
+otu.tmp <- waplsdata.list$all$otu
+resp.tmp <- waplsdata.list$all$resp
+
+# remove NAs from respvar dataset
+selection <- !is.na(resp.tmp$time37)
+y <- otu.tmp[selection,]
+x <- resp.tmp$time37[selection]
+
+# check again for empty cols
+n.emptycols <- sum(colSums(y) == 0)
+n.emptycols  
+if(n.emptycols != 0){
+      new.y <- y[,colSums(y)!=0]
+      y <- new.y
+    }
+dim(y)
+fit <- WAPLS(y=y, x=x, npls=2)
+
+comp1.df <- data.frame(codeStem = row.names(fit$T), fit$T,
+                    row.names = NULL)
+comp1.df %>%
+  left_join(resp.tmp) %>%
+  select(codeStem, Comp01, time37) -> comp1.df
+
+ggplot(comp1.df, aes(x = Comp01, y = time37)) +
+  geom_point() +
+  ylab("Percent mass remaining after 3 yrs") +
+  xlab("Endophyte WA-PLS Component 1")
+
+# add trait data
+traits.stem <- read.csv(file = "derived_data/traits_stem.csv", row.names = 1)
+head(traits.stem)
+comp1.df %>%
+  left_join(traits.stem) -> comp1.df
+
+colnames(comp1.df)
+ggplot(comp1.df, aes(x = Comp01, y = Ca, shape = size)) +
+  geom_point() +
+  ylab("Wood water content") +
+  xlab("Endophyte WA-PLS Component 1")
+
+ggplot(comp1.df, aes(x = Comp01, y = time37, shape = size)) +
+  geom_point() +
+  ylab("Percent mass remaining after 3 yrs") +
+  xlab("Endophyte WA-PLS Component 1")
+
+ggplot(comp1.df, aes(y = time37, x = waterperc, shape = size)) +
+  geom_point() +
+  xlab("Wood water content") +
+  ylab("Percent mass remaining after 3 yrs")
+
+
+
+```
 
 ___________________
 # 4-r. STEM-S2. Test role of endophyte composition after accounting for traits. C fraction data.
@@ -1051,13 +1113,14 @@ tibtab %>%
 tibtab.summ$slice <- "S2_resid"
 tibtab.summ
 write.csv(tibtab.summ, file = "output/tables/wapls_S2_resid.csv")
+read.csv(file = "output/tables/wapls_S2_resid.csv")
 
 # signif
 tibtab.summ %>%
   filter(comp1.signif == TRUE)
 
 ```
-
+None are significant
 
 ___________________
 # SAVE STUFF
@@ -1075,9 +1138,17 @@ h <- read.csv(file = "output/tables/wapls_S2_resid.csv", row.names = 1)
 df <- rbind(a, b, c, d, e, f, g, h)
 df %>%
   mutate(comp1.r2 = round(comp1.r2, digits = 2)) %>%
-  mutate(comp1.p = ifelse(comp1.signif == TRUE, comp1.p, "ns")) %>%
+  mutate(comp1.p = ifelse(comp1.p < 0.1, comp1.p, "lessThan0.1")) %>%
   select(slice, community, respVar, n.asvs1, n.samples1, comp1.p, comp1.r2) -> df.out
+
+df.out %>%
+  filter(is.na(comp1.p))
+
+df.out %>%
+  filter(comp1.p != "lessThan0.1")
   
 write.csv(df.out, file = "output/tables/wapls_ALL.csv")
 ```
+
+
 
