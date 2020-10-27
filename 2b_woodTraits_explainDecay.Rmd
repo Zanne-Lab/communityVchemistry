@@ -10,7 +10,7 @@ Contents:
 2. CODE-S2. Test role of wood substrate attributes. C fraction data.
 3. STEM-S1. Test role of wood substrate attributes. Exclude C fraction data, include small stems.
 4. STEM-S2. Test role of wood substrate attributes. C fraction data
-
+5. Print results
 ___________________
 ___________________
 
@@ -74,11 +74,11 @@ Initalize lists to store results
 # save the fig objects that come out of makefig__...
 models_explainDecay.list <- list() 
 
+# save the model tables w/ etasq for each term
+modelEta_explainDecay.list <- list() 
+
 # save residuals from the best models that use traits/C fractions to explain decay
 resids_explainDecay.list <- list()
-
-# save the plots that dig into models summary results
-plots_explainDecay.list <- list()
 
 # save the model fit statistics
 fitstats_explainDecay.list <- list()
@@ -119,6 +119,7 @@ result.traitsDecay$models %>%
   list_to_df %>%
   dplyr::rename('resp'='source','pval'='Pr...t..') %>%
   filter(term != "(Intercept)") -> coef.df
+coef.df
 
 result.traitsDecay$models %>%
   map(~anova_stats(car::Anova(.x, type = 2))) %>%
@@ -126,6 +127,7 @@ result.traitsDecay$models %>%
   list_to_df %>%
   dplyr::rename('resp'='source') %>%
   filter(term != "Residuals") -> fit.df
+fit.df
 coef.df %>%
   left_join(fit.df) -> plot.df
 write.csv(plot.df, file = "derived_data/result_traitsDecay_C1.csv")
@@ -281,6 +283,11 @@ result.traitsDecay$models %>%
   dplyr::rename('resp'='source') %>%
   filter(term != "Residuals") -> fit.df
 fit.df
+
+anova_stats(car::Anova(result.traitsDecay$models[[1]], type = 2))
+car::Anova(result.traitsDecay$models[[1]])
+
+
 coef.df %>%
   left_join(fit.df) -> plot.df
 write.csv(plot.df, file = "derived_data/result_traitsDecay_S1.csv")
@@ -409,10 +416,11 @@ fitstats_explainDecay.list[['S2']] <- result.traitsDecay$fitstats
 
 
 ___________________
-# 3. Print results
+# 5. Save and print results
 
 Save best model summaries - plots
 ```{r}
+
 # save the objects that come out of makefig__...
 getrid.of.stuff <- function(plot.obj){
   p <- plot.obj +
@@ -453,7 +461,7 @@ saveRDS(resids_explainDecay.list, file = "derived_data/resids_explainDecay_list.
 
 Save model fit statistics
 ```{r}
-fnames <- paste0("output/tables/", names(fitstats_explainDecay.list),".csv")
+fnames <- paste0("output/tables/", "traits_explainDecay", names(fitstats_explainDecay.list),".csv")
 fnames
 map2(.x = fitstats_explainDecay.list, .y = fnames,
      ~write.csv(.x, file = .y))
@@ -488,5 +496,31 @@ write.csv(r.all.df, "output/tables/traits_explainDecay_terms.csv")
 
 ```
 
+Print a big table with all best model summaries
+```{r}
+c1 <- read.csv(file = "derived_data/result_traitsDecay_C1.csv", row.names = 1)
+s1 <- read.csv(file = "derived_data/result_traitsDecay_S1.csv", row.names = 1)
+c2 <- read.csv(file = "derived_data/result_traitsDecay_C2.csv", row.names = 1)
+s2 <- read.csv(file = "derived_data/result_traitsDecay_S2.csv", row.names = 1)
 
+c1$part <- "C1"
+s1$part <- "S1"
+c2$part <- "C2"
+s2$part <- "S2"
+trait.mods <- rbind(c1, s1, c2, s2)
+head(trait.mods)
+
+# remove terms from empty models
+head(r.all.df)
+r.all.df <- read.csv("output/tables/traits_explainDecay_terms.csv", row.names = 1)
+r.all.df %>%
+  dplyr::rename('part' = 'source',
+                'term' = 'var',
+                'resp' = 'respVar') %>%
+  left_join(trait.mods) %>%
+  select(part, term, resp, Estimate, Std..Error, df, sumsq, statistic, p.value, etasq)-> trait.mods1
+
+write.csv(trait.mods1, file = "output/tables/traits_explainDecay_etasqs.csv")
+
+```
 
