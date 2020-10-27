@@ -56,15 +56,68 @@ code.respVars <- list("w.t50","beta","alpha","w.r2")
 
 Load wood trait data
 ```{r}
-# by code
+# number of stem samples per species and size
+stemSamples %>%
+  group_by(species, size) %>%
+  summarize(n = length(code)) %>%
+  filter(n != 3)
+# all have at least 3 stems
+stemSamples %>%
+  filter(species == 'cota', size == 'small') 
+stemSamples %>%
+  filter(species == 'isan', size == 'small') 
+stemSamples %>%
+  filter(species == 'leer', size == 'small') 
+
+# load all trait data
+trait.data.l <- mergeTraitData()
+
+# how many composite samples?
+trait.data.l %>%
+  filter(compositeSample == TRUE) %>%
+  group_by(code, trait) %>%
+  summarize(n = length(code)) %>%
+  spread(key = "trait", value ="n") -> compos
+# why isn't anba showing up as composite?
+trait.data.l %>%
+  filter(code == "anba")
+# stem 1 and 3 used for waterperc, density, barkthick
+# stem 2 and 3 used for CN, XRF
+
+# why are there only 2 stems that show up for acel?
+stemSamples %>%
+  filter(code == "acel")
+trait.data.l %>%
+  filter(code == "acel")
+
+# why are there only 2 stems that show up for cali?
+stemSamples %>%
+  filter(code == "cali")
+trait.data.l %>%
+  filter(code == "cali")
+
+# why is there only 1 stem that show up for ripi?
+stemSamples %>%
+  filter(code == "ripi")
+trait.data.l %>%
+  filter(code == "ripi")
+
+
+# print raw trait data by code
 traits.code <- trait.means_byCode(stemSamples, 
                                   fill.densitybark = FALSE, 
                                   fill.euscXRFCN = FALSE) 
+traits.code %>%
+  arrange(size, species) 
 # averaged by code
 # if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
 #if fill.euscXRFCN == TRUE, then use EUSC large-stem estimates of XRF and CN data for eusc
 sds <- trait.sds_byCode(stemSamples) # within code variation
 ns <- trait.n_byCode(stemSamples) # number of code samples that were aggregated
+ns %>%
+  filter(C_n < 3) -> ns.compos
+ns.compos$code[!ns.compos$code %in% compos$code]
+
 # calculate se
 traits.code %>%
   select(-c(species, size)) %>%
@@ -105,6 +158,7 @@ write.csv(traits.code.meanse, file = "output/tables/traits_code_meanse.csv")
 traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 sds <- trait.sds_byStem(stemSamples) # within codeStem variation
 ns <- trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
+View(ns)
 ns.stem <- ns
 trait.names <- colnames(sds)[5:22]
 colnames(sds)[5:22] <- paste0(trait.names, "_sd")
@@ -331,6 +385,7 @@ Code-level trait data
 # averaged by code
 # if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
 # if fill.euscXRFCN == TRUE, then use EUSC large-stem estimates of XRF and CN data for eusc
+View(stemSamples)
 traits.code <- trait.means_byCode(stemSamples, 
                                   fill.densitybark = TRUE, 
                                   fill.euscXRFCN = TRUE) 
@@ -370,6 +425,7 @@ ___________________
 traits.code %>%
   select(-c(code,species,size)) %>%
   select(-trait.order$cfract.cols) -> tmp
+dim(tmp)
 cor.mat <- cor(tmp[,-1])
 cor.mat <- round(cor.mat, digits = 2)
 #library(corrplot)
@@ -399,7 +455,17 @@ ggbiplot(pca) +
 traits.stem %>%
   select(-c(codeStem,code,species,size)) %>%
   select(-trait.order$cfract.cols) -> tmp
-cor.mat <- cor(tmp[,-1])
+dim(tmp)
+head(tmp)
+traits.stem %>%
+  group_by(species, size) %>%
+  summarize(n = length(code)) %>%
+  arrange(n)
+traits.stem %>%
+  filter(species == "ripi",
+         size == "small")
+head(tmp)
+cor.mat <- cor(tmp)
 cor.mat <- round(cor.mat, digits = 2)
 #library(corrplot)
 #corrplot(cor.mat, method = "number", type = "lower")
@@ -427,6 +493,8 @@ ggsave(filename = "output/figures/corr_traits_S1_biplot.png",
 traits.code %>%
   filter(size == "large") %>%
   select(cfractVars) -> tmp
+dim(tmp)
+head(tmp)
 cor.mat <- cor(tmp[,-1])
 cor.mat <- round(cor.mat, digits = 2)
 #library(corrplot)
@@ -453,7 +521,8 @@ ggsave(filename = "output/figures/corr_traits_C2_biplot.png",
 traits.stem %>%
   filter(size == "large") %>%
   select(cfractVars) -> tmp
-cor.mat <- cor(tmp[,-1])
+head(tmp)
+cor.mat <- cor(tmp)
 cor.mat <- round(cor.mat, digits = 2)
 #library(corrplot)
 #corrplot(cor.mat, method = "number", type = "lower")

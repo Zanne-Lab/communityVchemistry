@@ -144,6 +144,15 @@ comm.otu.trimmed <- removeRareOTUs(comm.otu)
 # are oomycetes in here? nope
 colnames(comm.otu.trimmed)[grep("oo", colnames(comm.otu.trimmed))]
 
+# are pathotrophs in here?
+head(taxAndFunguild)
+taxAndFunguild %>%
+  filter(OTUId %in% colnames(comm.otu.trimmed)) %>%
+  filter(grepl("Patho", Trophic.Mode)) -> common.paths
+write.csv(common.paths, file = "output/common_pathogens.csv")
+
+
+
 ```
 This drops all the oomycetes
 

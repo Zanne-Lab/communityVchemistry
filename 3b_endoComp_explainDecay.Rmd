@@ -11,10 +11,10 @@ Contents:
 3. STEM-S1. Test role of endophyte composition. Exclude C fraction data, include small stems.
 4. STEM-S2. Test role of endophyte composition. C fraction data
 
-5. CODE-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
-6. CODE-S2. Test role of endophyte composition after accounting for traits. C fraction data.
-7. STEM-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
-8. STEM-S2. Test role of endophyte composition after accounting for traits. C fraction data.
+1-r. CODE-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
+2-r. CODE-S2. Test role of endophyte composition after accounting for traits. C fraction data.
+3-r. STEM-S1. Test role of endophyte composition after accounting for traits. Exclude C fraction data, include small stems.
+4-r. STEM-S2. Test role of endophyte composition after accounting for traits. C fraction data.
 
 ___________________
 ___________________
@@ -27,12 +27,19 @@ knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 #---------------------------#
 #libraries
 library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
-library(tidymodels) # broom
-library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
-library(grid) #plotting
-library(gridExtra) # plotting
-#library(GGally) # bivariate plots
+library(easystats) # report, performance, parameters, correlation, effectsize
+library(rioja) # for WAPLS
+
+# commented out because I'm going to try using easystats instead...
+#library(tidymodels) # broom
+#library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
 #library(lmtest) # for coxtest()
+
+# commented out because I'm going to try using cowplot instead
+#library(grid) #plotting
+#library(gridExtra) # plotting
+#library(GGally) # bivariate plots
+
 
 
 #---------------------------#
@@ -71,13 +78,6 @@ resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_lis
 
 ```
 
-Initalize lists to store results
-```{r}
-# save the objects that come out of makefig__...
-models_explainDecay.list <- list() 
-
-```
-
 ___________________
 # 1. CODE-S1. Test role of endophyte composition. Exclude C fraction data, include small stems.
 
@@ -98,11 +98,7 @@ set up dataframe (otu table and response matrix)
 ```{r}
 codeOTUabund <- read.csv(file="derived_data/codeOTUabund.csv",
                          stringsAsFactors = F, row.names = 1)
-codeOTUabund # all OTUs
-comm.otu <- otu.list$oo
-resp.mat <- decayfits
-slice <- 1
-
+dim(codeOTUabund) # all OTUs
 setup_wapls_data <- function(codeOTUabund, comm.otu, stemSamples, resp.mat, slice){
   
   # subset OTUs based on current comm.otu
@@ -161,6 +157,8 @@ fit wapls
 require(rioja) # for WAPLS
 code.respVars
 
+k.list <- list()
+i.list <- list()
 names(waplsdata.list)
 for(i in 1:length(waplsdata.list)){
   # select current community type
@@ -172,13 +170,10 @@ for(i in 1:length(waplsdata.list)){
  
     #fit models and test signif
     dim(tmp$otu)
-    tmp$otu
-    tmp$resp[[respvar]]
     fit <- WAPLS(y=tmp$otu, x=tmp$resp[[respvar]], npls=2)
     fit.cv<-crossval(fit, cv.method="loo")
     mod.out <-rand.t.test(fit.cv) 
-    print(i); print(k)
-    
+    print(i); print(k); print(mod.out)
     if(is.na(mod.out)){
       mod.out.df <- data.frame(result = "too few samples",
                                n.asvs = dim(tmp$otu)[2], 
@@ -193,9 +188,28 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- code.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_C1.txt", append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_C1.txt", append = T)
   }
+  names(k.list) <- unlist(code.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "C1"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_C1.csv")
 
 ```
 None of the components are significant.
@@ -230,6 +244,8 @@ require(rioja) # for WAPLS
 code.respVars
 
 names(waplsdata.list)
+k.list <- list()
+i.list <- list()
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -238,7 +254,6 @@ for(i in 1:length(waplsdata.list)){
     respvar <- code.respVars[[k]]
     
     #fit models and test signif
-    
     if(dim(tmp$otu)[1] < 5){
       mod.out <-NA
     }else{
@@ -261,9 +276,28 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- code.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_C2.txt", append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_C2.txt", append = T)
   }
+  names(k.list) <- unlist(code.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "C2"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_C2.csv")
 
 ```
 None of the components are significant.
@@ -335,6 +369,9 @@ fit wapls
 require(rioja) # for WAPLS
 stem.respVars
 
+k.list <- list()
+i.list <- list()
+names(waplsdata.list)
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -382,13 +419,32 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- stem.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_S1.txt", 
-                   append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_S1.txt", append = T)
   }
+  names(k.list) <- unlist(stem.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "S1"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_S1.csv")
 
-# all, time37
 # signif
+tibtab.summ %>%
+  filter(comp1.signif == TRUE)
 
 ```
 Only 1 component is significant -- Full community at time = 37
@@ -424,6 +480,8 @@ require(rioja) # for WAPLS
 stem.respVars
 names(waplsdata.list)
 
+k.list <- list()
+i.list <- list()
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -472,17 +530,35 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- stem.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_S2.txt", append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_S2.txt", append = T)
   }
+  names(k.list) <- unlist(stem.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "S2"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_S2.csv")
 
-
-# all, tim37
-#stem.respVars[[4]]
-# p = 0.024
+# signif
+tibtab.summ %>%
+  filter(comp1.signif == TRUE)
 
 ```
-Only 1 component is significant -- Full community at time = 37
+2 things are significant: Basidios at time25 and Pathotrophs at time59
 
 
 ___________________
@@ -559,6 +635,8 @@ require(rioja) # for WAPLS
 code.respVars
 
 names(waplsdata.list)
+k.list <- list()
+i.list <- list()
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -574,8 +652,7 @@ for(i in 1:length(waplsdata.list)){
     fit <- WAPLS(y=tmp$otu, x=tmp$resp[[respvar]], npls=2)
     fit.cv<-crossval(fit, cv.method="loo")
     mod.out <-rand.t.test(fit.cv) 
-    print(i); print(k)
-    
+    print(i); print(k); print(mod.out)
     if(is.na(mod.out)){
       mod.out.df <- data.frame(result = "too few samples",
                                n.asvs = dim(tmp$otu)[2], 
@@ -590,9 +667,32 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- code.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_C1_resids.txt", append = T)
+    #capture.output(mod.out.df, file = "output/tables/wapls_C1_resids.txt", append = T)
+    k.list[[k]] <- mod.out.df
   }
+  names(k.list) <- unlist(code.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "C1_resid"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_C1_resid.csv")
+
+# signif
+tibtab.summ %>%
+  filter(comp1.signif == TRUE)
 
 ```
 None of the components are significant.
@@ -630,6 +730,8 @@ require(rioja) # for WAPLS
 code.respVars
 
 names(waplsdata.list)
+k.list <- list()
+i.list <- list()
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -649,7 +751,7 @@ for(i in 1:length(waplsdata.list)){
       fit.cv<-crossval(fit, cv.method="loo")
       mod.out <-rand.t.test(fit.cv) 
     }
-    print(i); print(k)
+    print(i); print(k); print(mod.out)
     
     if(is.na(mod.out)){
       mod.out.df <- data.frame(result = "too few samples",
@@ -665,9 +767,32 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- code.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_C2_resids.txt", append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_C2_resids.txt", append = T)
   }
+  names(k.list) <- unlist(code.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "C2_resid"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_C2_resid.csv")
+
+# signif
+tibtab.summ %>%
+  filter(comp1.signif == TRUE)
 
 ```
 None of the components are significant.
@@ -744,6 +869,9 @@ fit wapls
 require(rioja) # for WAPLS
 stem.respVars
 
+names(waplsdata.list)
+k.list <- list()
+i.list <- list()
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -775,7 +903,7 @@ for(i in 1:length(waplsdata.list)){
       fit.cv<-crossval(fit, cv.method="loo")
       mod.out <-rand.t.test(fit.cv) 
     }
-    print(i); print(k)
+    print(i); print(k); print(mod.out)
     
     if(is.na(mod.out)){
       mod.out.df <- data.frame(result = "too few samples",
@@ -791,13 +919,32 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- stem.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_S1_resids.txt", 
-                   append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_S1_resids.txt", append = T)
   }
+  names(k.list) <- unlist(stem.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "S1_resid"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_S1_resid.csv")
 
-# all, time37
 # signif
+tibtab.summ %>%
+  filter(comp1.signif == TRUE)
 
 ```
 
@@ -832,6 +979,9 @@ fit wapls
 require(rioja) # for WAPLS
 stem.respVars
 
+names(waplsdata.list)
+k.list <- list()
+i.list <- list()
 for(i in 1:length(waplsdata.list)){
   # select current community type
   tmp <- waplsdata.list[[i]]
@@ -863,7 +1013,7 @@ for(i in 1:length(waplsdata.list)){
       fit.cv<-crossval(fit, cv.method="loo")
       mod.out <-rand.t.test(fit.cv) 
     }
-    print(i); print(k)
+    print(i); print(k); print(mod.out)
     
     if(is.na(mod.out)){
       mod.out.df <- data.frame(result = "too few samples",
@@ -879,14 +1029,55 @@ for(i in 1:length(waplsdata.list)){
       mod.out.df$community <- names(waplsdata.list)[[i]]
       mod.out.df$respVar <- stem.respVars[[k]]
     }
-    capture.output(mod.out.df, file = "output/tables/wapls_S2_resids.txt", 
-                   append = T)
+    k.list[[k]] <- mod.out.df
+    #capture.output(mod.out.df, file = "output/tables/wapls_S2_resids.txt", append = T)
   }
+  names(k.list) <- unlist(stem.respVars)
+  i.list[[i]] <- k.list
 }
+warnings()
+names(i.list) <- names(waplsdata.list)
+tib <- tibble(data = i.list)
+tib %>%
+  unnest(data) %>%
+  unnest(cols = c(data)) -> tibtab
+tibtab %>%
+  group_by(community, respVar) %>%
+  summarize(n.asvs1 = unique(n.asvs),
+            n.samples1 = unique(n.samples),
+            comp1.p = p[Comp == "Comp01"],
+            comp1.signif = comp1.p < 0.05,
+            comp1.r2 = R2[Comp == "Comp01"]) -> tibtab.summ
+tibtab.summ$slice <- "S2_resid"
+tibtab.summ
+write.csv(tibtab.summ, file = "output/tables/wapls_S2_resid.csv")
 
-# all, time37
 # signif
+tibtab.summ %>%
+  filter(comp1.signif == TRUE)
 
 ```
 
+
+___________________
+# SAVE STUFF
+
+read in all the output files and create summaries
+```{r}
+a <- read.csv(file = "output/tables/wapls_C1.csv", row.names = 1)
+b <- read.csv(file = "output/tables/wapls_C2.csv", row.names = 1)
+c <- read.csv(file = "output/tables/wapls_S1.csv", row.names = 1)
+d <- read.csv(file = "output/tables/wapls_S2.csv", row.names = 1)
+e <- read.csv(file = "output/tables/wapls_C1_resid.csv", row.names = 1)
+f <- read.csv(file = "output/tables/wapls_C2_resid.csv", row.names = 1)
+g <- read.csv(file = "output/tables/wapls_S1_resid.csv", row.names = 1)
+h <- read.csv(file = "output/tables/wapls_S2_resid.csv", row.names = 1)
+df <- rbind(a, b, c, d, e, f, g, h)
+df %>%
+  mutate(comp1.r2 = round(comp1.r2, digits = 2)) %>%
+  mutate(comp1.p = ifelse(comp1.signif == TRUE, comp1.p, "ns")) %>%
+  select(slice, community, respVar, n.asvs1, n.samples1, comp1.p, comp1.r2) -> df.out
+  
+write.csv(df.out, file = "output/tables/wapls_ALL.csv")
+```
 

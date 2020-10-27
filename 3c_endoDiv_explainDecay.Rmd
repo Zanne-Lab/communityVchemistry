@@ -6,49 +6,52 @@ output: github_document
 ---
 
 Contents:
-1. Test role of endo diversity in predicting decay, *slice 1*. (Exclude C fraction data), include small stems
-- CODE
-- STEM
-2. Test role of endo diversity in predicting decay, *slice 2*. Include C fraction data, exclude small stems
-- CODE
-- STEM
-3. Test role of endo diversity in predicting decay *after* accounting for traits, *slice 1.* (Exclude C fraction data), include small stems
-- CODE
-- STEM
-4. Test role of endo diversity in predicting decay *after* accounting for traits, *slice 2.* Include C fraction data, exclude small stems
-- CODE
-- STEM
+1. CODE-S1. Test role of endophyte diversity. Exclude C fraction data, include small stems.
+2. CODE-S2. Test role of endophyte diversity. C fraction data
+3. STEM-S1. Test role of endophyte diversity. Exclude C fraction data, include small stems.
+4. STEM-S2. Test role of endophyte diversity. C fraction data
+
+1-r. CODE-S1. Test role of endophyte diversity after accounting for traits. Exclude C fraction data, include small stems.
+2-r. CODE-S2. Test role of endophyte diversity after accounting for traits. C fraction data.
+3-r. STEM-S1. Test role of endophyte diversity after accounting for traits. Exclude C fraction data, include small stems.
+4-r. STEM-S2. Test role of endophyte diversity after accounting for traits. C fraction data.
+
+**Note that the full community matrix was used for all analyses**
 
 ___________________
 ___________________
-Load libraries, functions
-```{r load}
 
+Load libraries and functions
+```{r}
 #chunk options
 knitr::opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE)
 
 #---------------------------#
 #libraries
 library(tidyverse) # ggplot2, dplyr, tidyr, readr, purrr
+library(easystats) # report, performance, parameters, correlation, effectsize
+library(rioja) # for WAPLS
+
+# commented out because I'm going to try using easystats instead...
 #library(tidymodels) # broom
 #library(sjstats) #provides function eta_sq() to extract r2 for each predictor in a lm
-library(grid) #plotting
-library(gridExtra) # plotting
-#library(GGally) # bivariate plots
 #library(lmtest) # for coxtest()
-library(vegan) #diversity metrics
-library(rioja) #WA-PLS
+
+# commented out because I'm going to try using cowplot instead
+#library(grid) #plotting
+#library(gridExtra) # plotting
+#library(GGally) # bivariate plots
+
 
 #---------------------------#
 #fxns
 source('code/helper_fxns.R')
 sourceDir('code')
+
 ```
 
-Load data
-```{r}
-#---------------------------#
-#data
+Load decay data
+```{r loaddata}
 
 # samples and decay
 stemSamples <- load_stemSamples() # this function is in load_microbeData.R
@@ -61,19 +64,33 @@ decayfits <- read_csv("derived_data/decayfits.csv") # see 1_decayPatterns.Rmd to
 code.respVars <- list("w.t50","beta","alpha","w.r2")
 # weibull params
 # beta = scale param = higher values mean *slower* decay
-# alpha = scale param = higher values mean more S-shaped
+# alpha = shape param = higher values mean more S-shaped
+```
 
-# wood traits
-traits.code <- trait.means_byCode(stemSamples, fill.densitybark = TRUE) # averaged by code; if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
-traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
+Load wood trait data
+```{r}
+traits.code <- read.csv(file = "derived_data/traits_code.csv", row.names = 1)
+traits.stem <- read.csv(file = "derived_data/traits_stem.csv", row.names = 1)
+
+# ordering and stuff
 trait.order <- traitcol.order()
-traitVars <- c(trait.order$phys.cols, trait.order$nutr.cols)
-traitVars.stem <- trait.order$stem.trait.cols
-traitVars.cfract <- trait.order$cfract.cols
+traitVars1 <- c(trait.order$phys.cols, trait.order$nutr.cols)
+traitVars1 # slice1 (w/ size)
+traitVars2 <- c(trait.order$cfract.cols)
+traitVars2 # slice2 (w/o size)
 
-# residuals from 'woodTraits_explainDecay.Rmd'
+```
+
+Load residuals from 2b_woodTraits_explainDecay.Rmd
+```{r}
 resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
-names(resids_explainDecay.list)
+
+```
+
+Load OTU tables
+```{r}
+otu.list <- readRDS(file = "derived_data/otu_list.RData")
+otu.list.trimmed <- readRDS(file = "derived_data/otu_list_trimmed.RData")
 
 # microbes
 microb.data <- load_MicrobeCollection(stemSamples)
@@ -81,312 +98,768 @@ taxAndFunguild <- microb.data$taxAndFunguild
 comm.otu <- microb.data$comm.otu
 seqSamples <- microb.data$seqSamples
 
-#check for oomycetes
-colnames(comm.otu)[grep("oo", colnames(comm.otu))]
-taxAndFunguild %>%
-  filter(kingdom != "Fungi")
-
 ```
 
-# Diversity (and diversity of specific clades) as a predictor  
 
-**Note that the full community matrix was used for these analyses**
+___________________
+# 1. CODE-S1. Test role of endophyte diversity. Exclude C fraction data, include small stems.
 
-## *Hyp-a (species+size-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because of the selection effect for fast decayers and complementarity among taxa for decay.  
-Hyp-Alt: Greater microbial diversity will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because taxa will be allocating more of their resources to combat one another.
-## *Hyp-b (species+size-level)* Greater saprotroph and basidiomycete richness will lead to better-fitting decay models (ne.r2), faster decay (k), and less lagginess (alpha) because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because decayers will be allocating more of their resources to combat one another.
-## *Hyp-c (species+size-level)* Greater pathogen and oomycete richness will lead to worse-fitting decay models (ne.r2), slower decay (k), and more lagginess (alpha) because the presence of these organisms will inhibit the establishment and activity of decayers.
+calculate diversity metrics and set up dataframe
 ```{r}
-result.list <- doAnalysis_endoDiv_explainDecay(taxAndFunguild, comm.otu, decayfits, code.respVars)
-result.list$pretty.df
-write.csv(result.list$pretty.df, file="output/tables/diversitysummary_code.csv")
-
-#identify significant relationships
-result.list$pretty.df %>%
-  filter(term %in% c('mean','sizesmall:mean')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  filter(signif == T)
-
-# make a df summary
-tmp <- result.list$pretty.df
-tmp %>%
-  filter(term %in% c('mean','sizesmall:mean')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  mutate(model = "code") %>%
-  mutate(term.new = ifelse(term == "mean", "diversity", NA)) %>%
-  mutate(term.new = ifelse(term == "sizesmall:mean", "size:diversity", term.new)) %>%
-  select(-term) -> summ.code
-summ.code
-
-
-```
-
-None of the diversity metrics and decay parameters are significantly related.
-
-## *Hyp-a (stem-level)* Greater microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will lead to less mass remaining esp. at early time steps because of the selection effect for fast decayers and complementarity among taxa for decay. 
-Hyp-Alt: Greater microbial diversity will lead to more mass remaining because taxa will be allocating more of their resources to combat one another.
-## *Hyp-b (stem-level)* Greater saprotroph and basidiomycete richness will lead to less mass remaining esp. at early time steps because the community does not need to wait for the arrival of key decayers to act on the wood substrate.  
-Hyp-Alt: Greater saprotroph and basidiomycete richness will lead to more mass remaining because decayers will be allocating more of their resources to combat one another.
-## *Hyp-c (stem-level)* Greater pathogen and oomycete richness will lead to more mass remaining because the presence of these organisms will inhibit the establishment and activity of decayers.
-```{r}
-result.list.stem <- doAnalysis_endoDiv_explainPMR(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
-result.list.stem$pretty.df
-write.csv(result.list.stem$pretty.df, file="output/tables/diversitysummary_stem.csv")
-
-#identify significant relationships
-result.list.stem$pretty.df %>%
-   filter(term %in% c('sizesmall:sub_rich','sub_rich')) %>%
-   gather(key = "respvar", value = "coef", -c(source, term)) %>%
-   mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-   filter(signif == T)
-
-
-# make a df summary
-tmp <- result.list.stem$pretty.df
-tmp %>%
-  filter(term %in% c('sub_rich','sizesmall:sub_rich')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  mutate(model = "stem") %>%
-  mutate(term.new = ifelse(term == "sub_rich", "diversity", NA)) %>%
-  mutate(term.new = ifelse(term == "sizesmall:sub_rich", "size:diversity", term.new)) %>%
-  select(-term) -> summ.stem
-summ.stem
-
-
-```
-
-Make a summary table plot
-```{r}
-summ.code %>%
-  full_join(summ.stem) -> tmp
+calc.div <- function(comm.otu){
+  require(vegan)
+  H <- diversity(comm.otu) # shannon's h
+  comm.pa <- (comm.otu>0)*1
+  SR <- rowSums(comm.pa) # species richness
+  df <- data.frame(seq_sampName = names(SR), SR, H, 
+                   stringsAsFactors = F, row.names = NULL)
   
-p1 <- ggplot(tmp, aes(y = respvar, x = term.new, fill = signif)) +
-  geom_tile(color = "black") +
-  facet_grid(~source) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ylab("Response variable") +
-  xlab("Term") +
-  ggtitle("Decay explained by diversity")
-p1
+  return(df)
+}
 
+otu.list %>%
+  map(~calc.div(.x)) -> div.list
 
+# richness only
+div.list %>%
+  map(~left_join(.x, seqSamples)) %>%
+  list_to_df() %>%
+  dplyr::rename('community'='source') %>%
+  group_by(code, community) %>%
+  summarize(mean=mean(SR),
+            se=sd(SR)/sqrt(length(SR)),
+            n = sum(!is.na(SR)),
+            upper=mean+se,
+            lower=mean-se) -> div.df
+div.df %>%
+  left_join(decayfits) -> rich.df
+write.csv(rich.df, file = "derived_data/richness_C.csv")
 ```
 
-
-OTU richness and Shannon's H are associated with percent mass remaining at time25 and time37. Pathogen OTU richness is associated with pmr at time 37. In all cases, there is a negative interaction between stem size and diversity.
-
-Plot the relationship between OTU richness and Shannon's H and pmr at time25 and time37
+fit models
 ```{r}
-p.list <- makefig__RichShannonPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
-names(p.list)
+unique(rich.df$community)
+fit.mods.c1 <- function(rich.df, curr.comm){
+  
+  rich.df %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(w.t50 ~ size * mean, data = df)
+  mod2 <- lm(beta ~ size * mean, data = df)
+  mod3 <- lm(alpha ~ size * mean, data = df)
+  mod4 <- lm(w.r2 ~ size * mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4)
+  names(mod.list) <- unlist(code.respVars)
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+  
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
 
-pdf(file = "output/figures/richness_pmr.pdf", width = 10, height = 5)
-grid.arrange(p.list$p.rich, p.list$p.h, ncol = 2)  
-dev.off()
+unique(rich.df$community) %>%
+  set_names() %>%
+  map(~fit.mods.c1(rich.df = rich.df, curr.comm = .x)) -> out.c1
+out.c1 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.c1.df
+
+# summarize signif models
+out.c1.df %>%
+  filter(Parameter %in% c("mean","size:mean")) %>%
+  filter(p < 0.05) -> signif.c1.df
+signif.c1.df
+out.c1.df %>%
+  filter(respvar == "alpha") %>%
+  filter(comm %in% c("all","basid","patho","sapro")) %>%
+  filter(!is.na(Coefficient)) %>%
+  select(comm, respvar, Parameter, p, Coefficient, SE) -> signifcoef.c1.df
+signifcoef.c1.df
 
 ```
 
-Not especially convincing relationships. On the whole, diversity is positively correlated with mass remaining in large stems but negatively correlated in small stems.
+___________________
+# 2. CODE-S2. Test role of endophyte diversity. C fraction data
 
-Plot the relationship between pathogen OTU richness and pmr at time37
+fit models
 ```{r}
-p <- makefig__pathoRichPMR.stem(taxAndFunguild, comm.otu, pmr_byStem, stem.respVars)
-p
-ggsave(filename = "output/figures/richness_patho_pmr.pdf", width = 5, height = 3.5)
+rich.df %>%
+  filter(size == "large") -> rich.df2
+unique(rich.df2$community)
+
+fit.mods.c2 <- function(rich.df2, curr.comm){
+  
+  rich.df2 %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(w.t50 ~ mean, data = df)
+  mod2 <- lm(beta ~ mean, data = df)
+  mod3 <- lm(alpha ~ mean, data = df)
+  mod4 <- lm(w.r2 ~ mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4)
+  names(mod.list) <- unlist(code.respVars)
+  
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
+
+
+unique(rich.df2$community) %>%
+  set_names() %>%
+  map(~fit.mods.c2(rich.df2 = rich.df2, curr.comm = .x)) -> out.c2
+out.c2 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.c2.df
+out.c2.df
+
+# summarize signif models
+out.c2.df %>%
+  filter(Parameter %in% c("mean")) %>%
+  filter(p < 0.05) -> signif.c2.df
+signif.c2.df
+out.c2.df %>%
+  filter(p<0.05)
+
 ```
 
-Pathotroph richness is positively correlated with mass remaining in large stems, but negatively correlated in small stems.
+
+___________________
+# 3. STEM-S1. Test role of endophyte diversity. Exclude C fraction data, include small stems.
+
+calculate diversity metrics and set up dataframe
+```{r}
+calc.div <- function(comm.otu){
+  require(vegan)
+  H <- diversity(comm.otu) # shannon's h
+  comm.pa <- (comm.otu>0)*1
+  SR <- rowSums(comm.pa) # species richness
+  df <- data.frame(seq_sampName = names(SR), SR, H, 
+                   stringsAsFactors = F, row.names = NULL)
+  
+  return(df)
+}
+
+otu.list %>%
+  map(~calc.div(.x)) -> div.list
+
+# richness only
+div.list %>%
+  map(~left_join(.x, seqSamples)) %>%
+  list_to_df() %>%
+  dplyr::rename('community'='source') %>%
+  group_by(community, codeStem) %>%
+  summarize(mean=mean(SR),
+            se=sd(SR)/sqrt(length(SR)),
+            n = sum(!is.na(SR)),
+            upper=mean+se,
+            lower=mean-se) -> div.df
+head(div.df)
+div.df %>%
+  left_join(pmr_byStem) -> rich.df
+head(rich.df)
+write.csv(rich.df, file = "derived_data/richness_S.csv")
+```
+
+fit models
+```{r}
+unique(rich.df$community)
+stem.respVars
+
+fit.mods.s1 <- function(rich.df, curr.comm){
+  
+  rich.df %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(time7 ~ size * mean, data = df)
+  mod2 <- lm(time13 ~ size * mean, data = df)
+  mod3 <- lm(time25 ~ size * mean, data = df)
+  mod4 <- lm(time37 ~ size * mean, data = df)
+  mod5 <- lm(time59 ~ size * mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4, mod5)
+  names(mod.list) <- unlist(stem.respVars)
+  
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+  
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
+
+unique(rich.df$community) %>%
+  set_names() %>%
+  map(~fit.mods.s1(rich.df = rich.df, curr.comm = .x)) -> out.s1
+out.s1
+out.s1 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.s1.df
+
+out.s1.df
+# summarize signif models
+out.s1.df %>%
+  filter(Parameter %in% c("mean","size:mean")) %>%
+  filter(p < 0.05) -> signif.s1.df
+signif.s1.df
+
+out.s1.df %>%
+  filter(comm == "patho" & respvar == "time37") %>%
+  filter(!is.na(p)) %>%
+  select(comm, respvar, Parameter, Coefficient, p) %>%
+  mutate(p = round(p, digits = 3))
+
+```
+
+examine interactions
+```{r}
+rich.df %>%
+    filter(community == "patho") -> df
+mod <- lm(time37 ~ size * mean, data = df)
+model_parameters(mod) 
+estimate_slopes(mod)
+
+
+```
+
+___________________
+# 4. STEM-S2. Test role of endophyte diversity. C fraction data
+
+fit models
+```{r}
+rich.df %>%
+  filter(size == "large") -> rich.df2
+
+fit.mods.s2 <- function(rich.df2, curr.comm){
+  
+  rich.df2 %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(time7 ~ mean, data = df)
+  mod2 <- lm(time13 ~ mean, data = df)
+  mod3 <- lm(time25 ~ mean, data = df)
+  mod4 <- lm(time37 ~ mean, data = df)
+  mod5 <- lm(time59 ~ mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4, mod5)
+  names(mod.list) <- unlist(stem.respVars)
+  
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+  
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
+
+unique(rich.df2$community) %>%
+  set_names() %>%
+  map(~fit.mods.s2(rich.df2 = rich.df2, curr.comm = .x)) -> out.s2
+out.s2
+out.s2 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.s2.df
+
+# summarize signif models
+out.s2.df %>%
+  filter(Parameter %in% c("mean","size:mean")) %>%
+  filter(p < 0.05) -> signif.s2.df
+signif.s2.df
+
+out.s2.df %>%
+  filter(comm == "oo" & respvar == "time25") %>%
+  filter(!is.na(p)) %>%
+  select(comm, respvar, Parameter, Coefficient, p) %>%
+  mutate(p = round(p, digits = 3))
+
+```
 
 
 ##############################################
 
-# Diversity plus traits as a predictor
+___________________
+# 1-r. CODE-S1. Test role of endophyte diversity after accounting for traits. Exclude C fraction data, include small stems.
 
-## *Hyp (species+size-level)* After accounting for variation in decay due to wood traits, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+calculate diversity metrics and set up dataframe
 ```{r}
-names(resids_explainDecay.list)
-traitResiduals.code <- resids_explainDecay.list$traits.code
+otu.list %>%
+  map(~calc.div(.x)) -> div.list
 
-result.list <- doAnalysis_endoDiv_explainDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
-result.list$pretty.df
-write.csv(result.list$pretty.df, file="output/tables/diversitysummary_code_traitresid.csv")
+# richness only
+div.list %>%
+  map(~left_join(.x, seqSamples)) %>%
+  list_to_df() %>%
+  dplyr::rename('community'='source') %>%
+  group_by(code, community) %>%
+  summarize(mean=mean(SR),
+            se=sd(SR)/sqrt(length(SR)),
+            n = sum(!is.na(SR)),
+            upper=mean+se,
+            lower=mean-se) -> div.df
+head(div.df)
 
-#identify significant relationships
-result.list$pretty.df %>%
-  filter(term %in% c('mean','sizesmall','sizesmall:mean')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  filter(signif == T)
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+residfits.c1<- resids_explainDecay.list[['C1']]
+residfits.c1 %>%
+  spread(key = resp, value = resid) -> residfits.c1.w
+head(residfits.c1.w)
 
-# make a df summary
-tmp <- result.list$pretty.df
-tmp %>%
-  filter(term %in% c('mean','sizesmall:mean')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  mutate(model = "code") %>%
-  mutate(term.new = ifelse(term == "mean", "diversity", NA)) %>%
-  mutate(term.new = ifelse(term == "sizesmall:mean", "size:diversity", term.new)) %>%
-  select(-term) -> summ.code
-summ.code
-
+size.indx <- unique(seqSamples[,c("code","size")])
+div.df %>%
+  left_join(residfits.c1.w) %>%
+  left_join(size.indx)-> rich.df
+head(rich.df)
+write.csv(rich.df, file = "derived_data/richness_C1_resid.csv")
 ```
 
-Beyond wood trait data, saprotroph richness improves models for beta and t50. 
-
-
-## *Hyp (stem-level)* After accounting for variation in decay due to wood traits, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
+fit models
 ```{r}
-names(resids_explainDecay.list)
-traitResiduals.stem <- resids_explainDecay.list$traits.stem
+rich.df <- read.csv("derived_data/richness_C1_resid.csv", row.names = 1)
+head(rich.df)
+unique(rich.df$community)
 
-result.list.stem <- doAnalysis_endoDiv_explainPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/diversitysummary_stem_traitresid.csv")
-
-#identify significant relationships
-result.list.stem$pretty.df %>%
-  filter(term %in% c('sub_rich','sizesmall','sizesmall:sub_rich')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  filter(signif == T)
-
-# make a df summary
-tmp <- result.list.stem$pretty.df
-tmp %>%
-  filter(term %in% c('sub_rich','sizesmall:sub_rich')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  mutate(model = "stem") %>%
-  mutate(term.new = ifelse(term == "sub_rich", "diversity", NA)) %>%
-  mutate(term.new = ifelse(term == "sizesmall:sub_rich", "size:diversity", term.new)) %>%
-  select(-term) -> summ.stem
-summ.stem
-
-```
-
-Beyond wood trait data, overall and basidio OTU richness improve model estimates for percent mass remaining at 25 months. Pathotroph richness improves model estmates for pmr at 37 months.
-
-
-Make a summary table plot
-```{r}
-summ.code %>%
-  full_join(summ.stem) -> tmp
+fit.mods.c1 <- function(rich.df, curr.comm){
   
-p2 <- ggplot(tmp, aes(y = respvar, x = term.new, fill = signif)) +
-  geom_tile(color = "black") +
-  facet_grid(~source) +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  ylab("Response variable") +
-  xlab("Term") +
-  ggtitle("Decay residuals explained by diversity")
-p2
+  rich.df %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(w.t50 ~ size * mean, data = df)
+  mod2 <- lm(beta ~ size * mean, data = df)
+  mod3 <- lm(alpha ~ size * mean, data = df)
+  mod4 <- lm(w.r2 ~ size * mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4)
+  names(mod.list) <- unlist(code.respVars)
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+  
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
 
-pdf(file = "output/tables/diversitySummary.pdf", width = 8, height = 8)
-grid.arrange(p1, p2)
-dev.off()
+unique(rich.df$community) %>%
+  set_names() %>%
+  map(~fit.mods.c1(rich.df = rich.df, curr.comm = .x)) -> out.c1
+out.c1 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.c1.df
+
+# summarize signif models
+out.c1.df %>%
+  filter(Parameter %in% c("mean","size:mean")) %>%
+  filter(p < 0.05) -> signif.c1.df
+signif.c1.df
+out.c1.df %>%
+  filter(respvar == "alpha") %>%
+  filter(comm %in% c("all")) %>%
+  select(comm, respvar, Parameter, p, Coefficient, SE)
+
 
 
 ```
 
-
-Plot the relationship between Saprotroph richness and beta, t60
+examine interactions
 ```{r}
-p <- makefig__saproRichDecayResids(taxAndFunguild, comm.otu, traitResiduals.code, code.respVars)
-p
-ggsave(filename = "output/figures/richness_sapro_decayResids.pdf", width = 5, height = 3.5)
+rich.df %>%
+    filter(community == "sapro") -> df
+mod <- lm(w.t50 ~ size * mean, data = df)
+model_parameters(mod) 
+estimate_slopes(mod)
+
+head(df)
+new.data <- data.frame(size = c("large","small"), 
+                       mean = mean(df$mean))
+new.data
+df$pred <- predict(mod)
+
+ggplot(df, aes(x = mean, y = w.t50, color = size)) +
+  geom_point() +
+  geom_line(aes(y = pred))
+
+
+
+```
+___________________
+# 2-r. CODE-S2. Test role of endophyte diversity after accounting for traits. C fraction data.
+
+calculate diversity metrics and set up dataframe
+```{r}
+otu.list %>%
+  map(~calc.div(.x)) -> div.list
+
+# richness only
+div.list %>%
+  map(~left_join(.x, seqSamples)) %>%
+  list_to_df() %>%
+  dplyr::rename('community'='source') %>%
+  group_by(code, community) %>%
+  summarize(mean=mean(SR),
+            se=sd(SR)/sqrt(length(SR)),
+            n = sum(!is.na(SR)),
+            upper=mean+se,
+            lower=mean-se) -> div.df
+
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+residfits.c2<- resids_explainDecay.list[['C2']]
+residfits.c2 %>%
+  spread(key = resp, value = resid) -> residfits.c2.w
+
+size.indx <- unique(seqSamples[,c("code","size")])
+div.df %>%
+  left_join(size.indx) -> div.df
+
+residfits.c2.w %>%
+  left_join(div.df)  -> rich.df
+write.csv(rich.df, file = "derived_data/richness_C2_resid.csv")
+```
+
+
+fit models
+```{r}
+rich.df2 <- read.csv("derived_data/richness_C2_resid.csv", row.names = 1)
+head(rich.df)
+unique(rich.df$community)
+
+fit.mods.c2 <- function(rich.df2, curr.comm){
+  
+  rich.df2 %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(w.t50 ~ mean, data = df)
+  mod2 <- lm(beta ~ mean, data = df)
+  mod3 <- lm(alpha ~ mean, data = df)
+  mod4 <- lm(w.r2 ~ mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4)
+  names(mod.list) <- unlist(code.respVars)
+  
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
+
+
+unique(rich.df2$community) %>%
+  set_names() %>%
+  map(~fit.mods.c2(rich.df2 = rich.df2, curr.comm = .x)) -> out.c2
+out.c2 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.c2.df
+out.c2.df
+
+# summarize signif models
+out.c2.df %>%
+  filter(Parameter %in% c("mean")) %>%
+  filter(p < 0.05) -> signif.c2.df
+signif.c2.df
+out.c2.df %>%
+  filter(p<0.05)
 
 ```
 
-Higher saprotroph richness leads to smaller beta and t50 values (i.e. faster mass loss) than would be expected based on wood traits alone, especially in large stems.
+___________________
+# 3-r. STEM-S1. Test role of endophyte diversity after accounting for traits. Exclude C fraction data, include small stems.
 
-Plot the relationship between OTU richness, basidio richness and residuals of pmr at time25
+
+calculate diversity metrics and set up dataframe
 ```{r}
-p <- makefig__richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars) 
-p
-ggsave(filename = "output/figures/richness_PMRResids.pdf", width = 5, height = 3.5)
+otu.list %>%
+  map(~calc.div(.x)) -> div.list
+
+# richness only
+div.list %>%
+  map(~left_join(.x, seqSamples)) %>%
+  list_to_df() %>%
+  dplyr::rename('community'='source') %>%
+  group_by(community, codeStem) %>%
+  summarize(mean=mean(SR),
+            se=sd(SR)/sqrt(length(SR)),
+            n = sum(!is.na(SR)),
+            upper=mean+se,
+            lower=mean-se) -> div.df
+head(div.df)
+
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+residfits.s1<- resids_explainDecay.list[['S1']]
+residfits.s1 %>%
+  spread(key = resp, value = resid) -> residfits.s1.w
+colnames(residfits.s1.w)
+
+size.indx <- unique(seqSamples[,c("codeStem","size")])
+div.df %>%
+  left_join(residfits.s1.w) %>%
+  left_join(size.indx)-> rich.df
+head(rich.df)
+write.csv(rich.df, file = "derived_data/richness_S1_resid.csv")
 ```
 
-In small stems, more OTU richness is associated with less mass remaining after 25 months than would be expected based on wood traits alone. This relationship looks heavily influenced by 1 outlier w/ high OTU (and basidio) richness
-
-
-Plot the relationship between Pathotroph OTU richness and residuals of pmr at time37
+fit models
 ```{r}
-p <- makefig__path_richPMRResids(taxAndFunguild, comm.otu, traitResiduals.stem, stem.respVars)
-p
-ggsave(filename = "output/figures/richness_patho_time37Resids.pdf", width = 5, height = 3.5)
+rich.df <- read.csv("derived_data/richness_S1_resid.csv", row.names = 1)
+head(rich.df)
+unique(rich.df$community)
+
+fit.mods.s1 <- function(rich.df, curr.comm){
+  
+  rich.df %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(time7 ~ size * mean, data = df)
+  mod2 <- lm(time13 ~ size * mean, data = df)
+  mod3 <- lm(time25 ~ size * mean, data = df)
+  mod4 <- lm(time37 ~ size * mean, data = df)
+  mod5 <- lm(time59 ~ size * mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4, mod5)
+  names(mod.list) <- unlist(stem.respVars)
+  
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+  
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
+
+unique(rich.df$community) %>%
+  set_names() %>%
+  map(~fit.mods.s1(rich.df = rich.df, curr.comm = .x)) -> out.s1
+out.s1
+out.s1 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.s1.df
+
+out.s1.df
+# summarize signif models
+out.s1.df %>%
+  filter(Parameter %in% c("mean","size:mean")) %>%
+  filter(p < 0.05) -> signif.s1.df
+signif.s1.df
+
+out.s1.df %>%
+  filter(comm == "patho" & respvar == "time37") %>%
+  filter(!is.na(p)) %>%
+  select(comm, respvar, Parameter, Coefficient, p) %>%
+  mutate(p = round(p, digits = 3))
 
 ```
 
-
-In small stems, more pathotroph OTUs is associated with less mass remaining after 37 months than would be expected based on wood traits alone.
-
-
-##############################################
-
-# Diversity plus C fractions as a predictor
-
-Note: Only for large stems
-
-## *Hyp (species+size-level)* After accounting for variation in decay due to C fractions, average initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in decay model fit (r2), rate (k), and lagginess (alpha).
+examine interactions
 ```{r}
-names(resids_explainDecay.list)
-cResiduals.code <- resids_explainDecay.list$cfract.code
+rich.df %>%
+    filter(community == "all") -> df
+mod <- lm(time37 ~ size * mean, data = df)
+model_parameters(mod) 
+estimate_slopes(mod)
 
-result.list <- doAnalysis_endoDiv_explainDecayResids_cfract(taxAndFunguild, comm.otu, cResiduals.code, code.respVars)
 
-result.list$pretty.df
-write.csv(result.list$pretty.df, file="output/tables/diversitysummary_code_traitresid_cfract.csv")
+```
 
-#identify significant relationships
-result.list$pretty.df %>%
-  filter(term %in% c('mean')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  filter(signif == T)
+___________________
+# 4-r. STEM-S2. Test role of endophyte diversity after accounting for traits. C fraction data.
 
-# make a df summary
-tmp <- result.list$pretty.df
+calculate diversity metrics and set up dataframe
+```{r}
+otu.list %>%
+  map(~calc.div(.x)) -> div.list
+
+# richness only
+div.list %>%
+  map(~left_join(.x, seqSamples)) %>%
+  list_to_df() %>%
+  dplyr::rename('community'='source') %>%
+  group_by(community, codeStem) %>%
+  summarize(mean=mean(SR),
+            se=sd(SR)/sqrt(length(SR)),
+            n = sum(!is.na(SR)),
+            upper=mean+se,
+            lower=mean-se) -> div.df
+head(div.df)
+
+resids_explainDecay.list <- readRDS(file = "derived_data/resids_explainDecay_list.RData")
+residfits.s2<- resids_explainDecay.list[['S2']]
+residfits.s2 %>%
+  spread(key = resp, value = resid) -> residfits.s2.w
+colnames(residfits.s2.w)
+
+size.indx <- unique(seqSamples[,c("codeStem","size")])
+div.df %>%
+  left_join(size.indx)-> tmp
+tmp
 tmp %>%
-  filter(term %in% c('mean')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  mutate(model = "code") %>%
-  select(-term) -> summ.code
-summ.code
-
+  left_join(residfits.s2.w) -> rich.df
+head(rich.df)
+write.csv(rich.df, file = "derived_data/richness_S2_resid.csv")
 ```
 
-
-## *Hyp (stem-level)* After accounting for variation in decay due to C fractions, initial microbial diversity (richness, Shannon diversity, ... add phylogenetic diversity) will predict variation in percent mass loss, esp. at early time points.
+fit models
 ```{r}
-names(resids_explainDecay.list)
-cResiduals.stem <- resids_explainDecay.list$cfract.stem
+rich.df2 <- read.csv("derived_data/richness_S2_resid.csv", row.names = 1)
+head(rich.df)
+unique(rich.df$community)
+fit.mods.s2 <- function(rich.df2, curr.comm){
+  
+  rich.df2 %>%
+    filter(community == curr.comm) -> df
+  mod1 <- lm(time7 ~ mean, data = df)
+  mod2 <- lm(time13 ~ mean, data = df)
+  mod3 <- lm(time25 ~ mean, data = df)
+  mod4 <- lm(time37 ~ mean, data = df)
+  mod5 <- lm(time59 ~ mean, data = df)
+  mod.list <- list(mod1, mod2, mod3, mod4, mod5)
+  names(mod.list) <- unlist(stem.respVars)
+  
+  # model r2s
+  mod.list %>%
+    map(~r2(.x)) %>%
+    map_df(.f = unlist, use.names = T, .id = "respvar") %>%
+    set_names(nm = c("respvar","Rsq","Rsq.adj")) %>%
+    mutate(community = curr.comm) -> df.r2
+  df.r2
+  # anova table
+  mod.list %>%
+    map(~aov(.x)) %>%
+    map(~model_parameters(.x, eta_squared = "partial")) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.an
+  # coefs
+  mod.list %>%
+    map(~model_parameters(.x)) %>%
+    map_df(.f = tibble, .id = "respvar") -> df.coefs # coefs
+  
+  result.list <- list(r2 = df.r2, an = df.an, coefs = df.coefs)
+  return(result.list)
+  
+}
 
-result.list.stem <- doAnalysis_endoDiv_explainPMRResids_cfract(taxAndFunguild, comm.otu, cResiduals.stem, stem.respVars)
-write.csv(result.list.stem$pretty.df, file="output/tables/diversitysummary_stem_traitresid_cfract.csv")
+unique(rich.df2$community) %>%
+  set_names() %>%
+  map(~fit.mods.s2(rich.df2 = rich.df2, curr.comm = .x)) -> out.s2
+out.s2 %>%
+  map(~tibble(.x)) %>%
+  map(~unnest(.x, cols= c(.x))) %>%
+  map_df(.f = tibble, .id = "comm") %>%
+  arrange(comm, respvar) -> out.s2.df
 
-#identify significant relationships
-result.list.stem$pretty.df %>%
-  filter(term %in% c('sub_rich')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  filter(signif == T)
+# summarize signif models
+out.s2.df %>%
+  filter(Parameter %in% c("mean","size:mean")) %>%
+  filter(p < 0.05) -> signif.s2.df
+signif.s2.df
 
-# make a df summary
-tmp <- result.list.stem$pretty.df
-tmp %>%
-  filter(term %in% c('sub_rich')) %>%
-  gather(key = "respvar", value = "coef", -c(source, term)) %>%
-  mutate(signif = ifelse(grepl("*", coef, fixed = T), T, F)) %>%
-  mutate(model = "stem") %>%
-  select(-term) -> summ.stem
-summ.stem
+out.s2.df %>%
+  filter(comm == "oo" & respvar == "time25") %>%
+  filter(!is.na(p)) %>%
+  select(comm, respvar, Parameter, Coefficient, p) %>%
+  mutate(p = round(p, digits = 3))
+
+
 
 ```
-
-
-
