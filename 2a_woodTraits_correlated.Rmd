@@ -158,7 +158,7 @@ write.csv(traits.code.meanse, file = "output/tables/traits_code_meanse.csv")
 traits.stem <- trait.means_byStem(stemSamples) # averaged by codeStem
 sds <- trait.sds_byStem(stemSamples) # within codeStem variation
 ns <- trait.n_byStem(stemSamples) # number of codeStem samples that were aggregated
-View(ns)
+#View(ns)
 ns.stem <- ns
 trait.names <- colnames(sds)[5:22]
 colnames(sds)[5:22] <- paste0(trait.names, "_sd")
@@ -219,7 +219,7 @@ p.list$p.denVar
 #pdf("output/figures/variation_densityNbarkthick.pdf", width=5, height=5)
 #grid.newpage()
 #grid.draw(cbind(ggplotGrob(p.list$p.denVar), 
-                  ggplotGrob(), size = "last"))
+#                  ggplotGrob(), size = "last"))
 #dev.off()
 
 ```
@@ -385,7 +385,7 @@ Code-level trait data
 # averaged by code
 # if fill.densitybark == TRUE, then use small stem estimates to approximate large stem density and bark thickness
 # if fill.euscXRFCN == TRUE, then use EUSC large-stem estimates of XRF and CN data for eusc
-View(stemSamples)
+#View(stemSamples)
 traits.code <- trait.means_byCode(stemSamples, 
                                   fill.densitybark = TRUE, 
                                   fill.euscXRFCN = TRUE) 
@@ -436,6 +436,10 @@ ggsave(filename = "output/figures/corr_traits_C1.png",
         upper = list(continuous = wrap("cor", method = "pearson"))),
        width = 8, height = 8)
 pca <- prcomp(tmp[,-1], scale. = TRUE)
+
+require(ggbiplot)
+#library(devtools); install_github("vqv/ggbiplot")
+
 p.bi <- ggbiplot(pca, obs.scale = 1, var.scale = 1) +
   geom_point(aes(color = traits.code$species, 
                  shape = traits.code$size), size = 2.5) +
@@ -445,11 +449,6 @@ p.bi
 ggsave(filename = "output/figures/corr_traits_C1_biplot.png",
        p.bi,
        width = 5, height = 5)
-
-#library(devtools); install_github("vqv/ggbiplot")
-require(ggbiplot)
-ggbiplot(pca) +
-  geom_text(aes(lab))
 
 # by stem
 traits.stem %>%

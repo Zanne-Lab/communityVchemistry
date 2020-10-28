@@ -61,7 +61,7 @@ y = exp(-(x/Beta)^Alpha)
 ```{r}
 p <- plot_weibull(pmr, decayfits)
 p
-ggsave(filename = "output/weibull_behavior.pdf", width = 4, height = 4)
+ggsave(filename = "output/weibull_behavior.png", width = 4, height = 4)
 ```
 Beta is the scale paramter -- higher values (more negative) mean slower decay
 Alpha is the shape parameter -- higher values mean more S-shaped
@@ -205,10 +205,12 @@ p.a
 p.b <- makefig__compare_t50_aic(decayfits) 
 p.b
 
-pdf(file = "output/figures/compare_t50.pdf", width = 6, height = 10)
 grid.arrange(p.a + ggtitle("a"), 
              p.b + ggtitle("b"))
-dev.off()
+#save
+g <- arrangeGrob(p.a + ggtitle("a"), 
+                 p.b + ggtitle("b")) #generates g
+ggsave(file="output/figures/compare_t50.png", plot = g, width = 6, height = 10) 
 
 ```
 
@@ -256,7 +258,7 @@ write.csv(tab, "output/tables/decayfits.csv")
 # see code/make_figs_decayPatterns.R
 p <- makefig__pmr_byStem(pmr, decayfits, param.labels = F) 
 p
-ggsave(filename = "output/figures/pmr_byStem.pdf", plot = p, width=8.5, height=8.5)
+ggsave(filename = "output/figures/pmr_byStem.png", plot = p, width=8.5, height=8.5)
 ```
 
 *Fig X.* Plot alpha vs beta w/ indication of model fit
@@ -264,7 +266,7 @@ ggsave(filename = "output/figures/pmr_byStem.pdf", plot = p, width=8.5, height=8
 # see code/make_figs_decayPatterns.R
 p <- makefig__scaleVshape(decayfits)
 p
-ggsave(filename = "output/figures/scaleVshape.pdf", plot = p, width=6, height=6)
+ggsave(filename = "output/figures/scaleVshape.png", plot = p, width=6, height=6)
 
 ```
 

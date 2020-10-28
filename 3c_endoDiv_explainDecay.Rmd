@@ -174,17 +174,20 @@ fit.mods.c1 <- function(rich.df, curr.comm){
 unique(rich.df$community) %>%
   set_names() %>%
   map(~fit.mods.c1(rich.df = rich.df, curr.comm = .x)) -> out.c1
+out.c1
 out.c1 %>%
   map(~tibble(.x)) %>%
   map(~unnest(.x, cols= c(.x))) %>%
   map_df(.f = tibble, .id = "comm") %>%
   arrange(comm, respvar) -> out.c1.df
+out.c1.df
 
 # summarize signif models
 out.c1.df %>%
   filter(Parameter %in% c("mean","size:mean")) %>%
   filter(p < 0.05) -> signif.c1.df
 signif.c1.df
+
 out.c1.df %>%
   filter(respvar == "alpha") %>%
   filter(comm %in% c("all","basid","patho","sapro")) %>%

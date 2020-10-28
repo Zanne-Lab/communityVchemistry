@@ -74,9 +74,6 @@ Initalize lists to store results
 # save the fig objects that come out of makefig__...
 models_explainDecay.list <- list() 
 
-# save the model tables w/ etasq for each term
-modelEta_explainDecay.list <- list() 
-
 # save residuals from the best models that use traits/C fractions to explain decay
 resids_explainDecay.list <- list()
 
