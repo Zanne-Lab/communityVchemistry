@@ -9,7 +9,7 @@ Contents:
 1. Plot weibull model behavior
 2. Compare the negative exp. vs weibull models
 3. Summarize species+size decay trajectories
-4. Missing data?
+4. Check missing data
 ___________________
 ___________________
 
